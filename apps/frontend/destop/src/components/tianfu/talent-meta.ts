@@ -1,5 +1,18 @@
 import { SeidMetaItem } from './SeidPickerModal'
 
+const EMBEDDED_META_MODULES = import.meta.glob('../../editorMeta/*.json', { eager: true })
+const EMBEDDED_META_BY_NAME: Record<string, unknown> = {}
+for (const [modulePath, value] of Object.entries(EMBEDDED_META_MODULES)) {
+    const fileName = modulePath.split('/').pop()
+    if (!fileName) continue
+    const moduleValue = value as { default?: unknown }
+    EMBEDDED_META_BY_NAME[fileName] = moduleValue.default ?? value
+}
+
+function readEmbeddedMeta(fileName: string) {
+    return EMBEDDED_META_BY_NAME[fileName] ?? null
+}
+
 function dirname(path: string) {
     const normalized = path.replace(/[\\/]+$/, '')
     const idx = Math.max(normalized.lastIndexOf('\\'), normalized.lastIndexOf('/'))
@@ -31,7 +44,11 @@ export function collectMetaFileCandidates(rootPath: string, fileName: string) {
 
     let current = normalized
     for (let i = 0; i < 7; i += 1) {
+        addCandidate(joinWinPath(current, fileName))
         addCandidate(joinWinPath(current, 'editorMeta', fileName))
+        addCandidate(joinWinPath(current, 'public', 'editorMeta', fileName))
+        addCandidate(joinWinPath(current, 'resources', 'editorMeta', fileName))
+        addCandidate(joinWinPath(current, 'resources', 'public', 'editorMeta', fileName))
         addCandidate(joinWinPath(current, 'config', fileName))
         const parent = dirname(current)
         if (!parent || parent === current) break
@@ -41,7 +58,11 @@ export function collectMetaFileCandidates(rootPath: string, fileName: string) {
     const marker = normalized.toLowerCase().lastIndexOf('\\mod\\')
     if (marker > 0) {
         const repoRoot = normalized.slice(0, marker)
+        addCandidate(joinWinPath(repoRoot, fileName))
         addCandidate(joinWinPath(repoRoot, 'editorMeta', fileName))
+        addCandidate(joinWinPath(repoRoot, 'public', 'editorMeta', fileName))
+        addCandidate(joinWinPath(repoRoot, 'resources', 'editorMeta', fileName))
+        addCandidate(joinWinPath(repoRoot, 'resources', 'public', 'editorMeta', fileName))
         addCandidate(joinWinPath(repoRoot, 'config', fileName))
     }
 
@@ -51,8 +72,9 @@ export function collectMetaFileCandidates(rootPath: string, fileName: string) {
 export async function readTalentTypeOptions(params: {
     rootPath: string
     readFilePayload: (filePath: string) => Promise<{ content: string }>
+    readBundledMetaPayload?: (fileName: string) => Promise<{ content: string; path?: string }>
 }) {
-    const { rootPath, readFilePayload } = params
+    const { rootPath, readFilePayload, readBundledMetaPayload } = params
     const candidates = collectMetaFileCandidates(rootPath, 'CreateAvatarTalentType.json')
 
     for (const filePath of candidates) {
@@ -73,6 +95,37 @@ export async function readTalentTypeOptions(params: {
         }
     }
 
+    const embedded = readEmbeddedMeta('CreateAvatarTalentType.json')
+    if (Array.isArray(embedded)) {
+        const options = embedded
+            .map(item => ({
+                id: Number((item as Record<string, unknown>).TypeID),
+                name: String((item as Record<string, unknown>).TypeName ?? ''),
+            }))
+            .filter(item => Number.isFinite(item.id) && item.id > 0)
+        if (options.length > 0) {
+            return { options, loadedPath: 'embedded:CreateAvatarTalentType.json', candidates }
+        }
+    }
+
+    if (readBundledMetaPayload) {
+        try {
+            const payload = await readBundledMetaPayload('CreateAvatarTalentType.json')
+            const parsed = JSON.parse(payload.content) as Array<Record<string, unknown>>
+            const options = parsed
+                .map(item => ({
+                    id: Number(item.TypeID),
+                    name: String(item.TypeName ?? ''),
+                }))
+                .filter(item => Number.isFinite(item.id) && item.id > 0)
+            if (options.length > 0) {
+                return { options, loadedPath: payload.path ?? 'bundled:CreateAvatarTalentType.json', candidates }
+            }
+        } catch {
+            // ignore bundled fallback errors
+        }
+    }
+
     return { options: [] as { id: number; name: string }[], loadedPath: '', candidates }
 }
 
@@ -81,8 +134,9 @@ export async function readEnumOptionsByFileName(params: {
     fileName: string
     preferDesc?: boolean
     readFilePayload: (filePath: string) => Promise<{ content: string }>
+    readBundledMetaPayload?: (fileName: string) => Promise<{ content: string; path?: string }>
 }) {
-    const { rootPath, fileName, readFilePayload, preferDesc = false } = params
+    const { rootPath, fileName, readFilePayload, preferDesc = false, readBundledMetaPayload } = params
     const candidates = collectMetaFileCandidates(rootPath, fileName)
     const merged = new Map<number, { id: number; name: string }>()
     const loadedPaths: string[] = []
@@ -127,6 +181,79 @@ export async function readEnumOptionsByFileName(params: {
             // try next
         }
     }
+    const embedded = readEmbeddedMeta(fileName)
+    if (embedded) {
+        const source = Array.isArray(embedded)
+            ? embedded
+            : typeof embedded === 'object'
+              ? Object.values(embedded as Record<string, unknown>).filter(item => item && typeof item === 'object')
+              : []
+        const options = source
+            .map(item => ({
+                id: Number(
+                    (item as Record<string, unknown>).TypeNum ??
+                        (item as Record<string, unknown>).TypeID ??
+                        (item as Record<string, unknown>).TypeId ??
+                        (item as Record<string, unknown>).ID ??
+                        (item as Record<string, unknown>).Id ??
+                        (item as Record<string, unknown>).id ??
+                        0
+                ),
+                name: String(
+                    (preferDesc ? (item as Record<string, unknown>).Desc : undefined) ??
+                        (item as Record<string, unknown>).TypeName ??
+                        (item as Record<string, unknown>).Name ??
+                        (item as Record<string, unknown>).name ??
+                        (item as Record<string, unknown>).Desc ??
+                        ''
+                ),
+            }))
+            .filter(item => Number.isFinite(item.id))
+        if (options.length > 0) {
+            for (const option of options) merged.set(option.id, option)
+            loadedPaths.push(`embedded:${fileName}`)
+        }
+    }
+    if (readBundledMetaPayload) {
+        try {
+            const payload = await readBundledMetaPayload(fileName)
+            const parsed = JSON.parse(payload.content) as unknown
+            const source = Array.isArray(parsed)
+                ? parsed
+                : parsed && typeof parsed === 'object'
+                  ? Object.values(parsed as Record<string, unknown>).filter(item => item && typeof item === 'object')
+                  : []
+            const options = source
+                .map(item => ({
+                    id: Number(
+                        (item as Record<string, unknown>).TypeNum ??
+                            (item as Record<string, unknown>).TypeID ??
+                            (item as Record<string, unknown>).TypeId ??
+                            (item as Record<string, unknown>).ID ??
+                            (item as Record<string, unknown>).Id ??
+                            (item as Record<string, unknown>).id ??
+                            0
+                    ),
+                    name: String(
+                        (preferDesc ? (item as Record<string, unknown>).Desc : undefined) ??
+                            (item as Record<string, unknown>).TypeName ??
+                            (item as Record<string, unknown>).Name ??
+                            (item as Record<string, unknown>).name ??
+                            (item as Record<string, unknown>).Desc ??
+                            ''
+                    ),
+                }))
+                .filter(item => Number.isFinite(item.id))
+            if (options.length > 0) {
+                for (const option of options) {
+                    merged.set(option.id, option)
+                }
+                loadedPaths.push(payload.path ?? `bundled:${fileName}`)
+            }
+        } catch {
+            // ignore bundled fallback errors
+        }
+    }
     const options = Array.from(merged.values()).sort((a, b) => a.id - b.id)
     return {
         options,
@@ -135,7 +262,11 @@ export async function readEnumOptionsByFileName(params: {
     }
 }
 
-export async function readSeidMeta(params: { rootPath: string; readFilePayload: (filePath: string) => Promise<{ content: string }> }) {
+export async function readSeidMeta(params: {
+    rootPath: string
+    readFilePayload: (filePath: string) => Promise<{ content: string }>
+    readBundledMetaPayload?: (fileName: string) => Promise<{ content: string; path?: string }>
+}) {
     return readSeidMetaByFileName({ ...params, fileName: 'CreateAvatarSeidMeta.json' })
 }
 
@@ -143,8 +274,9 @@ export async function readSeidMetaByFileName(params: {
     rootPath: string
     fileName: string
     readFilePayload: (filePath: string) => Promise<{ content: string }>
+    readBundledMetaPayload?: (fileName: string) => Promise<{ content: string; path?: string }>
 }) {
-    const { rootPath, readFilePayload } = params
+    const { rootPath, readFilePayload, readBundledMetaPayload } = params
     const candidates = collectMetaFileCandidates(rootPath, params.fileName)
 
     for (const filePath of candidates) {
@@ -176,15 +308,75 @@ export async function readSeidMetaByFileName(params: {
         }
     }
 
+    const embedded = readEmbeddedMeta(params.fileName)
+    if (embedded && typeof embedded === 'object' && !Array.isArray(embedded)) {
+        const mapped: Record<number, SeidMetaItem> = {}
+        for (const value of Object.values(embedded as Record<string, unknown>)) {
+            if (!value || typeof value !== 'object') continue
+            const row = value as Record<string, unknown>
+            const id = Number(row.ID)
+            if (!Number.isFinite(id) || id <= 0) continue
+            const propertiesRaw = Array.isArray(row.Properties) ? row.Properties : []
+            mapped[id] = {
+                id,
+                name: String(row.Name ?? ''),
+                desc: String(row.Desc ?? ''),
+                properties: propertiesRaw.map(property => ({
+                    ID: String((property as Record<string, unknown>).ID ?? ''),
+                    Type: String((property as Record<string, unknown>).Type ?? ''),
+                    Desc: String((property as Record<string, unknown>).Desc ?? ''),
+                    SpecialDrawer: Array.isArray((property as Record<string, unknown>).SpecialDrawer)
+                        ? ((property as Record<string, unknown>).SpecialDrawer as unknown[]).map(item => String(item))
+                        : undefined,
+                })),
+            }
+        }
+        if (Object.keys(mapped).length > 0) {
+            return { metaMap: mapped, loadedPath: `embedded:${params.fileName}`, candidates }
+        }
+    }
+
+    if (readBundledMetaPayload) {
+        try {
+            const payload = await readBundledMetaPayload(params.fileName)
+            const parsed = JSON.parse(payload.content) as Record<string, Record<string, unknown>>
+            const mapped: Record<number, SeidMetaItem> = {}
+            for (const value of Object.values(parsed)) {
+                const id = Number(value.ID)
+                if (!Number.isFinite(id) || id <= 0) continue
+                const propertiesRaw = Array.isArray(value.Properties) ? value.Properties : []
+                mapped[id] = {
+                    id,
+                    name: String(value.Name ?? ''),
+                    desc: String(value.Desc ?? ''),
+                    properties: propertiesRaw.map(property => ({
+                        ID: String((property as Record<string, unknown>).ID ?? ''),
+                        Type: String((property as Record<string, unknown>).Type ?? ''),
+                        Desc: String((property as Record<string, unknown>).Desc ?? ''),
+                        SpecialDrawer: Array.isArray((property as Record<string, unknown>).SpecialDrawer)
+                            ? ((property as Record<string, unknown>).SpecialDrawer as unknown[]).map(item => String(item))
+                            : undefined,
+                    })),
+                }
+            }
+            if (Object.keys(mapped).length > 0) {
+                return { metaMap: mapped, loadedPath: payload.path ?? `bundled:${params.fileName}`, candidates }
+            }
+        } catch {
+            // ignore bundled fallback errors
+        }
+    }
+
     return { metaMap: {} as Record<number, SeidMetaItem>, loadedPath: '', candidates }
 }
 
 export async function preloadEditorMeta(params: {
     roots: string[]
     readFilePayload: (filePath: string) => Promise<{ content: string }>
+    readBundledMetaPayload?: (fileName: string) => Promise<{ content: string; path?: string }>
     loadProjectEntries: (rootPath: string) => Promise<Array<{ path: string; name: string; is_dir: boolean }>>
 }) {
-    const { roots, readFilePayload, loadProjectEntries } = params
+    const { roots, readFilePayload, readBundledMetaPayload, loadProjectEntries } = params
     const orderedRoots = Array.from(new Set(roots.filter(Boolean)))
     let talentOptions: { id: number; name: string }[] | null = null
     let talentLoadedPath = ''
@@ -194,7 +386,7 @@ export async function preloadEditorMeta(params: {
 
     for (const root of orderedRoots) {
         if (!talentOptions) {
-            const result = await readTalentTypeOptions({ rootPath: root, readFilePayload })
+            const result = await readTalentTypeOptions({ rootPath: root, readFilePayload, readBundledMetaPayload })
             if (result.options.length > 0) {
                 talentOptions = result.options
                 talentLoadedPath = result.loadedPath
@@ -202,7 +394,7 @@ export async function preloadEditorMeta(params: {
         }
 
         if (!seidMetaMap) {
-            const result = await readSeidMeta({ rootPath: root, readFilePayload })
+            const result = await readSeidMeta({ rootPath: root, readFilePayload, readBundledMetaPayload })
             if (Object.keys(result.metaMap).length > 0) {
                 seidMetaMap = result.metaMap
                 seidLoadedPath = result.loadedPath

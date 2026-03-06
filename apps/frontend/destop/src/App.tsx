@@ -1,4 +1,4 @@
-﻿import { executableDir } from '@tauri-apps/api/path'
+﻿import { executableDir, resourceDir } from '@tauri-apps/api/path'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { open } from '@tauri-apps/plugin-dialog'
 import { FormEvent, useEffect, useMemo, useState } from 'react'
@@ -63,6 +63,7 @@ import {
     ensureModStructure,
     getWorkspaceRoot,
     loadProjectEntries,
+    readBundledMetaPayload,
     readFilePayload,
     renameModFolder,
     saveFilePayload,
@@ -201,11 +202,11 @@ export function App() {
     const [rootSnapshotCache, setRootSnapshotCache] = useState<Record<string, RootModuleSnapshot>>({})
     const [newProjectName, setNewProjectName] = useState('')
     const [newModName, setNewModName] = useState('')
-    const [exeMetaRoot, setExeMetaRoot] = useState('')
+    const [metaExtraRoots, setMetaExtraRoots] = useState<string[]>([])
     const [status, setStatus] = useState('请先从“文件”菜单打开项目。')
 
     function withMetaRoots(roots: string[]) {
-        return Array.from(new Set([...roots.filter(Boolean), ...(exeMetaRoot ? [exeMetaRoot] : [])]))
+        return Array.from(new Set([...roots.filter(Boolean), ...metaExtraRoots.filter(Boolean)]))
     }
 
     const moduleConfigPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Config', 'modConfig.json') : ''), [modRootPath])
@@ -563,9 +564,17 @@ export function App() {
         let active = true
         ;(async () => {
             try {
-                const dir = await executableDir()
+                const roots: string[] = []
+                const exePath = await executableDir()
+                if (exePath) roots.push(exePath)
+                try {
+                    const resPath = await resourceDir()
+                    if (resPath) roots.push(resPath)
+                } catch {
+                    // resourceDir may be unavailable in dev mode
+                }
                 if (!active) return
-                setExeMetaRoot(dir)
+                setMetaExtraRoots(Array.from(new Set(roots.filter(Boolean))))
             } catch {
                 // running in pure web mode or path API unavailable
             }
@@ -576,7 +585,7 @@ export function App() {
     }, [])
 
     useEffect(() => {
-        if (!workspaceRoot || !exeMetaRoot) return
+        if (!workspaceRoot || metaExtraRoots.length === 0) return
         ;(async () => {
             await preloadMeta([workspaceRoot], true)
             await loadBuffSeidMeta([workspaceRoot], true)
@@ -589,7 +598,7 @@ export function App() {
             await loadSkillEnumMeta([workspaceRoot], true)
             await loadSpecialDrawerOptions([workspaceRoot], modRootPath, true)
         })()
-    }, [workspaceRoot, exeMetaRoot, modRootPath])
+    }, [workspaceRoot, metaExtraRoots, modRootPath])
 
     useEffect(() => {
         let active = true
@@ -723,7 +732,12 @@ export function App() {
     ])
 
     async function preloadMeta(roots: string[], silent = false) {
-        const result = await preloadEditorMeta({ roots: withMetaRoots(roots), readFilePayload, loadProjectEntries })
+        const result = await preloadEditorMeta({
+            roots: withMetaRoots(roots),
+            readFilePayload,
+            readBundledMetaPayload,
+            loadProjectEntries,
+        })
         const talentLoaded = Boolean(result.talentOptions?.length)
         const seidLoaded = Boolean(result.seidMetaMap && Object.keys(result.seidMetaMap).length > 0)
 
@@ -755,6 +769,7 @@ export function App() {
                 rootPath: root,
                 fileName: 'BuffSeidMeta.json',
                 readFilePayload,
+                readBundledMetaPayload,
             })
             if (Object.keys(result.metaMap).length > 0) {
                 setBuffSeidMetaMap(result.metaMap)
@@ -779,6 +794,7 @@ export function App() {
                     rootPath: root,
                     fileName,
                     readFilePayload,
+                    readBundledMetaPayload,
                 })
                 if (Object.keys(result.metaMap).length > 0) {
                     setItemSeidMetaMap(result.metaMap)
@@ -800,6 +816,7 @@ export function App() {
                 rootPath: root,
                 fileName: 'SkillSeidMeta.json',
                 readFilePayload,
+                readBundledMetaPayload,
             })
             if (Object.keys(result.metaMap).length > 0) {
                 setSkillSeidMetaMap(result.metaMap)
@@ -822,6 +839,7 @@ export function App() {
                 rootPath: root,
                 fileName: 'StaticSkillSeidMeta.json',
                 readFilePayload,
+                readBundledMetaPayload,
             })
             if (Object.keys(result.metaMap).length > 0) {
                 setStaticSkillSeidMetaMap(result.metaMap)
@@ -855,6 +873,7 @@ export function App() {
                     fileName: item.file,
                     preferDesc: item.preferDesc,
                     readFilePayload,
+                    readBundledMetaPayload,
                 })
                 if (result.options.length > 0) {
                     item.setter(result.options)
@@ -897,6 +916,7 @@ export function App() {
                     rootPath: root,
                     fileName: loader.fileName,
                     readFilePayload,
+                    readBundledMetaPayload,
                 })
                 if (result.options.length > 0) {
                     loader.setter(loader.transform ? loader.transform(result.options) : result.options)
@@ -930,6 +950,7 @@ export function App() {
                     fileName: item.file,
                     preferDesc: item.preferDesc,
                     readFilePayload,
+                    readBundledMetaPayload,
                 })
                 if (result.options.length > 0) {
                     item.setter(result.options)
@@ -965,6 +986,7 @@ export function App() {
                     fileName: loader.fileName,
                     preferDesc: loader.preferDesc,
                     readFilePayload,
+                    readBundledMetaPayload,
                 })
                 if (result.options.length > 0) {
                     loader.setter(result.options)
@@ -1034,6 +1056,7 @@ export function App() {
                     fileName: mapping.file,
                     preferDesc: mapping.preferDesc,
                     readFilePayload,
+                    readBundledMetaPayload,
                 })
                 if (result.options.length > 0) {
                     nextMap[mapping.drawer] = result.options

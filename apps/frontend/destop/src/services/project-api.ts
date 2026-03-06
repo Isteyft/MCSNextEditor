@@ -22,6 +22,10 @@ export async function readFilePayload(filePath: string) {
     return invoke<FilePayload>('read_file_payload', { filePath })
 }
 
+export async function readBundledMetaPayload(fileName: string) {
+    return invoke<FilePayload>('read_bundled_meta_payload', { fileName })
+}
+
 export async function saveFilePayload(filePath: string, content: string) {
     return invoke('save_file_payload', { filePath, content })
 }

@@ -1,6 +1,8 @@
 use serde::Serialize;
 use std::fs;
 use std::path::{Path, PathBuf};
+use tauri::Manager;
+use tauri::path::BaseDirectory;
 
 #[derive(Serialize, Clone)]
 struct FsEntry {
@@ -237,6 +239,50 @@ fn read_file_payload(file_path: String) -> Result<FilePayload, String> {
 }
 
 #[tauri::command]
+fn read_bundled_meta_payload(app: tauri::AppHandle, file_name: String) -> Result<FilePayload, String> {
+    let trimmed = file_name.trim();
+    if trimmed.is_empty() {
+        return Err("file_name is required.".to_string());
+    }
+    let candidates = [
+        Path::new("editorMeta").join(trimmed),
+        Path::new("public").join("editorMeta").join(trimmed),
+        PathBuf::from(trimmed),
+    ];
+
+    let mut errors: Vec<String> = Vec::new();
+    for relative in candidates {
+        let resolved = match app.path().resolve(&relative, BaseDirectory::Resource) {
+            Ok(path) => path,
+            Err(err) => {
+                errors.push(format!("resolve {} failed: {}", relative.to_string_lossy(), err));
+                continue;
+            }
+        };
+
+        match fs::read(&resolved) {
+            Ok(bytes) => {
+                let content = String::from_utf8_lossy(&bytes).to_string();
+                return Ok(FilePayload {
+                    path: resolved.to_string_lossy().to_string(),
+                    size: bytes.len(),
+                    content,
+                });
+            }
+            Err(err) => {
+                errors.push(format!("read {} failed: {}", resolved.to_string_lossy(), err));
+            }
+        }
+    }
+
+    Err(format!(
+        "bundled meta not found for {}. attempts: {}",
+        trimmed,
+        errors.join(" | ")
+    ))
+}
+
+#[tauri::command]
 fn save_file_payload(file_path: String, content: String) -> Result<(), String> {
     let path = PathBuf::from(file_path.trim());
     if let Some(parent) = path.parent() {
@@ -345,6 +391,7 @@ pub fn run() {
             create_mod_folder,
             load_project_entries,
             read_file_payload,
+            read_bundled_meta_payload,
             save_file_payload,
             ensure_mod_structure,
             rename_mod_folder,
