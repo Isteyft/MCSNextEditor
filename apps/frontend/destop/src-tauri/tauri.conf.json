@@ -1,4 +1,4 @@
-{
+﻿{
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Next编辑器",
   "version": "0.1.0",
@@ -33,7 +33,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["nsis"],
     "icon": [
       "icons/icon.ico"
     ]
