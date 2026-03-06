@@ -6,6 +6,10 @@ export async function createProject(projectName: string, modName: string) {
     return invoke<string>('create_project', { projectName, modName })
 }
 
+export async function createModFolder(nextPath: string, modName: string) {
+    return invoke<string>('create_mod_folder', { nextPath, modName })
+}
+
 export async function getWorkspaceRoot() {
     return invoke<string>('get_workspace_root')
 }

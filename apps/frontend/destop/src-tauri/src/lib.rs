@@ -102,6 +102,73 @@ fn create_project(project_name: String, mod_name: String) -> Result<String, Stri
 }
 
 #[tauri::command]
+fn create_mod_folder(next_path: String, mod_name: String) -> Result<String, String> {
+    let base = PathBuf::from(next_path.trim());
+    if !base.exists() || !base.is_dir() {
+        return Err("next_path does not exist or is not a directory.".to_string());
+    }
+
+    let mod_raw = mod_name.trim();
+    let mod_core = mod_raw
+        .strip_prefix("mod")
+        .or_else(|| mod_raw.strip_prefix("MOD"))
+        .unwrap_or(mod_raw)
+        .trim();
+    if mod_core.is_empty() {
+        return Err("mod_name is required.".to_string());
+    }
+
+    let mod_root = base.join(format!("mod{}", mod_core));
+    if mod_root.exists() {
+        return Err("target mod folder already exists.".to_string());
+    }
+
+    let directories = [
+        mod_root.join("Assets"),
+        mod_root.join("Assets").join("Buff Icon"),
+        mod_root.join("Assets").join("Item Icon"),
+        mod_root.join("Assets").join("skill Icon"),
+        mod_root.join("Assets").join("StaticSkill Icon"),
+        mod_root.join("Config"),
+        mod_root.join("Data"),
+        mod_root.join("Data").join("BuffJsonData"),
+        mod_root.join("Data").join("BuffSeidJsonData"),
+        mod_root.join("Data").join("CrateAvatarSeidJsonData"),
+        mod_root.join("Data").join("EquipSeidJsonData"),
+        mod_root.join("Data").join("ItemJsonData"),
+        mod_root.join("Data").join("ItemsSeidJsonData"),
+        mod_root.join("Data").join("skillJsonData"),
+        mod_root.join("Data").join("SkillSeidJsonData"),
+        mod_root.join("Data").join("StaticSkillSeidJsonData"),
+        mod_root.join("Data").join("WuDaoSeidJsonData"),
+        mod_root.join("Lua"),
+        mod_root.join("NData"),
+        mod_root.join("NData").join("CustomFace"),
+        mod_root.join("NData").join("DialogEvent"),
+        mod_root.join("NData").join("DialogTrigger"),
+        mod_root.join("NData").join("FungusPatch"),
+    ];
+    for dir in directories {
+        fs::create_dir_all(dir).map_err(|err| err.to_string())?;
+    }
+
+    fs::write(
+        mod_root.join("Config").join("modConfig.json"),
+        format!(
+            "{{\n  \"Name\": \"{}\",\n  \"Author\": \"\",\n  \"Version\": \"0.0.1\",\n  \"Description\": \"\",\n  \"Settings\": []\n}}\n",
+            mod_core
+        ),
+    )
+    .map_err(|err| err.to_string())?;
+    fs::write(mod_root.join("Data").join("StaticSkillJsonData.json"), "{\n\n}\n")
+        .map_err(|err| err.to_string())?;
+    fs::write(mod_root.join("Data").join("CreateAvatarJsonData.json"), "{\n\n}\n")
+        .map_err(|err| err.to_string())?;
+
+    Ok(mod_root.to_string_lossy().to_string())
+}
+
+#[tauri::command]
 fn load_project_entries(root_path: String) -> Result<Vec<FsEntry>, String> {
     let root = PathBuf::from(root_path.trim());
     if !root.exists() || !root.is_dir() {
@@ -275,6 +342,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_workspace_root,
             create_project,
+            create_mod_folder,
             load_project_entries,
             read_file_payload,
             save_file_payload,

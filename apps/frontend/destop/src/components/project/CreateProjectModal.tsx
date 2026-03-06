@@ -1,10 +1,12 @@
-import { X } from 'lucide-react'
+﻿import { X } from 'lucide-react'
 import { FormEvent } from 'react'
 
 type CreateProjectModalProps = {
     open: boolean
     projectName: string
     modName: string
+    title?: string
+    showProjectName?: boolean
     onChangeProjectName: (value: string) => void
     onChangeModName: (value: string) => void
     onClose: () => void
@@ -15,6 +17,8 @@ export function CreateProjectModal({
     open,
     projectName,
     modName,
+    title = '新建项目',
+    showProjectName = true,
     onChangeProjectName,
     onChangeModName,
     onClose,
@@ -26,20 +30,22 @@ export function CreateProjectModal({
         <div className="modal-mask" onClick={onClose}>
             <div className="create-modal" onClick={event => event.stopPropagation()}>
                 <div className="create-modal-head">
-                    <strong>新建项目</strong>
+                    <strong>{title}</strong>
                     <button className="modal-close" onClick={onClose} type="button">
                         <X size={14} />
                     </button>
                 </div>
                 <form className="new-project-form" onSubmit={onSubmit}>
-                    <label>
-                        项目名字
-                        <input
-                            onChange={event => onChangeProjectName(event.target.value)}
-                            placeholder="例如: mod/测试"
-                            value={projectName}
-                        />
-                    </label>
+                    {showProjectName ? (
+                        <label>
+                            项目名称
+                            <input
+                                onChange={event => onChangeProjectName(event.target.value)}
+                                placeholder="例如: 测试"
+                                value={projectName}
+                            />
+                        </label>
+                    ) : null}
                     <label>
                         mod 名称
                         <input

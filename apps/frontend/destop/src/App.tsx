@@ -56,6 +56,7 @@ import { ModuleSidebar } from './components/workspace/ModuleSidebar'
 import { useSeidActiveSync } from './hooks/useSeidActiveSync'
 import { ModuleKey, MODULES, ViewMode } from './modules'
 import {
+    createModFolder,
     createProject,
     deleteModFolder,
     ensureModStructure,
@@ -69,6 +70,21 @@ import type { AffixEntry, BuffEntry, CreateAvatarEntry, ItemEntry, SkillEntry, S
 import { findModRoot, inferModRootPath, isModRootPath, joinWinPath, pickLeafName, pickProjectTail } from './utils/path'
 
 const appWindow = getCurrentWindow()
+
+type RootModuleSnapshot = {
+    affixMap: Record<string, AffixEntry>
+    talentMap: Record<string, CreateAvatarEntry>
+    buffMap: Record<string, BuffEntry>
+    itemMap: Record<string, ItemEntry>
+    skillMap: Record<string, SkillEntry>
+    staticSkillMap: Record<string, StaticSkillEntry>
+    affixDirty: boolean
+    talentDirty: boolean
+    buffDirty: boolean
+    itemDirty: boolean
+    skillDirty: boolean
+    staticSkillDirty: boolean
+}
 
 export function App() {
     const [projectPath, setProjectPath] = useState('')
@@ -168,12 +184,22 @@ export function App() {
     const [addStaticSkillOpen, setAddStaticSkillOpen] = useState(false)
     const [tableSearchText, setTableSearchText] = useState('')
 
-    const [treeExpanded, setTreeExpanded] = useState(true)
+    const [expandedRootPaths, setExpandedRootPaths] = useState<string[]>([])
     const [createOpen, setCreateOpen] = useState(false)
+    const [createMode, setCreateMode] = useState<'full' | 'quick'>('full')
     const [renameOpen, setRenameOpen] = useState(false)
-    const [contextMenu, setContextMenu] = useState({ open: false, x: 0, y: 0 })
-    const [newProjectName, setNewProjectName] = useState('mod/测试')
-    const [newModName, setNewModName] = useState('测试')
+    const [contextMenu, setContextMenu] = useState<{ open: boolean; x: number; y: number; kind: 'root' | 'blank'; targetPath: string }>({
+        open: false,
+        x: 0,
+        y: 0,
+        kind: 'root',
+        targetPath: '',
+    })
+    const [renameTargetPath, setRenameTargetPath] = useState('')
+    const [modRootFolders, setModRootFolders] = useState<Array<{ path: string; name: string }>>([])
+    const [rootSnapshotCache, setRootSnapshotCache] = useState<Record<string, RootModuleSnapshot>>({})
+    const [newProjectName, setNewProjectName] = useState('')
+    const [newModName, setNewModName] = useState('')
     const [status, setStatus] = useState('请先从“文件”菜单打开项目。')
 
     const moduleConfigPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Config', 'modConfig.json') : ''), [modRootPath])
@@ -189,7 +215,16 @@ export function App() {
     const skillDirPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Data', 'skillJsonData') : ''), [modRootPath])
     const skillIconDirPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Assets', 'skill Icon') : ''), [modRootPath])
     const staticSkillPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Data', 'StaticSkillJsonData.json') : ''), [modRootPath])
-    const modFolderName = useMemo(() => pickLeafName(modRootPath) || 'mod默认', [modRootPath])
+    const modFolderName = useMemo(() => pickLeafName(renameTargetPath || modRootPath) || 'mod默认', [renameTargetPath, modRootPath])
+    const rootFoldersForSidebar = useMemo(
+        () =>
+            modRootFolders.length > 0
+                ? modRootFolders
+                : modRootPath
+                  ? [{ path: modRootPath, name: pickLeafName(modRootPath) || 'mod默认' }]
+                  : [],
+        [modRootFolders, modRootPath]
+    )
     const affixRows = useMemo(() => toAffixRows(affixMap), [affixMap])
     const avatarRows = useMemo(() => toTalentRows(talentMap), [talentMap])
     const buffRows = useMemo(() => toBuffRows(buffMap), [buffMap])
@@ -366,6 +401,37 @@ export function App() {
         return Boolean(target.closest('[contenteditable="true"]'))
     }
 
+    function dirname(path: string) {
+        const normalized = path.replace(/[\\/]+$/, '')
+        const index = Math.max(normalized.lastIndexOf('\\'), normalized.lastIndexOf('/'))
+        return index >= 0 ? normalized.slice(0, index) : ''
+    }
+
+    function normalizePath(path: string) {
+        return path.replace(/\//g, '\\').toLowerCase()
+    }
+
+    function stripProjectPrefix(value: string) {
+        return value.replace(/^mod[\\/]+/i, '').trim()
+    }
+
+    async function collectSiblingModFolders(anchorModRoot: string) {
+        if (!anchorModRoot) return [] as Array<{ path: string; name: string }>
+        const parent = dirname(anchorModRoot)
+        if (!parent) return [{ path: anchorModRoot, name: pickLeafName(anchorModRoot) || 'mod默认' }]
+        try {
+            const entries = await loadProjectEntries(parent)
+            const folders = entries
+                .filter(entry => entry.is_dir && /^mod/i.test(entry.name))
+                .map(entry => ({ path: entry.path, name: entry.name }))
+                .sort((a, b) => a.name.localeCompare(b.name, 'zh-Hans-CN'))
+            if (folders.length > 0) return folders
+        } catch {
+            // fallback to single root
+        }
+        return [{ path: anchorModRoot, name: pickLeafName(anchorModRoot) || 'mod默认' }]
+    }
+
     useSeidActiveSync({ activeSeidId, seidEditorOpen, selectedTalent: currentSeidOwner, setActiveSeidId })
 
     useEffect(() => {
@@ -433,6 +499,49 @@ export function App() {
             setStaticSkillSelectionAnchor(fallback)
         }
     }, [staticSkillRows, selectedStaticSkillKey])
+
+    useEffect(() => {
+        if (!modRootPath) return
+        setExpandedRootPaths(prev =>
+            prev.some(path => normalizePath(path) === normalizePath(modRootPath)) ? prev : [...prev, modRootPath]
+        )
+    }, [modRootPath])
+
+    useEffect(() => {
+        if (!modRootPath) return
+        const cacheKey = normalizePath(modRootPath)
+        setRootSnapshotCache(prev => ({
+            ...prev,
+            [cacheKey]: {
+                affixMap,
+                talentMap,
+                buffMap,
+                itemMap,
+                skillMap,
+                staticSkillMap,
+                affixDirty,
+                talentDirty,
+                buffDirty,
+                itemDirty,
+                skillDirty,
+                staticSkillDirty,
+            },
+        }))
+    }, [
+        modRootPath,
+        affixMap,
+        talentMap,
+        buffMap,
+        itemMap,
+        skillMap,
+        staticSkillMap,
+        affixDirty,
+        talentDirty,
+        buffDirty,
+        itemDirty,
+        skillDirty,
+        staticSkillDirty,
+    ])
 
     useEffect(() => {
         let active = true
@@ -915,9 +1024,12 @@ export function App() {
         const loaded = await loadProjectEntries(rootPath)
         const modRoot = findModRoot(loaded)
         const nextModRoot = isModRootPath(rootPath) ? rootPath : (modRoot?.path ?? inferModRootPath(rootPath))
+        const siblingFolders = await collectSiblingModFolders(nextModRoot)
 
         setProjectPath(rootPath)
         setModRootPath(nextModRoot)
+        setModRootFolders(siblingFolders)
+        setRenameTargetPath('')
         setActiveModule('')
         setViewMode('todo')
         setActivePath('')
@@ -995,12 +1107,13 @@ export function App() {
         setSeidEditorOpen(false)
         setSeidPickerOpen(false)
         setActiveSeidId(null)
-        setTreeExpanded(true)
+        setExpandedRootPaths(siblingFolders.map(item => item.path))
         setAddBuffOpen(false)
         setAddAffixOpen(false)
         setAddItemOpen(false)
         setAddSkillOpen(false)
         setAddStaticSkillOpen(false)
+        setRootSnapshotCache({})
         await preloadMeta([rootPath, nextModRoot, workspaceRoot], true)
         await loadBuffSeidMeta([rootPath, nextModRoot, workspaceRoot], true)
         await loadItemSeidMeta([rootPath, nextModRoot, workspaceRoot], true)
@@ -1011,7 +1124,110 @@ export function App() {
         await loadItemEnumMeta([rootPath, nextModRoot, workspaceRoot], true)
         await loadSkillEnumMeta([rootPath, nextModRoot, workspaceRoot], true)
         await loadSpecialDrawerOptions([rootPath, nextModRoot, workspaceRoot], nextModRoot, true)
-        setStatus(modRoot ? `项目已打开: ${rootPath}` : `项目已打开，未发现 mod 目录，按预设路径加载: ${nextModRoot}`)
+        const preloadPairs = await Promise.all(
+            siblingFolders.map(async item => [normalizePath(item.path), await readRootModuleSnapshot(item.path)] as const)
+        )
+        const nextCache = Object.fromEntries(preloadPairs)
+        setRootSnapshotCache(nextCache)
+        const activeSnapshot = nextCache[normalizePath(nextModRoot)]
+        if (activeSnapshot) {
+            applyRootModuleSnapshot(nextModRoot, activeSnapshot)
+        }
+        setStatus(
+            modRoot ? `项目已打开并已预加载全部目录数据: ${rootPath}` : `项目已打开并已预加载全部目录数据，按预设路径加载: ${nextModRoot}`
+        )
+    }
+
+    async function handleSelectModRoot(nextModRoot: string) {
+        if (!nextModRoot || nextModRoot === modRootPath) return
+        const cachedSnapshot = rootSnapshotCache[normalizePath(nextModRoot)]
+        if (cachedSnapshot) {
+            setModRootPath(nextModRoot)
+            setRenameTargetPath('')
+            setActiveModule('')
+            setViewMode('todo')
+            setActivePath('')
+            setTableSearchText('')
+            setSeidEditorOpen(false)
+            setSeidPickerOpen(false)
+            setActiveSeidId(null)
+            applyRootModuleSnapshot(nextModRoot, cachedSnapshot)
+            setStatus(`已切换项目（缓存命中）: ${pickLeafName(nextModRoot)}`)
+            return
+        }
+
+        setModRootPath(nextModRoot)
+        setRenameTargetPath('')
+        setActiveModule('')
+        setViewMode('todo')
+        setActivePath('')
+        setTableSearchText('')
+        setConfigCachePath('')
+        setConfigDirty(false)
+        setAffixMap({})
+        setAffixCachePath('')
+        setAffixDirty(false)
+        setSelectedAffixKey('')
+        setSelectedAffixKeys([])
+        setAffixSelectionAnchor('')
+        setAffixClipboard([])
+        setTalentMap({})
+        setTalentPath('')
+        setTalentCachePath('')
+        setTalentDirty(false)
+        setBuffMap({})
+        setBuffCachePath('')
+        setBuffDirty(false)
+        setItemMap({})
+        setItemCachePath('')
+        setItemDirty(false)
+        setSelectedItemKey('')
+        setSelectedItemKeys([])
+        setItemSelectionAnchor('')
+        setItemClipboard([])
+        setSelectedBuffKey('')
+        setSelectedBuffKeys([])
+        setBuffSelectionAnchor('')
+        setBuffClipboard([])
+        setSkillMap({})
+        setSkillCachePath('')
+        setSkillDirty(false)
+        setSelectedSkillKey('')
+        setSelectedSkillKeys([])
+        setSkillSelectionAnchor('')
+        setSkillClipboard([])
+        setStaticSkillMap({})
+        setStaticSkillCachePath('')
+        setStaticSkillDirty(false)
+        setSelectedStaticSkillKey('')
+        setSelectedStaticSkillKeys([])
+        setStaticSkillSelectionAnchor('')
+        setStaticSkillClipboard([])
+        setSeidEditorOpen(false)
+        setSeidPickerOpen(false)
+        setActiveSeidId(null)
+        setAddBuffOpen(false)
+        setAddAffixOpen(false)
+        setAddItemOpen(false)
+        setAddSkillOpen(false)
+        setAddStaticSkillOpen(false)
+
+        const siblingFolders = await collectSiblingModFolders(nextModRoot)
+        setModRootFolders(siblingFolders)
+        await preloadMeta([projectPath, nextModRoot, workspaceRoot], true)
+        await loadBuffSeidMeta([projectPath, nextModRoot, workspaceRoot], true)
+        await loadItemSeidMeta([projectPath, nextModRoot, workspaceRoot], true)
+        await loadSkillSeidMeta([projectPath, nextModRoot, workspaceRoot], true)
+        await loadStaticSkillSeidMeta([projectPath, nextModRoot, workspaceRoot], true)
+        await loadBuffEnumMeta([projectPath, nextModRoot, workspaceRoot], true)
+        await loadAffixEnumMeta([projectPath, nextModRoot, workspaceRoot], true)
+        await loadItemEnumMeta([projectPath, nextModRoot, workspaceRoot], true)
+        await loadSkillEnumMeta([projectPath, nextModRoot, workspaceRoot], true)
+        await loadSpecialDrawerOptions([projectPath, nextModRoot, workspaceRoot], nextModRoot, true)
+        const snapshot = await readRootModuleSnapshot(nextModRoot)
+        setRootSnapshotCache(prev => ({ ...prev, [normalizePath(nextModRoot)]: snapshot }))
+        applyRootModuleSnapshot(nextModRoot, snapshot)
+        setStatus(`已切换项目并预加载全部数据: ${pickLeafName(nextModRoot)}`)
     }
 
     async function handleOpenProject() {
@@ -1026,20 +1242,242 @@ export function App() {
 
     async function handleCreateProject(event: FormEvent<HTMLFormElement>) {
         event.preventDefault()
-        const projectName = newProjectName.trim()
-        const modName = (newModName.trim() || pickProjectTail(projectName)).trim()
-        if (!projectName || !modName) {
-            setStatus('请输入项目名字和 mod 名称。')
+        const projectNameInput = stripProjectPrefix(newProjectName)
+        const modName = (newModName.trim() || projectNameInput).trim()
+        const projectName = (createMode === 'quick' ? modName : projectNameInput).trim()
+        if (!modName || (!projectName && createMode !== 'quick')) {
+            setStatus(createMode === 'quick' ? '请输入 mod 名称。' : '请输入项目名字和 mod 名称。')
             return
         }
         try {
-            const createdPath = await createProject(projectName, modName)
-            await reloadProject(createdPath)
+            let createdMessage = ''
+            if (createMode === 'quick') {
+                if (!modRootPath) {
+                    setStatus('请先打开一个项目，再新增 mod 目录。')
+                    return
+                }
+                const nextBasePath = dirname(modRootPath)
+                if (!nextBasePath) {
+                    setStatus('无法定位 plugins\\Next 目录。')
+                    return
+                }
+                const createdModPath = await createModFolder(nextBasePath, modName)
+                const siblingFolders = await collectSiblingModFolders(createdModPath)
+                setModRootFolders(siblingFolders)
+                await handleSelectModRoot(createdModPath)
+                createdMessage = `mod目录已新建: ${createdModPath}`
+            } else {
+                const createdPath = await createProject(projectName, modName)
+                await reloadProject(createdPath)
+                createdMessage = `项目已新建: ${createdPath}`
+            }
             setCreateOpen(false)
-            setStatus(`项目已新建: ${createdPath}`)
+            setCreateMode('full')
+            setNewProjectName('')
+            setNewModName('')
+            setStatus(createdMessage)
         } catch (error) {
             setStatus(`新建失败: ${String(error)}`)
         }
+    }
+
+    async function readRootModuleSnapshot(targetModRoot: string): Promise<RootModuleSnapshot> {
+        const emptySnapshot: RootModuleSnapshot = {
+            affixMap: {},
+            talentMap: {},
+            buffMap: {},
+            itemMap: {},
+            skillMap: {},
+            staticSkillMap: {},
+            affixDirty: false,
+            talentDirty: false,
+            buffDirty: false,
+            itemDirty: false,
+            skillDirty: false,
+            staticSkillDirty: false,
+        }
+        if (!targetModRoot) return emptySnapshot
+
+        const targetAffixPath = joinWinPath(targetModRoot, 'Data', 'TuJianChunWenBen.json')
+        const targetTalentPath = joinWinPath(targetModRoot, 'Data', 'CreateAvatarJsonData.json')
+        const targetStaticSkillPath = joinWinPath(targetModRoot, 'Data', 'StaticSkillJsonData.json')
+        const snapshot = { ...emptySnapshot }
+
+        try {
+            let payload
+            try {
+                payload = await readFilePayload(targetAffixPath)
+            } catch {
+                await saveFilePayload(targetAffixPath, '{}\n')
+                payload = await readFilePayload(targetAffixPath)
+            }
+            const parsed = JSON.parse(payload.content) as unknown
+            const normalized = normalizeAffixMap(parsed)
+            snapshot.affixMap = normalized
+        } catch {
+            // ignore and continue
+        }
+
+        try {
+            let payload
+            try {
+                payload = await readFilePayload(targetTalentPath)
+            } catch {
+                await saveFilePayload(targetTalentPath, '{}\n')
+                payload = await readFilePayload(targetTalentPath)
+            }
+            const parsed = JSON.parse(payload.content) as unknown
+            const normalized = normalizeTalentMap(parsed)
+            const merged = await mergeTalentSeidFiles({
+                source: normalized,
+                modRootPath: targetModRoot,
+                joinWinPath,
+                loadProjectEntries,
+                readFilePayload,
+            })
+            snapshot.talentMap = merged
+        } catch {
+            // ignore and continue
+        }
+
+        try {
+            const loaded = await loadBuffFiles({
+                modRootPath: targetModRoot,
+                joinWinPath,
+                loadProjectEntries,
+                readFilePayload,
+            })
+            const merged = await mergeBuffSeidFiles({
+                source: loaded,
+                modRootPath: targetModRoot,
+                joinWinPath,
+                loadProjectEntries,
+                readFilePayload,
+            })
+            snapshot.buffMap = merged
+        } catch {
+            // ignore and continue
+        }
+
+        try {
+            const loaded = await loadItemFiles({
+                modRootPath: targetModRoot,
+                joinWinPath,
+                loadProjectEntries,
+                readFilePayload,
+            })
+            const merged = await mergeItemSeidFiles({
+                source: loaded,
+                modRootPath: targetModRoot,
+                joinWinPath,
+                loadProjectEntries,
+                readFilePayload,
+            })
+            snapshot.itemMap = merged
+        } catch {
+            // ignore and continue
+        }
+
+        try {
+            const loaded = await loadSkillFiles({
+                modRootPath: targetModRoot,
+                joinWinPath,
+                loadProjectEntries,
+                readFilePayload,
+            })
+            const merged = await mergeSkillSeidFiles({
+                source: loaded,
+                modRootPath: targetModRoot,
+                joinWinPath,
+                loadProjectEntries,
+                readFilePayload,
+            })
+            snapshot.skillMap = merged
+        } catch {
+            // ignore and continue
+        }
+
+        try {
+            let payload
+            try {
+                payload = await readFilePayload(targetStaticSkillPath)
+            } catch {
+                await saveFilePayload(targetStaticSkillPath, '{}\n')
+                payload = await readFilePayload(targetStaticSkillPath)
+            }
+            const parsed = JSON.parse(payload.content) as unknown
+            const normalized = normalizeStaticSkillMap(parsed)
+            const merged = await mergeStaticSkillSeidFiles({
+                source: normalized,
+                modRootPath: targetModRoot,
+                joinWinPath,
+                loadProjectEntries,
+                readFilePayload,
+            })
+            snapshot.staticSkillMap = merged
+        } catch {
+            // ignore and continue
+        }
+
+        return snapshot
+    }
+
+    function applyRootModuleSnapshot(targetModRoot: string, snapshot: RootModuleSnapshot) {
+        const targetAffixPath = joinWinPath(targetModRoot, 'Data', 'TuJianChunWenBen.json')
+        const targetTalentPath = joinWinPath(targetModRoot, 'Data', 'CreateAvatarJsonData.json')
+        const targetBuffDirPath = joinWinPath(targetModRoot, 'Data', 'BuffJsonData')
+        const targetItemDirPath = joinWinPath(targetModRoot, 'Data', 'ItemJsonData')
+        const targetSkillDirPath = joinWinPath(targetModRoot, 'Data', 'skillJsonData')
+        const targetStaticSkillPath = joinWinPath(targetModRoot, 'Data', 'StaticSkillJsonData.json')
+
+        setAffixMap(snapshot.affixMap)
+        setAffixCachePath(targetAffixPath)
+        setAffixDirty(snapshot.affixDirty)
+        const firstAffix = Object.keys(snapshot.affixMap).sort((a, b) => Number(a) - Number(b))[0] ?? ''
+        setSelectedAffixKey(firstAffix)
+        setSelectedAffixKeys(firstAffix ? [firstAffix] : [])
+        setAffixSelectionAnchor(firstAffix)
+
+        setTalentMap(snapshot.talentMap)
+        setTalentPath(targetTalentPath)
+        setTalentCachePath(targetTalentPath)
+        setTalentDirty(snapshot.talentDirty)
+        const firstTalent = Object.keys(snapshot.talentMap).sort((a, b) => Number(a) - Number(b))[0] ?? ''
+        setSelectedTalentKey(firstTalent)
+        setSelectedTalentKeys(firstTalent ? [firstTalent] : [])
+        setTalentSelectionAnchor(firstTalent)
+
+        setBuffMap(snapshot.buffMap)
+        setBuffCachePath(targetBuffDirPath)
+        setBuffDirty(snapshot.buffDirty)
+        const firstBuff = Object.keys(snapshot.buffMap).sort((a, b) => Number(a) - Number(b))[0] ?? ''
+        setSelectedBuffKey(firstBuff)
+        setSelectedBuffKeys(firstBuff ? [firstBuff] : [])
+        setBuffSelectionAnchor(firstBuff)
+
+        setItemMap(snapshot.itemMap)
+        setItemCachePath(targetItemDirPath)
+        setItemDirty(snapshot.itemDirty)
+        const firstItem = Object.keys(snapshot.itemMap).sort((a, b) => Number(a) - Number(b))[0] ?? ''
+        setSelectedItemKey(firstItem)
+        setSelectedItemKeys(firstItem ? [firstItem] : [])
+        setItemSelectionAnchor(firstItem)
+
+        setSkillMap(snapshot.skillMap)
+        setSkillCachePath(targetSkillDirPath)
+        setSkillDirty(snapshot.skillDirty)
+        const firstSkill = Object.keys(snapshot.skillMap).sort((a, b) => Number(a) - Number(b))[0] ?? ''
+        setSelectedSkillKey(firstSkill)
+        setSelectedSkillKeys(firstSkill ? [firstSkill] : [])
+        setSkillSelectionAnchor(firstSkill)
+
+        setStaticSkillMap(snapshot.staticSkillMap)
+        setStaticSkillCachePath(targetStaticSkillPath)
+        setStaticSkillDirty(snapshot.staticSkillDirty)
+        const firstStaticSkill = Object.keys(snapshot.staticSkillMap).sort((a, b) => Number(a) - Number(b))[0] ?? ''
+        setSelectedStaticSkillKey(firstStaticSkill)
+        setSelectedStaticSkillKeys(firstStaticSkill ? [firstStaticSkill] : [])
+        setStaticSkillSelectionAnchor(firstStaticSkill)
     }
 
     async function loadConfigForm() {
@@ -1079,11 +1517,11 @@ export function App() {
         setViewMode('table')
         setActivePath(createAvatarPath)
         if (!modRootPath || !createAvatarPath) return
-        await preloadMeta([modRootPath, projectPath, workspaceRoot], true)
         if (talentCachePath === createAvatarPath) {
             setStatus(talentDirty ? '已加载天赋数据（缓存，未保存）。' : '已加载天赋数据（缓存）。')
             return
         }
+        await preloadMeta([modRootPath, projectPath, workspaceRoot], true)
         try {
             let payload
             try {
@@ -1125,11 +1563,11 @@ export function App() {
         setViewMode('table')
         setActivePath(affixPath)
         if (!modRootPath || !affixPath) return
-        await loadAffixEnumMeta([modRootPath, projectPath, workspaceRoot], true)
         if (affixCachePath === affixPath) {
             setStatus(affixDirty ? '已加载词缀数据（缓存，未保存）。' : '已加载词缀数据（缓存）。')
             return
         }
+        await loadAffixEnumMeta([modRootPath, projectPath, workspaceRoot], true)
         try {
             let payload
             try {
@@ -1162,14 +1600,14 @@ export function App() {
         setViewMode('table')
         setActivePath(buffDirPath)
         if (!modRootPath || !buffDirPath) return
-        await preloadMeta([modRootPath, projectPath, workspaceRoot], true)
-        await loadBuffSeidMeta([modRootPath, projectPath, workspaceRoot], true)
-        await loadBuffEnumMeta([modRootPath, projectPath, workspaceRoot], true)
-        await loadSpecialDrawerOptions([modRootPath, projectPath, workspaceRoot], modRootPath, true)
         if (buffCachePath === buffDirPath) {
             setStatus(buffDirty ? '已加载 Buff 数据（缓存，未保存）。' : '已加载 Buff 数据（缓存）。')
             return
         }
+        await preloadMeta([modRootPath, projectPath, workspaceRoot], true)
+        await loadBuffSeidMeta([modRootPath, projectPath, workspaceRoot], true)
+        await loadBuffEnumMeta([modRootPath, projectPath, workspaceRoot], true)
+        await loadSpecialDrawerOptions([modRootPath, projectPath, workspaceRoot], modRootPath, true)
         try {
             const loaded = await loadBuffFiles({
                 modRootPath,
@@ -1201,13 +1639,13 @@ export function App() {
         setViewMode('table')
         setActivePath(itemDirPath)
         if (!modRootPath || !itemDirPath) return
-        await preloadMeta([modRootPath, projectPath, workspaceRoot], true)
-        await loadItemSeidMeta([modRootPath, projectPath, workspaceRoot], true)
-        await loadItemEnumMeta([modRootPath, projectPath, workspaceRoot], true)
         if (itemCachePath === itemDirPath) {
             setStatus(itemDirty ? '已加载 Item 数据（缓存，未保存）。' : '已加载 Item 数据（缓存）。')
             return
         }
+        await preloadMeta([modRootPath, projectPath, workspaceRoot], true)
+        await loadItemSeidMeta([modRootPath, projectPath, workspaceRoot], true)
+        await loadItemEnumMeta([modRootPath, projectPath, workspaceRoot], true)
         try {
             const loaded = await loadItemFiles({
                 modRootPath,
@@ -1239,13 +1677,13 @@ export function App() {
         setViewMode('table')
         setActivePath(skillDirPath)
         if (!modRootPath || !skillDirPath) return
-        await preloadMeta([modRootPath, projectPath, workspaceRoot], true)
-        await loadSkillSeidMeta([modRootPath, projectPath, workspaceRoot], true)
-        await loadSkillEnumMeta([modRootPath, projectPath, workspaceRoot], true)
         if (skillCachePath === skillDirPath) {
             setStatus(skillDirty ? '已加载 Skill 数据（缓存，未保存）。' : '已加载 Skill 数据（缓存）。')
             return
         }
+        await preloadMeta([modRootPath, projectPath, workspaceRoot], true)
+        await loadSkillSeidMeta([modRootPath, projectPath, workspaceRoot], true)
+        await loadSkillEnumMeta([modRootPath, projectPath, workspaceRoot], true)
         try {
             const loaded = await loadSkillFiles({
                 modRootPath,
@@ -1277,13 +1715,13 @@ export function App() {
         setViewMode('table')
         setActivePath(staticSkillPath)
         if (!modRootPath || !staticSkillPath) return
-        await preloadMeta([modRootPath, projectPath, workspaceRoot], true)
-        await loadStaticSkillSeidMeta([modRootPath, projectPath, workspaceRoot], true)
-        await loadSkillEnumMeta([modRootPath, projectPath, workspaceRoot], true)
         if (staticSkillCachePath === staticSkillPath) {
             setStatus(staticSkillDirty ? '已加载功法数据（缓存，未保存）。' : '已加载功法数据（缓存）。')
             return
         }
+        await preloadMeta([modRootPath, projectPath, workspaceRoot], true)
+        await loadStaticSkillSeidMeta([modRootPath, projectPath, workspaceRoot], true)
+        await loadSkillEnumMeta([modRootPath, projectPath, workspaceRoot], true)
         try {
             let payload
             try {
@@ -2753,10 +3191,16 @@ export function App() {
     }
 
     async function handleRenameModRoot(newName: string) {
-        if (!newName || !modRootPath) return
+        const targetPath = renameTargetPath || modRootPath
+        if (!newName || !targetPath) return
         try {
-            const nextPath = await renameModFolder(modRootPath, newName)
-            setModRootPath(nextPath)
+            const nextPath = await renameModFolder(targetPath, newName)
+            if (targetPath === modRootPath) {
+                setModRootPath(nextPath)
+            }
+            const siblingFolders = await collectSiblingModFolders(nextPath)
+            setModRootFolders(siblingFolders)
+            setRenameTargetPath('')
             setRenameOpen(false)
             setStatus(`mod 目录已重命名: ${pickLeafName(nextPath)}`)
         } catch (error) {
@@ -2764,53 +3208,21 @@ export function App() {
         }
     }
 
-    async function handleDeleteModRoot() {
-        setContextMenu({ open: false, x: 0, y: 0 })
-        if (!modRootPath) return
-        if (!window.confirm(`确认删除文件夹 ${pickLeafName(modRootPath)} 吗？`)) return
+    async function handleDeleteModRoot(targetPath?: string) {
+        setContextMenu({ open: false, x: 0, y: 0, kind: 'root', targetPath: '' })
+        const pathToDelete = targetPath || modRootPath
+        if (!pathToDelete) return
+        if (!window.confirm(`确认删除文件夹 ${pickLeafName(pathToDelete)} 吗？`)) return
         try {
-            await deleteModFolder(modRootPath)
-            const inferred = inferModRootPath(projectPath)
-            setModRootPath(inferred)
-            setActiveModule('')
-            setViewMode('todo')
-            setSelectedAffixKey('')
-            setSelectedAffixKeys([])
-            setAffixSelectionAnchor('')
-            setAffixMap({})
-            setAffixCachePath('')
-            setAffixDirty(false)
-            setSelectedTalentKey('')
-            setSelectedTalentKeys([])
-            setTalentSelectionAnchor('')
-            setTalentMap({})
-            setTalentCachePath('')
-            setTalentDirty(false)
-            setSelectedBuffKey('')
-            setSelectedBuffKeys([])
-            setBuffSelectionAnchor('')
-            setBuffMap({})
-            setBuffCachePath('')
-            setBuffDirty(false)
-            setSelectedItemKey('')
-            setSelectedItemKeys([])
-            setItemSelectionAnchor('')
-            setItemMap({})
-            setItemCachePath('')
-            setItemDirty(false)
-            setSelectedSkillKey('')
-            setSelectedSkillKeys([])
-            setSkillSelectionAnchor('')
-            setSkillMap({})
-            setSkillCachePath('')
-            setSkillDirty(false)
-            setSelectedStaticSkillKey('')
-            setSelectedStaticSkillKeys([])
-            setStaticSkillSelectionAnchor('')
-            setStaticSkillMap({})
-            setStaticSkillCachePath('')
-            setStaticSkillDirty(false)
-            setStatus(`已删除文件夹，后续按预设路径加载: ${inferred}`)
+            await deleteModFolder(pathToDelete)
+            const siblings = await collectSiblingModFolders(modRootPath)
+            const stillExists = siblings.some(item => item.path === modRootPath)
+            const fallback = siblings[0]?.path || inferModRootPath(projectPath)
+            setModRootFolders(siblings)
+            if (pathToDelete === modRootPath || !stillExists) {
+                await handleSelectModRoot(fallback)
+            }
+            setStatus(`已删除文件夹: ${pickLeafName(pathToDelete)}`)
         } catch (error) {
             setStatus(`删除失败: ${String(error)}`)
         }
@@ -2935,7 +3347,12 @@ export function App() {
             <AppTopBarMenu
                 configDirty={configDirty || affixDirty || talentDirty || buffDirty || itemDirty || skillDirty || staticSkillDirty}
                 onClose={() => appWindow.close()}
-                onCreateProject={() => setCreateOpen(true)}
+                onCreateProject={() => {
+                    setCreateMode('full')
+                    setNewProjectName('')
+                    setNewModName('')
+                    setCreateOpen(true)
+                }}
                 onMinimize={() => appWindow.minimize()}
                 onOpenProject={handleOpenProject}
                 onSaveProject={handleSaveProject}
@@ -2947,14 +3364,24 @@ export function App() {
                 modName={newModName}
                 onChangeModName={setNewModName}
                 onChangeProjectName={setNewProjectName}
-                onClose={() => setCreateOpen(false)}
+                onClose={() => {
+                    setCreateOpen(false)
+                    setCreateMode('full')
+                    setNewProjectName('')
+                    setNewModName('')
+                }}
                 onSubmit={handleCreateProject}
                 open={createOpen}
                 projectName={newProjectName}
+                title={createMode === 'quick' ? '新增mod目录' : '新建项目'}
+                showProjectName={createMode === 'full'}
             />
             <RenameFolderModal
                 initialName={modFolderName}
-                onClose={() => setRenameOpen(false)}
+                onClose={() => {
+                    setRenameOpen(false)
+                    setRenameTargetPath('')
+                }}
                 onSubmit={handleRenameModRoot}
                 open={renameOpen}
             />
@@ -3066,12 +3493,26 @@ export function App() {
                 }
             />
             <FolderContextMenu
-                onClose={() => setContextMenu({ open: false, x: 0, y: 0 })}
-                onDelete={handleDeleteModRoot}
-                onRename={() => {
-                    setContextMenu({ open: false, x: 0, y: 0 })
-                    setRenameOpen(true)
-                }}
+                onClose={() => setContextMenu({ open: false, x: 0, y: 0, kind: 'root', targetPath: '' })}
+                onCreateProject={
+                    contextMenu.kind === 'blank'
+                        ? () => {
+                              setCreateMode('quick')
+                              setNewProjectName('')
+                              setNewModName('')
+                              setCreateOpen(true)
+                          }
+                        : undefined
+                }
+                onDelete={contextMenu.kind === 'root' ? () => handleDeleteModRoot(contextMenu.targetPath) : undefined}
+                onRename={
+                    contextMenu.kind === 'root'
+                        ? () => {
+                              setRenameTargetPath(contextMenu.targetPath || modRootPath)
+                              setRenameOpen(true)
+                          }
+                        : undefined
+                }
                 open={contextMenu.open}
                 x={contextMenu.x}
                 y={contextMenu.y}
@@ -3080,11 +3521,20 @@ export function App() {
             <main className={`workspace ${activeModule === 'project-config' ? 'workspace-config' : ''}`}>
                 <ModuleSidebar
                     activeModule={activeModule}
-                    expanded={treeExpanded}
-                    onRootContextMenu={(x, y) => setContextMenu({ open: true, x, y })}
+                    activeRootPath={modRootPath}
+                    expandedRootPaths={expandedRootPaths}
+                    onBlankContextMenu={(x, y) => setContextMenu({ open: true, x, y, kind: 'blank', targetPath: '' })}
+                    onRootContextMenu={(x, y, path) => setContextMenu({ open: true, x, y, kind: 'root', targetPath: path })}
                     onSelect={handleSelectModule}
-                    onToggleExpanded={() => setTreeExpanded(prev => !prev)}
-                    rootName={modFolderName}
+                    onSelectRoot={handleSelectModRoot}
+                    onToggleExpanded={path =>
+                        setExpandedRootPaths(prev =>
+                            prev.some(item => normalizePath(item) === normalizePath(path))
+                                ? prev.filter(item => normalizePath(item) !== normalizePath(path))
+                                : [...prev, path]
+                        )
+                    }
+                    rootFolders={rootFoldersForSidebar}
                 />
 
                 {activeModule && activeModule !== 'project-config' ? (
