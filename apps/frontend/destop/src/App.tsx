@@ -2843,6 +2843,17 @@ export function App() {
         if (!Number.isFinite(nextId) || nextId <= 0) return
         const nextKey = String(nextId)
         next.id = nextId
+        const hasSkillIdPatch = Object.prototype.hasOwnProperty.call(patch, 'Skill_ID')
+        const oldUniqueId = Number(current.Skill_ID ?? 0)
+        const nextUniqueId = Number(next.Skill_ID ?? 0)
+        const shouldUpdateUniqueGroup =
+            hasSkillIdPatch &&
+            Number(current.Skill_Lv ?? 0) === 1 &&
+            Number.isFinite(oldUniqueId) &&
+            oldUniqueId > 0 &&
+            Number.isFinite(nextUniqueId) &&
+            nextUniqueId > 0 &&
+            oldUniqueId !== nextUniqueId
 
         setSkillMap(prev => {
             if (nextKey !== selectedSkillKey && prev[nextKey]) {
@@ -2852,6 +2863,12 @@ export function App() {
             const draft = { ...prev }
             delete draft[selectedSkillKey]
             draft[nextKey] = next
+            if (shouldUpdateUniqueGroup) {
+                for (const [key, row] of Object.entries(draft)) {
+                    if (Number(row.Skill_ID ?? 0) !== oldUniqueId) continue
+                    draft[key] = { ...row, Skill_ID: nextUniqueId }
+                }
+            }
             return draft
         })
         setSelectedSkillKey(nextKey)
@@ -3130,6 +3147,17 @@ export function App() {
         const nextId = Number(next.id || 0)
         if (!Number.isFinite(nextId) || nextId <= 0) return
         const nextKey = String(nextId)
+        const hasSkillIdPatch = Object.prototype.hasOwnProperty.call(patch, 'Skill_ID')
+        const oldUniqueId = Number(current.Skill_ID ?? 0)
+        const nextUniqueId = Number(next.Skill_ID ?? 0)
+        const shouldUpdateUniqueGroup =
+            hasSkillIdPatch &&
+            Number(current.Skill_Lv ?? 0) === 1 &&
+            Number.isFinite(oldUniqueId) &&
+            oldUniqueId > 0 &&
+            Number.isFinite(nextUniqueId) &&
+            nextUniqueId > 0 &&
+            oldUniqueId !== nextUniqueId
         setStaticSkillMap(prev => {
             if (nextKey !== selectedStaticSkillKey && prev[nextKey]) {
                 setStatus(`功法 ID ${nextId} 已存在，不能重复。`)
@@ -3138,6 +3166,12 @@ export function App() {
             const draft = { ...prev }
             delete draft[selectedStaticSkillKey]
             draft[nextKey] = { ...next, id: nextId }
+            if (shouldUpdateUniqueGroup) {
+                for (const [key, row] of Object.entries(draft)) {
+                    if (Number(row.Skill_ID ?? 0) !== oldUniqueId) continue
+                    draft[key] = { ...row, Skill_ID: nextUniqueId }
+                }
+            }
             return draft
         })
         setSelectedStaticSkillKey(nextKey)
