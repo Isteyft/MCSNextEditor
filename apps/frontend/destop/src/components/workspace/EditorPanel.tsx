@@ -1,6 +1,8 @@
-import { ViewMode } from '../../modules'
-import type { BuffEntry, SkillEntry, StaticSkillEntry } from '../../types'
+﻿import { ViewMode } from '../../modules'
+import type { AffixEntry, BuffEntry, ItemEntry, SkillEntry, StaticSkillEntry } from '../../types'
+import { AffixForm } from '../affix/AffixForm'
 import { BuffForm } from '../buff/BuffForm'
+import { ItemForm } from '../item/ItemForm'
 import { SkillForm } from '../skill/SkillForm'
 import { StaticSkillForm } from '../staticskill/StaticSkillForm'
 import { TalentForm } from '../tianfu/TalentForm'
@@ -17,6 +19,8 @@ type EditorPanelProps = {
         description: string
     }
     onChangeConfigForm: (patch: Partial<EditorPanelProps['configForm']>) => void
+    affixForm: AffixEntry | null
+    onChangeAffixForm: (patch: Partial<AffixEntry>) => void
     talentForm: {
         id: number
         Title: string
@@ -31,6 +35,9 @@ type EditorPanelProps = {
     buffForm: BuffEntry | null
     buffIconDir: string
     onChangeBuffForm: (patch: Partial<BuffEntry>) => void
+    itemForm: ItemEntry | null
+    itemIconDir: string
+    onChangeItemForm: (patch: Partial<ItemEntry>) => void
     skillForm: SkillEntry | null
     skillIconDir: string
     onChangeSkillForm: (patch: Partial<SkillEntry>) => void
@@ -45,6 +52,14 @@ type EditorPanelProps = {
     skillConsultTypeOptions: { id: number; name: string }[]
     skillPhaseOptions: { id: number; name: string }[]
     skillQualityOptions: { id: number; name: string }[]
+    itemGuideTypeOptions: { id: number; name: string }[]
+    itemShopTypeOptions: { id: number; name: string }[]
+    itemUseTypeOptions: { id: number; name: string }[]
+    itemTypeOptions: { id: number; name: string }[]
+    itemQualityOptions: { id: number; name: string }[]
+    itemPhaseOptions: { id: number; name: string }[]
+    affixTypeOptions: { id: number; name: string }[]
+    affixProjectTypeOptions: { id: number; name: string }[]
     onOpenSeidEditor: () => void
     seidDisplayRows: { id: number; name: string }[]
 }
@@ -55,11 +70,16 @@ export function EditorPanel({
     activeModuleLabel,
     configForm,
     onChangeConfigForm,
+    affixForm,
+    onChangeAffixForm,
     talentForm,
     onChangeTalentForm,
     buffForm,
     buffIconDir,
     onChangeBuffForm,
+    itemForm,
+    itemIconDir,
+    onChangeItemForm,
     skillForm,
     skillIconDir,
     onChangeSkillForm,
@@ -74,6 +94,14 @@ export function EditorPanel({
     skillConsultTypeOptions,
     skillPhaseOptions,
     skillQualityOptions,
+    itemGuideTypeOptions,
+    itemShopTypeOptions,
+    itemUseTypeOptions,
+    itemTypeOptions,
+    itemQualityOptions,
+    itemPhaseOptions,
+    affixTypeOptions,
+    affixProjectTypeOptions,
     onOpenSeidEditor,
     seidDisplayRows,
 }: EditorPanelProps) {
@@ -88,7 +116,14 @@ export function EditorPanel({
                 ) : null}
 
                 {viewMode === 'table' ? (
-                    activeModule === 'talent' ? (
+                    activeModule === 'affix' ? (
+                        <AffixForm
+                            values={affixForm}
+                            onChange={onChangeAffixForm}
+                            affixTypeOptions={affixTypeOptions}
+                            affixProjectTypeOptions={affixProjectTypeOptions}
+                        />
+                    ) : activeModule === 'talent' ? (
                         <TalentForm
                             onOpenSeidEditor={onOpenSeidEditor}
                             seidDisplayRows={seidDisplayRows}
@@ -107,6 +142,20 @@ export function EditorPanel({
                             buffTriggerOptions={buffTriggerOptions}
                             buffRemoveTriggerOptions={buffRemoveTriggerOptions}
                             buffOverlayTypeOptions={buffOverlayTypeOptions}
+                        />
+                    ) : activeModule === 'item' ? (
+                        <ItemForm
+                            itemIconDir={itemIconDir}
+                            onOpenSeidEditor={onOpenSeidEditor}
+                            seidDisplayRows={seidDisplayRows}
+                            values={itemForm}
+                            onChange={onChangeItemForm}
+                            guideTypeOptions={itemGuideTypeOptions}
+                            itemShopTypeOptions={itemShopTypeOptions}
+                            itemUseTypeOptions={itemUseTypeOptions}
+                            itemTypeOptions={itemTypeOptions}
+                            itemQualityOptions={itemQualityOptions}
+                            itemPhaseOptions={itemPhaseOptions}
                         />
                     ) : activeModule === 'skill' ? (
                         <SkillForm

@@ -1,4 +1,4 @@
-export type ModuleKey = 'project-config' | 'affix' | 'talent' | 'buff' | 'item' | 'skill' | 'staticskill'
+﻿export type ModuleKey = 'project-config' | 'affix' | 'talent' | 'buff' | 'item' | 'skill' | 'staticskill'
 export type ViewMode = 'config-form' | 'todo' | 'table'
 
 export const MODULES: { key: ModuleKey; label: string }[] = [

@@ -1,4 +1,4 @@
-import { ClipboardPaste, Copy, Plus, Search, Trash2 } from 'lucide-react'
+﻿import { ClipboardPaste, Copy, Plus, Search, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { ModuleKey } from '../../modules'
@@ -55,18 +55,37 @@ export function InfoPanel({
         onBatchPrefixIds(prefix)
     }
 
-    const isTableModule = activeModule === 'talent' || activeModule === 'buff'
-    const isSkillModule = activeModule === 'skill' || activeModule === 'staticskill'
-    const isTableModuleFinal = isTableModule || isSkillModule
+    const isTableModule = ['affix', 'talent', 'buff', 'item', 'skill', 'staticskill'].includes(activeModule)
     const nameCol =
-        activeModule === 'buff' ? 'Buff 名字' : activeModule === 'staticskill' ? '功法名字' : isSkillModule ? '神通名字' : '天赋名字'
-    const cateCol = activeModule === 'buff' ? 'Buff 类型' : activeModule === 'staticskill' ? '属性' : isSkillModule ? '优先级' : '分类'
+        activeModule === 'affix'
+            ? '词缀名称'
+            : activeModule === 'buff'
+              ? 'Buff 名称'
+              : activeModule === 'item'
+                ? '物品名称'
+                : activeModule === 'skill'
+                  ? '神通名称'
+                  : activeModule === 'staticskill'
+                    ? '功法名称'
+                    : '天赋名称'
+    const cateCol =
+        activeModule === 'affix'
+            ? '项目类型'
+            : activeModule === 'buff'
+              ? 'Buff 类型'
+              : activeModule === 'item'
+                ? '物品类型'
+                : activeModule === 'skill'
+                  ? '释放优先级'
+                  : activeModule === 'staticskill'
+                    ? '属性'
+                    : '分类'
 
     return (
         <section className="panel panel-data">
             <h2>数据内容</h2>
             <div className="panel-content">
-                {isTableModuleFinal ? (
+                {isTableModule ? (
                     <>
                         <div className="table-toolbar">
                             <button className="icon-btn" onClick={onAddTalent} title="新增" type="button">

@@ -4,10 +4,12 @@ breakline
 bufficon
 buffid
 bufftype
+Chun
 commitlint
 descr
 intarray
 isteyft
+Jian
 Jiandescr
 jiesuo
 lian
@@ -16,6 +18,7 @@ ming
 nums
 panduan
 Prefixs
+qingjiaotype
 Seid
 skillid
 staticskill
@@ -28,5 +31,4 @@ Xbuf
 Xbuff
 Ybuf
 Ybuff
-qingjiaotype
-Jian
+typenum

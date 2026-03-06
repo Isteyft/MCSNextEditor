@@ -2,6 +2,7 @@
 import { open } from '@tauri-apps/plugin-dialog'
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 
+import { createEmptyAffix, normalizeAffixMap, saveAffixFile, toAffixRows } from './components/affix/affix-domain'
 import {
     createEmptyBuff,
     loadBuffFiles,
@@ -10,6 +11,14 @@ import {
     saveBuffSeidFiles,
     toBuffRows,
 } from './components/buff/buff-domain'
+import {
+    createEmptyItem,
+    loadItemFiles,
+    mergeItemSeidFiles,
+    saveItemFiles,
+    saveItemSeidFiles,
+    toItemRows,
+} from './components/item/item-domain'
 import { CreateProjectModal } from './components/project/CreateProjectModal'
 import { FolderContextMenu } from './components/project/FolderContextMenu'
 import { RenameFolderModal } from './components/project/RenameFolderModal'
@@ -56,7 +65,7 @@ import {
     renameModFolder,
     saveFilePayload,
 } from './services/project-api'
-import type { BuffEntry, CreateAvatarEntry, SkillEntry, StaticSkillEntry, TalentTypeOption } from './types'
+import type { AffixEntry, BuffEntry, CreateAvatarEntry, ItemEntry, SkillEntry, StaticSkillEntry, TalentTypeOption } from './types'
 import { findModRoot, inferModRootPath, isModRootPath, joinWinPath, pickLeafName, pickProjectTail } from './utils/path'
 
 const appWindow = getCurrentWindow()
@@ -80,6 +89,14 @@ export function App() {
     const [configDirty, setConfigDirty] = useState(false)
     const [configCachePath, setConfigCachePath] = useState('')
 
+    const [affixMap, setAffixMap] = useState<Record<string, AffixEntry>>({})
+    const [affixCachePath, setAffixCachePath] = useState('')
+    const [affixDirty, setAffixDirty] = useState(false)
+    const [selectedAffixKey, setSelectedAffixKey] = useState('')
+    const [selectedAffixKeys, setSelectedAffixKeys] = useState<string[]>([])
+    const [affixSelectionAnchor, setAffixSelectionAnchor] = useState('')
+    const [affixClipboard, setAffixClipboard] = useState<AffixEntry[]>([])
+
     const [talentMap, setTalentMap] = useState<Record<string, CreateAvatarEntry>>({})
     const [talentPath, setTalentPath] = useState('')
     const [talentCachePath, setTalentCachePath] = useState('')
@@ -95,6 +112,13 @@ export function App() {
     const [selectedBuffKeys, setSelectedBuffKeys] = useState<string[]>([])
     const [buffSelectionAnchor, setBuffSelectionAnchor] = useState('')
     const [buffClipboard, setBuffClipboard] = useState<BuffEntry[]>([])
+    const [itemMap, setItemMap] = useState<Record<string, ItemEntry>>({})
+    const [itemCachePath, setItemCachePath] = useState('')
+    const [itemDirty, setItemDirty] = useState(false)
+    const [selectedItemKey, setSelectedItemKey] = useState('')
+    const [selectedItemKeys, setSelectedItemKeys] = useState<string[]>([])
+    const [itemSelectionAnchor, setItemSelectionAnchor] = useState('')
+    const [itemClipboard, setItemClipboard] = useState<ItemEntry[]>([])
     const [skillMap, setSkillMap] = useState<Record<string, SkillEntry>>({})
     const [skillCachePath, setSkillCachePath] = useState('')
     const [skillDirty, setSkillDirty] = useState(false)
@@ -116,6 +140,15 @@ export function App() {
     const [buffTriggerOptions, setBuffTriggerOptions] = useState<TalentTypeOption[]>([])
     const [buffRemoveTriggerOptions, setBuffRemoveTriggerOptions] = useState<TalentTypeOption[]>([])
     const [buffOverlayTypeOptions, setBuffOverlayTypeOptions] = useState<TalentTypeOption[]>([])
+    const [itemGuideTypeOptions, setItemGuideTypeOptions] = useState<TalentTypeOption[]>([])
+    const [itemShopTypeOptions, setItemShopTypeOptions] = useState<TalentTypeOption[]>([])
+    const [itemUseTypeOptions, setItemUseTypeOptions] = useState<TalentTypeOption[]>([])
+    const [itemTypeOptions, setItemTypeOptions] = useState<TalentTypeOption[]>([])
+    const [itemQualityOptions, setItemQualityOptions] = useState<TalentTypeOption[]>([])
+    const [itemPhaseOptions, setItemPhaseOptions] = useState<TalentTypeOption[]>([])
+    const [itemSeidMetaMap, setItemSeidMetaMap] = useState<Record<number, SeidMetaItem>>({})
+    const [affixTypeOptions, setAffixTypeOptions] = useState<TalentTypeOption[]>([])
+    const [affixProjectTypeOptions, setAffixProjectTypeOptions] = useState<TalentTypeOption[]>([])
     const [skillAttackTypeOptions, setSkillAttackTypeOptions] = useState<TalentTypeOption[]>([])
     const [skillConsultTypeOptions, setSkillConsultTypeOptions] = useState<TalentTypeOption[]>([])
     const [skillPhaseOptions, setSkillPhaseOptions] = useState<TalentTypeOption[]>([])
@@ -128,7 +161,9 @@ export function App() {
     const [seidPickerOpen, setSeidPickerOpen] = useState(false)
     const [activeSeidId, setActiveSeidId] = useState<number | null>(null)
     const [addTalentOpen, setAddTalentOpen] = useState(false)
+    const [addAffixOpen, setAddAffixOpen] = useState(false)
     const [addBuffOpen, setAddBuffOpen] = useState(false)
+    const [addItemOpen, setAddItemOpen] = useState(false)
     const [addSkillOpen, setAddSkillOpen] = useState(false)
     const [addStaticSkillOpen, setAddStaticSkillOpen] = useState(false)
     const [tableSearchText, setTableSearchText] = useState('')
@@ -142,18 +177,23 @@ export function App() {
     const [status, setStatus] = useState('请先从“文件”菜单打开项目。')
 
     const moduleConfigPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Config', 'modConfig.json') : ''), [modRootPath])
+    const affixPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Data', 'TuJianChunWenBen.json') : ''), [modRootPath])
     const createAvatarPath = useMemo(
         () => (modRootPath ? joinWinPath(modRootPath, 'Data', 'CreateAvatarJsonData.json') : ''),
         [modRootPath]
     )
     const buffDirPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Data', 'BuffJsonData') : ''), [modRootPath])
     const buffIconDirPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Assets', 'Buff Icon') : ''), [modRootPath])
+    const itemDirPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Data', 'ItemJsonData') : ''), [modRootPath])
+    const itemIconDirPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Assets', 'Item Icon') : ''), [modRootPath])
     const skillDirPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Data', 'skillJsonData') : ''), [modRootPath])
     const skillIconDirPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Assets', 'skill Icon') : ''), [modRootPath])
     const staticSkillPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Data', 'StaticSkillJsonData.json') : ''), [modRootPath])
     const modFolderName = useMemo(() => pickLeafName(modRootPath) || 'mod默认', [modRootPath])
+    const affixRows = useMemo(() => toAffixRows(affixMap), [affixMap])
     const avatarRows = useMemo(() => toTalentRows(talentMap), [talentMap])
     const buffRows = useMemo(() => toBuffRows(buffMap), [buffMap])
+    const itemRows = useMemo(() => toItemRows(itemMap), [itemMap])
     const skillRows = useMemo(() => toSkillRows(skillMap), [skillMap])
     const staticSkillRows = useMemo(() => toStaticSkillRows(staticSkillMap), [staticSkillMap])
     const filteredAvatarRows = useMemo(() => {
@@ -165,6 +205,15 @@ export function App() {
             return haystack.includes(keyword)
         })
     }, [avatarRows, talentMap, tableSearchText])
+    const filteredAffixRows = useMemo(() => {
+        const keyword = tableSearchText.trim().toLowerCase()
+        if (!keyword) return affixRows
+        return affixRows.filter(row => {
+            const source = affixMap[row.key]
+            const haystack = `${row.id} ${source?.name1 ?? ''} ${row.title} ${row.fenLei} ${row.desc}`.toLowerCase()
+            return haystack.includes(keyword)
+        })
+    }, [affixRows, affixMap, tableSearchText])
     const filteredBuffRows = useMemo(() => {
         const keyword = tableSearchText.trim().toLowerCase()
         if (!keyword) return buffRows
@@ -174,6 +223,15 @@ export function App() {
             return haystack.includes(keyword)
         })
     }, [buffRows, buffMap, tableSearchText])
+    const filteredItemRows = useMemo(() => {
+        const keyword = tableSearchText.trim().toLowerCase()
+        if (!keyword) return itemRows
+        return itemRows.filter(row => {
+            const source = itemMap[row.key]
+            const haystack = `${row.id} ${row.title} ${row.desc} ${source?.desc2 ?? ''}`.toLowerCase()
+            return haystack.includes(keyword)
+        })
+    }, [itemRows, itemMap, tableSearchText])
     const filteredSkillRows = useMemo(() => {
         const keyword = tableSearchText.trim().toLowerCase()
         if (!keyword) return skillRows
@@ -197,7 +255,9 @@ export function App() {
         () => (selectedTalentKey ? (talentMap[selectedTalentKey] ?? null) : null),
         [talentMap, selectedTalentKey]
     )
+    const selectedAffix = useMemo(() => (selectedAffixKey ? (affixMap[selectedAffixKey] ?? null) : null), [affixMap, selectedAffixKey])
     const selectedBuff = useMemo(() => (selectedBuffKey ? (buffMap[selectedBuffKey] ?? null) : null), [buffMap, selectedBuffKey])
+    const selectedItem = useMemo(() => (selectedItemKey ? (itemMap[selectedItemKey] ?? null) : null), [itemMap, selectedItemKey])
     const selectedSkill = useMemo(() => (selectedSkillKey ? (skillMap[selectedSkillKey] ?? null) : null), [skillMap, selectedSkillKey])
     const selectedStaticSkill = useMemo(
         () => (selectedStaticSkillKey ? (staticSkillMap[selectedStaticSkillKey] ?? null) : null),
@@ -206,35 +266,40 @@ export function App() {
     const activeModuleLabel = useMemo(() => MODULES.find(item => item.key === activeModule)?.label ?? '-', [activeModule])
     const activeSeidMetaMap = useMemo(() => {
         if (activeModule === 'buff') return buffSeidMetaMap
+        if (activeModule === 'item') return itemSeidMetaMap
         if (activeModule === 'skill') return skillSeidMetaMap
         if (activeModule === 'staticskill') return staticSkillSeidMetaMap
         return seidMetaMap
-    }, [activeModule, buffSeidMetaMap, skillSeidMetaMap, staticSkillSeidMetaMap, seidMetaMap])
+    }, [activeModule, buffSeidMetaMap, itemSeidMetaMap, skillSeidMetaMap, staticSkillSeidMetaMap, seidMetaMap])
     const seidPickerItems = useMemo(() => Object.values(activeSeidMetaMap).sort((a, b) => a.id - b.id), [activeSeidMetaMap])
     const selectedSeidDisplayRows = useMemo(() => {
         const currentSeid =
             activeModule === 'buff'
                 ? (selectedBuff?.seid ?? [])
-                : activeModule === 'skill'
-                  ? (selectedSkill?.seid ?? [])
-                  : activeModule === 'staticskill'
-                    ? (selectedStaticSkill?.seid ?? [])
-                    : (selectedTalent?.seid ?? [])
+                : activeModule === 'item'
+                  ? (selectedItem?.seid ?? [])
+                  : activeModule === 'skill'
+                    ? (selectedSkill?.seid ?? [])
+                    : activeModule === 'staticskill'
+                      ? (selectedStaticSkill?.seid ?? [])
+                      : (selectedTalent?.seid ?? [])
         return currentSeid.map(id => ({
             id,
             name: activeSeidMetaMap[id]?.name ?? '',
         }))
-    }, [activeModule, selectedTalent, selectedBuff, selectedSkill, selectedStaticSkill, activeSeidMetaMap])
+    }, [activeModule, selectedTalent, selectedBuff, selectedItem, selectedSkill, selectedStaticSkill, activeSeidMetaMap])
     const currentSeidOwner = useMemo(
         () =>
             activeModule === 'buff'
                 ? selectedBuff
-                : activeModule === 'skill'
-                  ? selectedSkill
-                  : activeModule === 'staticskill'
-                    ? selectedStaticSkill
-                    : selectedTalent,
-        [activeModule, selectedBuff, selectedSkill, selectedStaticSkill, selectedTalent]
+                : activeModule === 'item'
+                  ? selectedItem
+                  : activeModule === 'skill'
+                    ? selectedSkill
+                    : activeModule === 'staticskill'
+                      ? selectedStaticSkill
+                      : selectedTalent,
+        [activeModule, selectedBuff, selectedItem, selectedSkill, selectedStaticSkill, selectedTalent]
     )
 
     function cloneTalentEntry(entry: CreateAvatarEntry): CreateAvatarEntry {
@@ -245,10 +310,27 @@ export function App() {
         }
     }
 
+    function cloneAffixEntry(entry: AffixEntry): AffixEntry {
+        return {
+            ...entry,
+        }
+    }
+
     function cloneBuffEntry(entry: BuffEntry): BuffEntry {
         return {
             ...entry,
             Affix: [...entry.Affix],
+            seid: [...entry.seid],
+            seidData: JSON.parse(JSON.stringify(entry.seidData ?? {})) as Record<string, Record<string, string | number | number[]>>,
+        }
+    }
+
+    function cloneItemEntry(entry: ItemEntry): ItemEntry {
+        return {
+            ...entry,
+            Affix: [...entry.Affix],
+            ItemFlag: [...entry.ItemFlag],
+            wuDao: [...entry.wuDao],
             seid: [...entry.seid],
             seidData: JSON.parse(JSON.stringify(entry.seidData ?? {})) as Record<string, Record<string, string | number | number[]>>,
         }
@@ -287,6 +369,17 @@ export function App() {
     useSeidActiveSync({ activeSeidId, seidEditorOpen, selectedTalent: currentSeidOwner, setActiveSeidId })
 
     useEffect(() => {
+        const validKeys = new Set(affixRows.map(row => row.key))
+        setSelectedAffixKeys(prev => prev.filter(key => validKeys.has(key)))
+        if (selectedAffixKey && !validKeys.has(selectedAffixKey)) {
+            const fallback = affixRows[0]?.key ?? ''
+            setSelectedAffixKey(fallback)
+            setSelectedAffixKeys(fallback ? [fallback] : [])
+            setAffixSelectionAnchor(fallback)
+        }
+    }, [affixRows, selectedAffixKey])
+
+    useEffect(() => {
         const validKeys = new Set(avatarRows.map(row => row.key))
         setSelectedTalentKeys(prev => prev.filter(key => validKeys.has(key)))
         if (selectedTalentKey && !validKeys.has(selectedTalentKey)) {
@@ -307,6 +400,17 @@ export function App() {
             setBuffSelectionAnchor(fallback)
         }
     }, [buffRows, selectedBuffKey])
+
+    useEffect(() => {
+        const validKeys = new Set(itemRows.map(row => row.key))
+        setSelectedItemKeys(prev => prev.filter(key => validKeys.has(key)))
+        if (selectedItemKey && !validKeys.has(selectedItemKey)) {
+            const fallback = itemRows[0]?.key ?? ''
+            setSelectedItemKey(fallback)
+            setSelectedItemKeys(fallback ? [fallback] : [])
+            setItemSelectionAnchor(fallback)
+        }
+    }, [itemRows, selectedItemKey])
 
     useEffect(() => {
         const validKeys = new Set(skillRows.map(row => row.key))
@@ -339,9 +443,12 @@ export function App() {
                 setWorkspaceRoot(root)
                 await preloadMeta([root], true)
                 await loadBuffSeidMeta([root], true)
+                await loadItemSeidMeta([root], true)
                 await loadSkillSeidMeta([root], true)
                 await loadStaticSkillSeidMeta([root], true)
                 await loadBuffEnumMeta([root], true)
+                await loadAffixEnumMeta([root], true)
+                await loadItemEnumMeta([root], true)
                 await loadSkillEnumMeta([root], true)
                 await loadSpecialDrawerOptions([root], '', true)
             } catch {
@@ -355,12 +462,24 @@ export function App() {
 
     useEffect(() => {
         function onKeyDown(event: KeyboardEvent) {
-            if (activeModule !== 'talent' && activeModule !== 'buff' && activeModule !== 'skill' && activeModule !== 'staticskill') return
+            if (
+                activeModule !== 'affix' &&
+                activeModule !== 'talent' &&
+                activeModule !== 'buff' &&
+                activeModule !== 'item' &&
+                activeModule !== 'skill' &&
+                activeModule !== 'staticskill'
+            )
+                return
             if (isEditableElement(event.target)) return
             if (event.key === 'Delete') {
                 event.preventDefault()
-                if (activeModule === 'buff') {
+                if (activeModule === 'affix') {
+                    handleDeleteAffixes()
+                } else if (activeModule === 'buff') {
                     handleDeleteBuffs()
+                } else if (activeModule === 'item') {
+                    handleDeleteItems()
                 } else if (activeModule === 'skill') {
                     handleDeleteSkills()
                 } else if (activeModule === 'staticskill') {
@@ -374,8 +493,12 @@ export function App() {
             const key = event.key.toLowerCase()
             if (key === 'c') {
                 event.preventDefault()
-                if (activeModule === 'buff') {
+                if (activeModule === 'affix') {
+                    handleCopyAffix()
+                } else if (activeModule === 'buff') {
                     handleCopyBuff()
+                } else if (activeModule === 'item') {
+                    handleCopyItem()
                 } else if (activeModule === 'skill') {
                     handleCopySkill()
                 } else if (activeModule === 'staticskill') {
@@ -385,8 +508,12 @@ export function App() {
                 }
             } else if (key === 'v') {
                 event.preventDefault()
-                if (activeModule === 'buff') {
+                if (activeModule === 'affix') {
+                    handlePasteAffix()
+                } else if (activeModule === 'buff') {
                     handlePasteBuff()
+                } else if (activeModule === 'item') {
+                    handlePasteItem()
                 } else if (activeModule === 'skill') {
                     handlePasteSkill()
                 } else if (activeModule === 'staticskill') {
@@ -403,27 +530,37 @@ export function App() {
         }
     }, [
         activeModule,
+        affixRows,
         avatarRows,
         buffRows,
+        itemRows,
         skillRows,
         staticSkillRows,
+        selectedAffixKey,
+        selectedAffixKeys,
         selectedTalent,
         selectedTalentKey,
         selectedTalentKeys,
         selectedBuffKey,
         selectedBuffKeys,
+        selectedItemKey,
+        selectedItemKeys,
         selectedSkill,
         selectedSkillKey,
         selectedSkillKeys,
         selectedStaticSkill,
         selectedStaticSkillKey,
         selectedStaticSkillKeys,
+        affixClipboard,
         talentClipboard,
         buffClipboard,
+        itemClipboard,
         skillClipboard,
         staticSkillClipboard,
+        affixMap,
         talentMap,
         buffMap,
+        itemMap,
         skillMap,
         staticSkillMap,
     ])
@@ -473,6 +610,29 @@ export function App() {
         if (!silent) {
             setBuffSeidMetaMap({})
         }
+        return false
+    }
+
+    async function loadItemSeidMeta(roots: string[], silent = false) {
+        const candidates = Array.from(new Set(roots.filter(Boolean)))
+        const fileNames = ['ItemUseSeidMeta.json', 'ItemsSeidMeta.json', 'ItemSeidMeta.json']
+        for (const root of candidates) {
+            for (const fileName of fileNames) {
+                const result = await readSeidMetaByFileName({
+                    rootPath: root,
+                    fileName,
+                    readFilePayload,
+                })
+                if (Object.keys(result.metaMap).length > 0) {
+                    setItemSeidMetaMap(result.metaMap)
+                    if (!silent) {
+                        setStatus(`已加载 Item Seid 元数据: ${result.loadedPath} (${Object.keys(result.metaMap).length} 条)`)
+                    }
+                    return true
+                }
+            }
+        }
+        if (!silent) setItemSeidMetaMap({})
         return false
     }
 
@@ -555,6 +715,75 @@ export function App() {
             setStatus(`已加载 Buff 枚举元数据 ${loaded.length}/4 个`)
         }
         return loaded.length > 0
+    }
+
+    async function loadAffixEnumMeta(roots: string[], silent = false) {
+        const candidates = Array.from(new Set(roots.filter(Boolean)))
+        const loaders: Array<{
+            fileName: string
+            setter: (rows: TalentTypeOption[]) => void
+            transform?: (rows: TalentTypeOption[]) => TalentTypeOption[]
+        }> = [
+            { fileName: 'AffixType.json', setter: setAffixTypeOptions },
+            {
+                fileName: 'AffixProjectType.json',
+                setter: setAffixProjectTypeOptions,
+                transform: rows => rows,
+            },
+        ]
+
+        let loadedAny = false
+        for (const loader of loaders) {
+            let loaded = false
+            for (const root of candidates) {
+                const result = await readEnumOptionsByFileName({
+                    rootPath: root,
+                    fileName: loader.fileName,
+                    readFilePayload,
+                })
+                if (result.options.length > 0) {
+                    loader.setter(loader.transform ? loader.transform(result.options) : result.options)
+                    loaded = true
+                    loadedAny = true
+                    break
+                }
+            }
+            if (!loaded && !silent) loader.setter([])
+        }
+        return loadedAny
+    }
+
+    async function loadItemEnumMeta(roots: string[], silent = false) {
+        const candidates = Array.from(new Set(roots.filter(Boolean)))
+        const fileMap: Array<{ file: string; setter: (value: TalentTypeOption[]) => void; preferDesc?: boolean }> = [
+            { file: 'GuideType.json', setter: setItemGuideTypeOptions, preferDesc: true },
+            { file: 'ItemShopType.json', setter: setItemShopTypeOptions, preferDesc: true },
+            { file: 'ItemUseType.json', setter: setItemUseTypeOptions, preferDesc: true },
+            { file: 'ItemType.json', setter: setItemTypeOptions, preferDesc: true },
+            { file: 'ItemQualityType.json', setter: setItemQualityOptions, preferDesc: true },
+            { file: 'ItemPhaseType.json', setter: setItemPhaseOptions, preferDesc: true },
+        ]
+
+        let loadedAny = false
+        for (const item of fileMap) {
+            let assigned = false
+            for (const root of candidates) {
+                const result = await readEnumOptionsByFileName({
+                    rootPath: root,
+                    fileName: item.file,
+                    preferDesc: item.preferDesc,
+                    readFilePayload,
+                })
+                if (result.options.length > 0) {
+                    item.setter(result.options)
+                    loadedAny = true
+                    assigned = true
+                    break
+                }
+            }
+            if (!assigned && !silent) item.setter([])
+        }
+        return loadedAny
     }
 
     async function loadSkillEnumMeta(roots: string[], silent = false) {
@@ -698,6 +927,13 @@ export function App() {
         setPreservedSettings([])
         setConfigDirty(false)
         setConfigCachePath('')
+        setAffixMap({})
+        setAffixCachePath('')
+        setAffixDirty(false)
+        setSelectedAffixKey('')
+        setSelectedAffixKeys([])
+        setAffixSelectionAnchor('')
+        setAffixClipboard([])
         setTalentMap({})
         setTalentPath('')
         setTalentCachePath('')
@@ -705,6 +941,13 @@ export function App() {
         setBuffMap({})
         setBuffCachePath('')
         setBuffDirty(false)
+        setItemMap({})
+        setItemCachePath('')
+        setItemDirty(false)
+        setSelectedItemKey('')
+        setSelectedItemKeys([])
+        setItemSelectionAnchor('')
+        setItemClipboard([])
         setSelectedBuffKey('')
         setSelectedBuffKeys([])
         setBuffSelectionAnchor('')
@@ -727,6 +970,15 @@ export function App() {
         setBuffTriggerOptions([])
         setBuffRemoveTriggerOptions([])
         setBuffOverlayTypeOptions([])
+        setAffixTypeOptions([])
+        setAffixProjectTypeOptions([])
+        setItemGuideTypeOptions([])
+        setItemShopTypeOptions([])
+        setItemUseTypeOptions([])
+        setItemTypeOptions([])
+        setItemQualityOptions([])
+        setItemPhaseOptions([])
+        setItemSeidMetaMap({})
         setSkillAttackTypeOptions([])
         setSkillConsultTypeOptions([])
         setSkillPhaseOptions([])
@@ -745,13 +997,18 @@ export function App() {
         setActiveSeidId(null)
         setTreeExpanded(true)
         setAddBuffOpen(false)
+        setAddAffixOpen(false)
+        setAddItemOpen(false)
         setAddSkillOpen(false)
         setAddStaticSkillOpen(false)
         await preloadMeta([rootPath, nextModRoot, workspaceRoot], true)
         await loadBuffSeidMeta([rootPath, nextModRoot, workspaceRoot], true)
+        await loadItemSeidMeta([rootPath, nextModRoot, workspaceRoot], true)
         await loadSkillSeidMeta([rootPath, nextModRoot, workspaceRoot], true)
         await loadStaticSkillSeidMeta([rootPath, nextModRoot, workspaceRoot], true)
         await loadBuffEnumMeta([rootPath, nextModRoot, workspaceRoot], true)
+        await loadAffixEnumMeta([rootPath, nextModRoot, workspaceRoot], true)
+        await loadItemEnumMeta([rootPath, nextModRoot, workspaceRoot], true)
         await loadSkillEnumMeta([rootPath, nextModRoot, workspaceRoot], true)
         await loadSpecialDrawerOptions([rootPath, nextModRoot, workspaceRoot], nextModRoot, true)
         setStatus(modRoot ? `项目已打开: ${rootPath}` : `项目已打开，未发现 mod 目录，按预设路径加载: ${nextModRoot}`)
@@ -864,6 +1121,43 @@ export function App() {
         }
     }
 
+    async function loadAffixTable() {
+        setViewMode('table')
+        setActivePath(affixPath)
+        if (!modRootPath || !affixPath) return
+        await loadAffixEnumMeta([modRootPath, projectPath, workspaceRoot], true)
+        if (affixCachePath === affixPath) {
+            setStatus(affixDirty ? '已加载词缀数据（缓存，未保存）。' : '已加载词缀数据（缓存）。')
+            return
+        }
+        try {
+            let payload
+            try {
+                payload = await readFilePayload(affixPath)
+            } catch {
+                await saveFilePayload(affixPath, '{}\n')
+                payload = await readFilePayload(affixPath)
+            }
+            let parsed: unknown = {}
+            try {
+                parsed = JSON.parse(payload.content)
+            } catch {
+                parsed = {}
+            }
+            const normalized = normalizeAffixMap(parsed)
+            const firstKey = Object.keys(normalized).sort((a, b) => Number(a) - Number(b))[0] ?? ''
+            setAffixMap(normalized)
+            setAffixCachePath(affixPath)
+            setAffixDirty(false)
+            setSelectedAffixKey(firstKey)
+            setSelectedAffixKeys(firstKey ? [firstKey] : [])
+            setAffixSelectionAnchor(firstKey)
+            setStatus('已加载词缀数据（TuJianChunWenBen）。')
+        } catch (error) {
+            setStatus(`读取词缀数据失败: ${String(error)}`)
+        }
+    }
+
     async function loadBuffTable() {
         setViewMode('table')
         setActivePath(buffDirPath)
@@ -900,6 +1194,44 @@ export function App() {
             setStatus('已加载 Buff 数据（BuffJsonData）。')
         } catch (error) {
             setStatus(`读取 Buff 数据失败: ${String(error)}`)
+        }
+    }
+
+    async function loadItemTable() {
+        setViewMode('table')
+        setActivePath(itemDirPath)
+        if (!modRootPath || !itemDirPath) return
+        await preloadMeta([modRootPath, projectPath, workspaceRoot], true)
+        await loadItemSeidMeta([modRootPath, projectPath, workspaceRoot], true)
+        await loadItemEnumMeta([modRootPath, projectPath, workspaceRoot], true)
+        if (itemCachePath === itemDirPath) {
+            setStatus(itemDirty ? '已加载 Item 数据（缓存，未保存）。' : '已加载 Item 数据（缓存）。')
+            return
+        }
+        try {
+            const loaded = await loadItemFiles({
+                modRootPath,
+                joinWinPath,
+                loadProjectEntries,
+                readFilePayload,
+            })
+            const finalData = await mergeItemSeidFiles({
+                source: loaded,
+                modRootPath,
+                joinWinPath,
+                loadProjectEntries,
+                readFilePayload,
+            })
+            const firstKey = Object.keys(finalData).sort((a, b) => Number(a) - Number(b))[0] ?? ''
+            setItemMap(finalData)
+            setItemCachePath(itemDirPath)
+            setItemDirty(false)
+            setSelectedItemKey(firstKey)
+            setSelectedItemKeys(firstKey ? [firstKey] : [])
+            setItemSelectionAnchor(firstKey)
+            setStatus('已加载 Item 数据（ItemJsonData）。')
+        } catch (error) {
+            setStatus(`读取 Item 数据失败: ${String(error)}`)
         }
     }
 
@@ -998,8 +1330,16 @@ export function App() {
             await loadTalentTable()
             return
         }
+        if (key === 'affix') {
+            await loadAffixTable()
+            return
+        }
         if (key === 'buff') {
             await loadBuffTable()
+            return
+        }
+        if (key === 'item') {
+            await loadItemTable()
             return
         }
         if (key === 'skill') {
@@ -1012,6 +1352,211 @@ export function App() {
         }
         setViewMode('todo')
         setActivePath('')
+    }
+
+    function handleSelectAffix(key: string, index: number, options: { shift: boolean; ctrl: boolean }) {
+        const sourceRows = filteredAffixRows
+        if (options.shift && affixSelectionAnchor) {
+            const anchorIndex = sourceRows.findIndex(row => row.key === affixSelectionAnchor)
+            if (anchorIndex >= 0) {
+                const [start, end] = anchorIndex <= index ? [anchorIndex, index] : [index, anchorIndex]
+                const nextKeys = sourceRows.slice(start, end + 1).map(row => row.key)
+                setSelectedAffixKeys(nextKeys)
+                setSelectedAffixKey(key)
+                return
+            }
+        }
+
+        if (options.ctrl) {
+            setSelectedAffixKeys(prev => {
+                if (prev.includes(key)) {
+                    const next = prev.filter(item => item !== key)
+                    const active = next[next.length - 1] ?? ''
+                    setSelectedAffixKey(active)
+                    return next
+                }
+                return [...prev, key]
+            })
+            setSelectedAffixKey(key)
+            setAffixSelectionAnchor(key)
+            return
+        }
+
+        setSelectedAffixKeys([key])
+        setSelectedAffixKey(key)
+        setAffixSelectionAnchor(key)
+    }
+
+    function handleDeleteAffixes() {
+        const targets = selectedAffixKeys.length > 0 ? selectedAffixKeys : selectedAffixKey ? [selectedAffixKey] : []
+        if (targets.length === 0) return
+        const targetSet = new Set(targets)
+        const remainingRows = affixRows.filter(row => !targetSet.has(row.key))
+        const nextActive = remainingRows[0]?.key ?? ''
+
+        setAffixMap(prev => {
+            const draft = { ...prev }
+            targets.forEach(key => {
+                delete draft[key]
+            })
+            return draft
+        })
+        setSelectedAffixKey(nextActive)
+        setSelectedAffixKeys(nextActive ? [nextActive] : [])
+        setAffixSelectionAnchor(nextActive)
+        setAffixDirty(true)
+        setStatus(`已删除 ${targets.length} 条词缀数据。`)
+    }
+
+    function handleBatchPrefixAffixIds(prefix: string) {
+        if (!/^\d+$/.test(prefix)) {
+            setStatus('批量修改ID失败：请输入数字开头。')
+            return
+        }
+        const targets = selectedAffixKeys.length > 0 ? selectedAffixKeys : selectedAffixKey ? [selectedAffixKey] : []
+        if (targets.length === 0) {
+            setStatus('请先选中要修改的词缀。')
+            return
+        }
+        const orderedTargets = [...targets].sort((a, b) => (affixMap[a]?.id ?? 0) - (affixMap[b]?.id ?? 0))
+        const nextKeys = orderedTargets.map((_, index) => String(Number(`${prefix}${index + 1}`)))
+        const nextKeySet = new Set(nextKeys)
+        if (nextKeySet.size !== nextKeys.length) {
+            setStatus('批量修改ID失败：新ID出现重复。')
+            return
+        }
+        const occupied = new Set(Object.keys(affixMap).filter(key => !orderedTargets.includes(key)))
+        const conflict = nextKeys.find(key => occupied.has(key))
+        if (conflict) {
+            setStatus(`批量修改ID失败：目标ID ${conflict} 已存在。`)
+            return
+        }
+
+        setAffixMap(prev => {
+            const draft = { ...prev }
+            orderedTargets.forEach(oldKey => delete draft[oldKey])
+            orderedTargets.forEach((oldKey, index) => {
+                const nextKey = nextKeys[index]
+                const row = prev[oldKey]
+                if (!row) return
+                draft[nextKey] = { ...row, id: Number(nextKey) }
+            })
+            return draft
+        })
+        const nextActive = nextKeys[0] ?? ''
+        setSelectedAffixKey(nextActive)
+        setSelectedAffixKeys(nextKeys)
+        setAffixSelectionAnchor(nextActive)
+        setAffixDirty(true)
+        setStatus(`已批量修改 ${targets.length} 条ID，开头为 ${prefix}。`)
+    }
+
+    function handleAddAffix(id: number) {
+        const key = String(id)
+        setAddAffixOpen(false)
+        if (affixMap[key]) {
+            setSelectedAffixKey(key)
+            setSelectedAffixKeys([key])
+            setAffixSelectionAnchor(key)
+            setStatus(`ID ${id} 已存在，已定位到该条目。`)
+            return
+        }
+        setAffixMap(prev => ({ ...prev, [key]: createEmptyAffix(id) }))
+        setSelectedAffixKey(key)
+        setSelectedAffixKeys([key])
+        setAffixSelectionAnchor(key)
+        setAffixDirty(true)
+    }
+
+    function handleCopyAffix() {
+        const targets = selectedAffixKeys.length > 0 ? selectedAffixKeys : selectedAffixKey ? [selectedAffixKey] : []
+        if (targets.length === 0) return
+        const copied = targets
+            .map(key => affixMap[key])
+            .filter((item): item is AffixEntry => Boolean(item))
+            .sort((a, b) => a.id - b.id)
+            .map(item => cloneAffixEntry(item))
+        if (copied.length === 0) return
+        setAffixClipboard(copied)
+        setStatus(copied.length === 1 ? `已复制词缀 ${copied[0].id}` : `已复制 ${copied.length} 条词缀数据`)
+    }
+
+    function handlePasteAffix() {
+        if (affixClipboard.length === 0) return
+        const existingKeys = new Set(Object.keys(affixMap))
+        const inserts: Array<{ key: string; row: AffixEntry }> = []
+        const conflicts: AffixEntry[] = []
+
+        affixClipboard.forEach(item => {
+            const id = Number(item.id)
+            if (!Number.isFinite(id) || id <= 0) return
+            const key = String(id)
+            if (existingKeys.has(key)) {
+                conflicts.push(item)
+                return
+            }
+            inserts.push({ key, row: { ...cloneAffixEntry(item), id } })
+            existingKeys.add(key)
+        })
+
+        if (conflicts.length > 0) {
+            const prefixText = window.prompt(`检测到 ${conflicts.length} 条ID重复，请输入新的ID前缀（例如 70）`)
+            if (prefixText === null) return
+            const prefix = prefixText.trim()
+            if (!/^\d+$/.test(prefix)) {
+                setStatus('粘贴失败：请输入数字前缀。')
+                return
+            }
+            for (let index = 0; index < conflicts.length; index += 1) {
+                const nextKey = String(Number(`${prefix}${index + 1}`))
+                if (existingKeys.has(nextKey)) {
+                    setStatus(`粘贴失败：批量重命名ID冲突（${nextKey}）。`)
+                    return
+                }
+                inserts.push({ key: nextKey, row: { ...cloneAffixEntry(conflicts[index]), id: Number(nextKey) } })
+                existingKeys.add(nextKey)
+            }
+        }
+        if (inserts.length === 0) return
+        setAffixMap(prev => {
+            const draft = { ...prev }
+            inserts.forEach(({ key, row }) => {
+                draft[key] = row
+            })
+            return draft
+        })
+        const nextKeys = inserts.map(item => item.key)
+        setSelectedAffixKey(nextKeys[0] ?? '')
+        setSelectedAffixKeys(nextKeys)
+        setAffixSelectionAnchor(nextKeys[0] ?? '')
+        setAffixDirty(true)
+        setStatus(`已粘贴 ${inserts.length} 条词缀数据。`)
+    }
+
+    function handleChangeAffixForm(patch: Partial<AffixEntry>) {
+        if (!selectedAffixKey || !affixMap[selectedAffixKey]) return
+        const current = affixMap[selectedAffixKey]
+        const next = { ...current, ...patch }
+        const nextId = Number(next.id || 0)
+        if (!Number.isFinite(nextId) || nextId <= 0) return
+        const nextKey = String(nextId)
+
+        setAffixMap(prev => {
+            if (nextKey !== selectedAffixKey && prev[nextKey]) {
+                setStatus(`ID ${nextId} 已存在，不能重复。`)
+                return prev
+            }
+            const draft = { ...prev }
+            delete draft[selectedAffixKey]
+            draft[nextKey] = { ...next, id: nextId }
+            return draft
+        })
+        setSelectedAffixKey(nextKey)
+        setSelectedAffixKeys(prev =>
+            prev.map(key => (key === selectedAffixKey ? nextKey : key)).filter((key, idx, arr) => arr.indexOf(key) === idx)
+        )
+        setAffixSelectionAnchor(nextKey)
+        setAffixDirty(true)
     }
 
     function handleSelectTalent(key: string, index: number, options: { shift: boolean; ctrl: boolean }) {
@@ -1437,6 +1982,200 @@ export function App() {
         setBuffDirty(true)
     }
 
+    function handleSelectItem(key: string, index: number, options: { shift: boolean; ctrl: boolean }) {
+        const sourceRows = filteredItemRows
+        if (options.shift && itemSelectionAnchor) {
+            const anchorIndex = sourceRows.findIndex(row => row.key === itemSelectionAnchor)
+            if (anchorIndex >= 0) {
+                const [start, end] = anchorIndex <= index ? [anchorIndex, index] : [index, anchorIndex]
+                const nextKeys = sourceRows.slice(start, end + 1).map(row => row.key)
+                setSelectedItemKeys(nextKeys)
+                setSelectedItemKey(key)
+                return
+            }
+        }
+        if (options.ctrl) {
+            setSelectedItemKeys(prev => {
+                if (prev.includes(key)) {
+                    const next = prev.filter(item => item !== key)
+                    const active = next[next.length - 1] ?? ''
+                    setSelectedItemKey(active)
+                    return next
+                }
+                return [...prev, key]
+            })
+            setSelectedItemKey(key)
+            setItemSelectionAnchor(key)
+            return
+        }
+        setSelectedItemKeys([key])
+        setSelectedItemKey(key)
+        setItemSelectionAnchor(key)
+    }
+
+    function handleDeleteItems() {
+        const targets = selectedItemKeys.length > 0 ? selectedItemKeys : selectedItemKey ? [selectedItemKey] : []
+        if (targets.length === 0) return
+        const targetSet = new Set(targets)
+        const remainingRows = itemRows.filter(row => !targetSet.has(row.key))
+        const nextActive = remainingRows[0]?.key ?? ''
+        setItemMap(prev => {
+            const draft = { ...prev }
+            targets.forEach(key => delete draft[key])
+            return draft
+        })
+        setSelectedItemKey(nextActive)
+        setSelectedItemKeys(nextActive ? [nextActive] : [])
+        setItemSelectionAnchor(nextActive)
+        setItemDirty(true)
+        setStatus(`已删除 ${targets.length} 条 Item 数据。`)
+    }
+
+    function handleBatchPrefixItemIds(prefix: string) {
+        if (!/^\d+$/.test(prefix)) {
+            setStatus('批量修改ID失败：请输入数字开头。')
+            return
+        }
+        const targets = selectedItemKeys.length > 0 ? selectedItemKeys : selectedItemKey ? [selectedItemKey] : []
+        if (targets.length === 0) {
+            setStatus('请先选中要修改的 Item。')
+            return
+        }
+        const orderedTargets = [...targets].sort((a, b) => (itemMap[a]?.id ?? 0) - (itemMap[b]?.id ?? 0))
+        const nextKeys = orderedTargets.map((_, index) => String(Number(`${prefix}${index + 1}`)))
+        const nextKeySet = new Set(nextKeys)
+        if (nextKeySet.size !== nextKeys.length) {
+            setStatus('批量修改ID失败：新ID出现重复。')
+            return
+        }
+        const occupied = new Set(Object.keys(itemMap).filter(key => !orderedTargets.includes(key)))
+        const conflict = nextKeys.find(key => occupied.has(key))
+        if (conflict) {
+            setStatus(`批量修改ID失败：目标ID ${conflict} 已存在。`)
+            return
+        }
+        setItemMap(prev => {
+            const draft = { ...prev }
+            orderedTargets.forEach(oldKey => delete draft[oldKey])
+            orderedTargets.forEach((oldKey, index) => {
+                const nextKey = nextKeys[index]
+                const row = prev[oldKey]
+                if (!row) return
+                draft[nextKey] = { ...row, id: Number(nextKey) }
+            })
+            return draft
+        })
+        const nextActive = nextKeys[0] ?? ''
+        setSelectedItemKey(nextActive)
+        setSelectedItemKeys(nextKeys)
+        setItemSelectionAnchor(nextActive)
+        setItemDirty(true)
+    }
+
+    function handleAddItem(id: number) {
+        const key = String(id)
+        setAddItemOpen(false)
+        if (itemMap[key]) {
+            setSelectedItemKey(key)
+            setSelectedItemKeys([key])
+            setItemSelectionAnchor(key)
+            setStatus(`Item ID ${id} 已存在，已定位到该条目。`)
+            return
+        }
+        setItemMap(prev => ({ ...prev, [key]: createEmptyItem(id) }))
+        setSelectedItemKey(key)
+        setSelectedItemKeys([key])
+        setItemSelectionAnchor(key)
+        setItemDirty(true)
+    }
+
+    function handleCopyItem() {
+        const targets = selectedItemKeys.length > 0 ? selectedItemKeys : selectedItemKey ? [selectedItemKey] : []
+        if (targets.length === 0) return
+        const copied = targets
+            .map(key => itemMap[key])
+            .filter((item): item is ItemEntry => Boolean(item))
+            .sort((a, b) => a.id - b.id)
+            .map(item => cloneItemEntry(item))
+        if (copied.length === 0) return
+        setItemClipboard(copied)
+        setStatus(copied.length === 1 ? `已复制 Item ${copied[0].id}` : `已复制 ${copied.length} 条 Item 数据`)
+    }
+
+    function handlePasteItem() {
+        if (itemClipboard.length === 0) return
+        const existingKeys = new Set(Object.keys(itemMap))
+        const inserts: Array<{ key: string; row: ItemEntry }> = []
+        const conflicts: ItemEntry[] = []
+        itemClipboard.forEach(item => {
+            const id = Number(item.id)
+            if (!Number.isFinite(id) || id <= 0) return
+            const key = String(id)
+            if (existingKeys.has(key)) {
+                conflicts.push(item)
+                return
+            }
+            inserts.push({ key, row: { ...cloneItemEntry(item), id } })
+            existingKeys.add(key)
+        })
+        if (conflicts.length > 0) {
+            const prefixText = window.prompt(`检测到 ${conflicts.length} 条Item ID重复，请输入新的ID前缀（例如 52）`)
+            if (prefixText === null) return
+            const prefix = prefixText.trim()
+            if (!/^\d+$/.test(prefix)) {
+                setStatus('粘贴失败：请输入数字前缀。')
+                return
+            }
+            for (let index = 0; index < conflicts.length; index += 1) {
+                const nextKey = String(Number(`${prefix}${index + 1}`))
+                if (existingKeys.has(nextKey)) {
+                    setStatus(`粘贴失败：批量重命名ID冲突（${nextKey}）。`)
+                    return
+                }
+                inserts.push({ key: nextKey, row: { ...cloneItemEntry(conflicts[index]), id: Number(nextKey) } })
+                existingKeys.add(nextKey)
+            }
+        }
+        if (inserts.length === 0) return
+        setItemMap(prev => {
+            const draft = { ...prev }
+            inserts.forEach(({ key, row }) => {
+                draft[key] = row
+            })
+            return draft
+        })
+        const nextKeys = inserts.map(item => item.key)
+        setSelectedItemKey(nextKeys[0] ?? '')
+        setSelectedItemKeys(nextKeys)
+        setItemSelectionAnchor(nextKeys[0] ?? '')
+        setItemDirty(true)
+    }
+
+    function handleChangeItemForm(patch: Partial<ItemEntry>) {
+        if (!selectedItemKey || !itemMap[selectedItemKey]) return
+        const current = itemMap[selectedItemKey]
+        const next = { ...current, ...patch }
+        const nextId = Number(next.id || 0)
+        if (!Number.isFinite(nextId) || nextId <= 0) return
+        const nextKey = String(nextId)
+        setItemMap(prev => {
+            if (nextKey !== selectedItemKey && prev[nextKey]) {
+                setStatus(`Item ID ${nextId} 已存在，不能重复。`)
+                return prev
+            }
+            const draft = { ...prev }
+            delete draft[selectedItemKey]
+            draft[nextKey] = { ...next, id: nextId }
+            return draft
+        })
+        setSelectedItemKey(nextKey)
+        setSelectedItemKeys(prev =>
+            prev.map(key => (key === selectedItemKey ? nextKey : key)).filter((key, idx, arr) => arr.indexOf(key) === idx)
+        )
+        setItemSelectionAnchor(nextKey)
+        setItemDirty(true)
+    }
+
     function handleSelectSkill(key: string, index: number, options: { shift: boolean; ctrl: boolean }) {
         const sourceRows = filteredSkillRows
         if (options.shift && skillSelectionAnchor) {
@@ -1851,6 +2590,17 @@ export function App() {
             return
         }
 
+        if (activeModule === 'item') {
+            if (!selectedItemKey || !itemMap[selectedItemKey]) return
+            setItemMap(prev => {
+                const current = prev[selectedItemKey]
+                if (!current) return prev
+                return { ...prev, [selectedItemKey]: { ...current, ...updater(current) } }
+            })
+            setItemDirty(true)
+            return
+        }
+
         if (activeModule === 'skill') {
             if (!selectedSkillKey || !skillMap[selectedSkillKey]) return
             setSkillMap(prev => {
@@ -1887,6 +2637,10 @@ export function App() {
             if (Object.keys(buffSeidMetaMap).length > 0) return true
             return loadBuffSeidMeta([workspaceRoot, projectPath, modRootPath], true)
         }
+        if (activeModule === 'item') {
+            if (Object.keys(itemSeidMetaMap).length > 0) return true
+            return loadItemSeidMeta([workspaceRoot, projectPath, modRootPath], true)
+        }
         if (activeModule === 'skill') {
             if (Object.keys(skillSeidMetaMap).length > 0) return true
             return loadSkillSeidMeta([workspaceRoot, projectPath, modRootPath], true)
@@ -1904,22 +2658,26 @@ export function App() {
         const selected =
             activeModule === 'buff'
                 ? selectedBuff
-                : activeModule === 'skill'
-                  ? selectedSkill
-                  : activeModule === 'staticskill'
-                    ? selectedStaticSkill
-                    : selectedTalent
+                : activeModule === 'item'
+                  ? selectedItem
+                  : activeModule === 'skill'
+                    ? selectedSkill
+                    : activeModule === 'staticskill'
+                      ? selectedStaticSkill
+                      : selectedTalent
         if (!selected) return
         const ok = await ensureSeidMetaLoaded()
         if (!ok) {
             setStatus(
                 activeModule === 'buff'
                     ? '未加载到 Buff Seid 元数据，请确认 editorMeta/BuffSeidMeta.json 路径和 JSON 格式。'
-                    : activeModule === 'skill'
-                      ? '未加载到 Skill Seid 元数据，请确认 editorMeta/SkillSeidMeta.json 路径和 JSON 格式。'
-                      : activeModule === 'staticskill'
-                        ? '未加载到 StaticSkill Seid 元数据，请确认 editorMeta/StaticSkillSeidMeta.json 路径和 JSON 格式。'
-                        : '未加载到 Seid 元数据，请确认 editorMeta/CreateAvatarSeidMeta.json 路径和 JSON 格式。'
+                    : activeModule === 'item'
+                      ? '未加载到 Item Seid 元数据，请确认 editorMeta/ItemUseSeidMeta.json 路径和 JSON 格式。'
+                      : activeModule === 'skill'
+                        ? '未加载到 Skill Seid 元数据，请确认 editorMeta/SkillSeidMeta.json 路径和 JSON 格式。'
+                        : activeModule === 'staticskill'
+                          ? '未加载到 StaticSkill Seid 元数据，请确认 editorMeta/StaticSkillSeidMeta.json 路径和 JSON 格式。'
+                          : '未加载到 Seid 元数据，请确认 editorMeta/CreateAvatarSeidMeta.json 路径和 JSON 格式。'
             )
         }
         const first = selected.seid[0] ?? null
@@ -1958,11 +2716,13 @@ export function App() {
         const currentList =
             activeModule === 'buff'
                 ? (selectedBuff?.seid ?? [])
-                : activeModule === 'skill'
-                  ? (selectedSkill?.seid ?? [])
-                  : activeModule === 'staticskill'
-                    ? (selectedStaticSkill?.seid ?? [])
-                    : (selectedTalent?.seid ?? [])
+                : activeModule === 'item'
+                  ? (selectedItem?.seid ?? [])
+                  : activeModule === 'skill'
+                    ? (selectedSkill?.seid ?? [])
+                    : activeModule === 'staticskill'
+                      ? (selectedStaticSkill?.seid ?? [])
+                      : (selectedTalent?.seid ?? [])
         const nextId = currentList.find(id => id !== activeSeidId) ?? null
         setActiveSeidId(nextId)
     }
@@ -2014,6 +2774,12 @@ export function App() {
             setModRootPath(inferred)
             setActiveModule('')
             setViewMode('todo')
+            setSelectedAffixKey('')
+            setSelectedAffixKeys([])
+            setAffixSelectionAnchor('')
+            setAffixMap({})
+            setAffixCachePath('')
+            setAffixDirty(false)
             setSelectedTalentKey('')
             setSelectedTalentKeys([])
             setTalentSelectionAnchor('')
@@ -2026,6 +2792,12 @@ export function App() {
             setBuffMap({})
             setBuffCachePath('')
             setBuffDirty(false)
+            setSelectedItemKey('')
+            setSelectedItemKeys([])
+            setItemSelectionAnchor('')
+            setItemMap({})
+            setItemCachePath('')
+            setItemDirty(false)
             setSelectedSkillKey('')
             setSelectedSkillKeys([])
             setSkillSelectionAnchor('')
@@ -2074,6 +2846,11 @@ export function App() {
                 joinWinPath,
                 saveFilePayload,
             })
+            const affixFileCount = await saveAffixFile({
+                affixMap,
+                affixPath,
+                saveFilePayload,
+            })
 
             const buffFileCount = await saveBuffFiles({
                 buffMap,
@@ -2083,6 +2860,18 @@ export function App() {
             })
             const buffSeidFileCount = await saveBuffSeidFiles({
                 buffMap,
+                modRootPath,
+                joinWinPath,
+                saveFilePayload,
+            })
+            const itemFileCount = await saveItemFiles({
+                itemMap,
+                modRootPath,
+                joinWinPath,
+                saveFilePayload,
+            })
+            const itemSeidFileCount = await saveItemSeidFiles({
+                itemMap,
                 modRootPath,
                 joinWinPath,
                 saveFilePayload,
@@ -2112,16 +2901,20 @@ export function App() {
             })
 
             setConfigDirty(false)
+            setAffixDirty(false)
             setTalentDirty(false)
             setBuffDirty(false)
+            setItemDirty(false)
             setSkillDirty(false)
             setStaticSkillDirty(false)
+            setAffixCachePath(affixPath)
             setTalentCachePath(talentTarget)
             setBuffCachePath(buffDirPath)
+            setItemCachePath(itemDirPath)
             setSkillCachePath(skillDirPath)
             setStaticSkillCachePath(staticSkillPath)
             setStatus(
-                `项目已保存：${moduleConfigPath}；天赋Seid ${seidFileCount} 个；Buff ${buffFileCount} 个，BuffSeid ${buffSeidFileCount} 个；Skill ${skillFileCount} 个，SkillSeid ${skillSeidFileCount} 个；StaticSkill ${staticSkillFileCount} 条，StaticSkillSeid ${staticSkillSeidFileCount} 个`
+                `项目已保存：${moduleConfigPath}；词缀 ${affixFileCount} 条；天赋Seid ${seidFileCount} 个；Buff ${buffFileCount} 个，BuffSeid ${buffSeidFileCount} 个；Item ${itemFileCount} 个，ItemSeid ${itemSeidFileCount} 个；Skill ${skillFileCount} 个，SkillSeid ${skillSeidFileCount} 个；StaticSkill ${staticSkillFileCount} 条，StaticSkillSeid ${staticSkillSeidFileCount} 个`
             )
         } catch (error) {
             setStatus(`保存项目失败: ${String(error)}`)
@@ -2140,7 +2933,7 @@ export function App() {
     return (
         <div className="app-shell" data-active-path={activePath} data-status={status}>
             <AppTopBarMenu
-                configDirty={configDirty || talentDirty || buffDirty || skillDirty || staticSkillDirty}
+                configDirty={configDirty || affixDirty || talentDirty || buffDirty || itemDirty || skillDirty || staticSkillDirty}
                 onClose={() => appWindow.close()}
                 onCreateProject={() => setCreateOpen(true)}
                 onMinimize={() => appWindow.minimize()}
@@ -2167,12 +2960,28 @@ export function App() {
             />
             <AddTalentModal open={addTalentOpen} onClose={() => setAddTalentOpen(false)} onSubmit={handleAddTalent} />
             <AddTalentModal
+                open={addAffixOpen}
+                onClose={() => setAddAffixOpen(false)}
+                onSubmit={handleAddAffix}
+                title="新增词缀"
+                confirmText="确认新增"
+                placeholder="例如: 70001"
+            />
+            <AddTalentModal
                 open={addBuffOpen}
                 onClose={() => setAddBuffOpen(false)}
                 onSubmit={handleAddBuff}
                 title="新增 Buff"
                 confirmText="确认新增"
                 placeholder="例如: 52000"
+            />
+            <AddTalentModal
+                open={addItemOpen}
+                onClose={() => setAddItemOpen(false)}
+                onSubmit={handleAddItem}
+                title="新增物品"
+                confirmText="确认新增"
+                placeholder="例如: 52500"
             />
             <AddTalentModal
                 open={addSkillOpen}
@@ -2219,20 +3028,24 @@ export function App() {
                 seidData={
                     activeModule === 'buff'
                         ? (selectedBuff?.seidData ?? {})
-                        : activeModule === 'skill'
-                          ? (selectedSkill?.seidData ?? {})
-                          : activeModule === 'staticskill'
-                            ? (selectedStaticSkill?.seidData ?? {})
-                            : (selectedTalent?.seidData ?? {})
+                        : activeModule === 'item'
+                          ? (selectedItem?.seidData ?? {})
+                          : activeModule === 'skill'
+                            ? (selectedSkill?.seidData ?? {})
+                            : activeModule === 'staticskill'
+                              ? (selectedStaticSkill?.seidData ?? {})
+                              : (selectedTalent?.seidData ?? {})
                 }
                 seidIds={
                     activeModule === 'buff'
                         ? (selectedBuff?.seid ?? [])
-                        : activeModule === 'skill'
-                          ? (selectedSkill?.seid ?? [])
-                          : activeModule === 'staticskill'
-                            ? (selectedStaticSkill?.seid ?? [])
-                            : (selectedTalent?.seid ?? [])
+                        : activeModule === 'item'
+                          ? (selectedItem?.seid ?? [])
+                          : activeModule === 'skill'
+                            ? (selectedSkill?.seid ?? [])
+                            : activeModule === 'staticskill'
+                              ? (selectedStaticSkill?.seid ?? [])
+                              : (selectedTalent?.seid ?? [])
                 }
             />
             <SeidPickerModal
@@ -2243,11 +3056,13 @@ export function App() {
                 selectedIds={
                     activeModule === 'buff'
                         ? (selectedBuff?.seid ?? [])
-                        : activeModule === 'skill'
-                          ? (selectedSkill?.seid ?? [])
-                          : activeModule === 'staticskill'
-                            ? (selectedStaticSkill?.seid ?? [])
-                            : (selectedTalent?.seid ?? [])
+                        : activeModule === 'item'
+                          ? (selectedItem?.seid ?? [])
+                          : activeModule === 'skill'
+                            ? (selectedSkill?.seid ?? [])
+                            : activeModule === 'staticskill'
+                              ? (selectedStaticSkill?.seid ?? [])
+                              : (selectedTalent?.seid ?? [])
                 }
             />
             <FolderContextMenu
@@ -2278,73 +3093,101 @@ export function App() {
                         searchText={tableSearchText}
                         onSearchTextChange={setTableSearchText}
                         onAddTalent={() =>
-                            activeModule === 'buff'
-                                ? setAddBuffOpen(true)
-                                : activeModule === 'skill'
-                                  ? setAddSkillOpen(true)
-                                  : activeModule === 'staticskill'
-                                    ? setAddStaticSkillOpen(true)
-                                    : setAddTalentOpen(true)
+                            activeModule === 'affix'
+                                ? setAddAffixOpen(true)
+                                : activeModule === 'buff'
+                                  ? setAddBuffOpen(true)
+                                  : activeModule === 'item'
+                                    ? setAddItemOpen(true)
+                                    : activeModule === 'skill'
+                                      ? setAddSkillOpen(true)
+                                      : activeModule === 'staticskill'
+                                        ? setAddStaticSkillOpen(true)
+                                        : setAddTalentOpen(true)
                         }
                         onBatchPrefixIds={prefix => {
+                            if (activeModule === 'affix') return handleBatchPrefixAffixIds(prefix)
                             if (activeModule === 'buff') return handleBatchPrefixBuffIds(prefix)
+                            if (activeModule === 'item') return handleBatchPrefixItemIds(prefix)
                             if (activeModule === 'skill') return handleBatchPrefixSkillIds(prefix)
                             if (activeModule === 'staticskill') return handleBatchPrefixStaticSkillIds(prefix)
                             return handleBatchPrefixIds(prefix)
                         }}
                         onDeleteTalents={() => {
+                            if (activeModule === 'affix') return handleDeleteAffixes()
                             if (activeModule === 'buff') return handleDeleteBuffs()
+                            if (activeModule === 'item') return handleDeleteItems()
                             if (activeModule === 'skill') return handleDeleteSkills()
                             if (activeModule === 'staticskill') return handleDeleteStaticSkills()
                             return handleDeleteTalents()
                         }}
                         onCopyTalent={() => {
+                            if (activeModule === 'affix') return handleCopyAffix()
                             if (activeModule === 'buff') return handleCopyBuff()
+                            if (activeModule === 'item') return handleCopyItem()
                             if (activeModule === 'skill') return handleCopySkill()
                             if (activeModule === 'staticskill') return handleCopyStaticSkill()
                             return handleCopyTalent()
                         }}
                         onPasteTalent={() => {
+                            if (activeModule === 'affix') return handlePasteAffix()
                             if (activeModule === 'buff') return handlePasteBuff()
+                            if (activeModule === 'item') return handlePasteItem()
                             if (activeModule === 'skill') return handlePasteSkill()
                             if (activeModule === 'staticskill') return handlePasteStaticSkill()
                             return handlePasteTalent()
                         }}
                         onSelectTalent={(key, index, options) =>
-                            activeModule === 'buff'
-                                ? handleSelectBuff(key, index, options)
-                                : activeModule === 'skill'
-                                  ? handleSelectSkill(key, index, options)
-                                  : activeModule === 'staticskill'
-                                    ? handleSelectStaticSkill(key, index, options)
-                                    : handleSelectTalent(key, index, options)
+                            activeModule === 'affix'
+                                ? handleSelectAffix(key, index, options)
+                                : activeModule === 'buff'
+                                  ? handleSelectBuff(key, index, options)
+                                  : activeModule === 'item'
+                                    ? handleSelectItem(key, index, options)
+                                    : activeModule === 'skill'
+                                      ? handleSelectSkill(key, index, options)
+                                      : activeModule === 'staticskill'
+                                        ? handleSelectStaticSkill(key, index, options)
+                                        : handleSelectTalent(key, index, options)
                         }
                         rows={
-                            activeModule === 'buff'
-                                ? filteredBuffRows
-                                : activeModule === 'skill'
-                                  ? filteredSkillRows
-                                  : activeModule === 'staticskill'
-                                    ? filteredStaticSkillRows
-                                    : filteredAvatarRows
+                            activeModule === 'affix'
+                                ? filteredAffixRows
+                                : activeModule === 'buff'
+                                  ? filteredBuffRows
+                                  : activeModule === 'item'
+                                    ? filteredItemRows
+                                    : activeModule === 'skill'
+                                      ? filteredSkillRows
+                                      : activeModule === 'staticskill'
+                                        ? filteredStaticSkillRows
+                                        : filteredAvatarRows
                         }
                         selectedTalentKey={
-                            activeModule === 'buff'
-                                ? selectedBuffKey
-                                : activeModule === 'skill'
-                                  ? selectedSkillKey
-                                  : activeModule === 'staticskill'
-                                    ? selectedStaticSkillKey
-                                    : selectedTalentKey
+                            activeModule === 'affix'
+                                ? selectedAffixKey
+                                : activeModule === 'buff'
+                                  ? selectedBuffKey
+                                  : activeModule === 'item'
+                                    ? selectedItemKey
+                                    : activeModule === 'skill'
+                                      ? selectedSkillKey
+                                      : activeModule === 'staticskill'
+                                        ? selectedStaticSkillKey
+                                        : selectedTalentKey
                         }
                         selectedTalentKeys={
-                            activeModule === 'buff'
-                                ? selectedBuffKeys
-                                : activeModule === 'skill'
-                                  ? selectedSkillKeys
-                                  : activeModule === 'staticskill'
-                                    ? selectedStaticSkillKeys
-                                    : selectedTalentKeys
+                            activeModule === 'affix'
+                                ? selectedAffixKeys
+                                : activeModule === 'buff'
+                                  ? selectedBuffKeys
+                                  : activeModule === 'item'
+                                    ? selectedItemKeys
+                                    : activeModule === 'skill'
+                                      ? selectedSkillKeys
+                                      : activeModule === 'staticskill'
+                                        ? selectedStaticSkillKeys
+                                        : selectedTalentKeys
                         }
                     />
                 ) : null}
@@ -2358,14 +3201,19 @@ export function App() {
                             setConfigForm(prev => ({ ...prev, ...patch }))
                             setConfigDirty(true)
                         }}
+                        affixForm={selectedAffix}
+                        onChangeAffixForm={handleChangeAffixForm}
                         onChangeTalentForm={handleChangeTalentForm}
                         buffForm={selectedBuff}
                         onChangeBuffForm={handleChangeBuffForm}
+                        itemForm={selectedItem}
+                        onChangeItemForm={handleChangeItemForm}
                         skillForm={selectedSkill}
                         onChangeSkillForm={handleChangeSkillForm}
                         staticSkillForm={selectedStaticSkill}
                         onChangeStaticSkillForm={handleChangeStaticSkillForm}
                         buffIconDir={buffIconDirPath}
+                        itemIconDir={itemIconDirPath}
                         skillIconDir={skillIconDirPath}
                         buffTypeOptions={buffTypeOptions}
                         buffTriggerOptions={buffTriggerOptions}
@@ -2375,6 +3223,14 @@ export function App() {
                         skillConsultTypeOptions={skillConsultTypeOptions}
                         skillPhaseOptions={skillPhaseOptions}
                         skillQualityOptions={skillQualityOptions}
+                        itemGuideTypeOptions={itemGuideTypeOptions}
+                        itemShopTypeOptions={itemShopTypeOptions}
+                        itemUseTypeOptions={itemUseTypeOptions}
+                        itemTypeOptions={itemTypeOptions}
+                        itemQualityOptions={itemQualityOptions}
+                        itemPhaseOptions={itemPhaseOptions}
+                        affixTypeOptions={affixTypeOptions}
+                        affixProjectTypeOptions={affixProjectTypeOptions}
                         onOpenSeidEditor={handleOpenSeidEditor}
                         seidDisplayRows={selectedSeidDisplayRows}
                         talentForm={selectedTalent}
