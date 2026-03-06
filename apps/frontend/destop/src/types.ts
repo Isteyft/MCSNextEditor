@@ -1,3 +1,5 @@
 export type { FilePayload, FsEntry } from './types/fs'
 export type { BuffEntry } from './types/buff'
+export type { SkillEntry } from './types/skill'
+export type { StaticSkillEntry } from './types/staticskill'
 export type { CreateAvatarEntry, TalentTypeOption } from './types/talent'

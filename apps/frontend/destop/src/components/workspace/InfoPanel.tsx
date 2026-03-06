@@ -1,5 +1,5 @@
-import { ClipboardPaste, Copy, Plus, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { ClipboardPaste, Copy, Plus, Search, Trash2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 import { ModuleKey } from '../../modules'
 
@@ -14,6 +14,8 @@ export type CreateAvatarRow = {
 type InfoPanelProps = {
     activeModule: ModuleKey | ''
     rows: CreateAvatarRow[]
+    searchText: string
+    onSearchTextChange: (value: string) => void
     selectedTalentKey: string
     selectedTalentKeys: string[]
     onSelectTalent: (key: string, index: number, options: { shift: boolean; ctrl: boolean }) => void
@@ -27,6 +29,8 @@ type InfoPanelProps = {
 export function InfoPanel({
     activeModule,
     rows,
+    searchText,
+    onSearchTextChange,
     selectedTalentKey,
     selectedTalentKeys,
     onSelectTalent,
@@ -37,9 +41,14 @@ export function InfoPanel({
     onPasteTalent,
 }: InfoPanelProps) {
     const [menu, setMenu] = useState({ open: false, x: 0, y: 0 })
+    const [searchDraft, setSearchDraft] = useState(searchText)
+
+    useEffect(() => {
+        setSearchDraft(searchText)
+    }, [searchText])
 
     function handleBatchPrefix() {
-        const value = window.prompt('请输入ID开头数字，例如 40')
+        const value = window.prompt('请输入 ID 开头数字，例如 40')
         if (value === null) return
         const prefix = value.trim()
         if (!prefix) return
@@ -47,14 +56,17 @@ export function InfoPanel({
     }
 
     const isTableModule = activeModule === 'talent' || activeModule === 'buff'
-    const nameCol = activeModule === 'buff' ? 'Buff名字' : '天赋名字'
-    const cateCol = activeModule === 'buff' ? 'Buff类型' : '分类'
+    const isSkillModule = activeModule === 'skill' || activeModule === 'staticskill'
+    const isTableModuleFinal = isTableModule || isSkillModule
+    const nameCol =
+        activeModule === 'buff' ? 'Buff 名字' : activeModule === 'staticskill' ? '功法名字' : isSkillModule ? '神通名字' : '天赋名字'
+    const cateCol = activeModule === 'buff' ? 'Buff 类型' : activeModule === 'staticskill' ? '属性' : isSkillModule ? '优先级' : '分类'
 
     return (
         <section className="panel panel-data">
             <h2>数据内容</h2>
             <div className="panel-content">
-                {isTableModule ? (
+                {isTableModuleFinal ? (
                     <>
                         <div className="table-toolbar">
                             <button className="icon-btn" onClick={onAddTalent} title="新增" type="button">
@@ -69,6 +81,25 @@ export function InfoPanel({
                             <button className="icon-btn" onClick={onPasteTalent} title="粘贴" type="button">
                                 <ClipboardPaste size={14} />
                             </button>
+                            <div className="search-input-wrap">
+                                <input
+                                    className="table-search-input"
+                                    onChange={event => setSearchDraft(event.target.value)}
+                                    onKeyDown={event => {
+                                        if (event.key === 'Enter') onSearchTextChange(searchDraft)
+                                    }}
+                                    placeholder="搜索 id/name/desc/info"
+                                    value={searchDraft}
+                                />
+                                <button
+                                    className="search-action-btn"
+                                    onClick={() => onSearchTextChange(searchDraft)}
+                                    title="搜索"
+                                    type="button"
+                                >
+                                    <Search size={14} />
+                                </button>
+                            </div>
                         </div>
                         <div className="todo-table-wrap">
                             <table className="todo-table">
@@ -132,7 +163,7 @@ export function InfoPanel({
                                         }}
                                         type="button"
                                     >
-                                        批量修改ID开头
+                                        批量修改 ID 开头
                                     </button>
                                 </div>
                             </>

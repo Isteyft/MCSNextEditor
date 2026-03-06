@@ -1,6 +1,8 @@
 import { ViewMode } from '../../modules'
-import type { BuffEntry } from '../../types'
+import type { BuffEntry, SkillEntry, StaticSkillEntry } from '../../types'
 import { BuffForm } from '../buff/BuffForm'
+import { SkillForm } from '../skill/SkillForm'
+import { StaticSkillForm } from '../staticskill/StaticSkillForm'
 import { TalentForm } from '../tianfu/TalentForm'
 import { ProjectConfigForm } from './ProjectConfigForm'
 
@@ -29,11 +31,17 @@ type EditorPanelProps = {
     buffForm: BuffEntry | null
     buffIconDir: string
     onChangeBuffForm: (patch: Partial<BuffEntry>) => void
+    skillForm: SkillEntry | null
+    skillIconDir: string
+    onChangeSkillForm: (patch: Partial<SkillEntry>) => void
+    staticSkillForm: StaticSkillEntry | null
+    onChangeStaticSkillForm: (patch: Partial<StaticSkillEntry>) => void
     talentTypeOptions: { id: number; name: string }[]
     buffTypeOptions: { id: number; name: string }[]
     buffTriggerOptions: { id: number; name: string }[]
     buffRemoveTriggerOptions: { id: number; name: string }[]
     buffOverlayTypeOptions: { id: number; name: string }[]
+    skillAttackTypeOptions: { id: number; name: string }[]
     onOpenSeidEditor: () => void
     seidDisplayRows: { id: number; name: string }[]
 }
@@ -49,11 +57,17 @@ export function EditorPanel({
     buffForm,
     buffIconDir,
     onChangeBuffForm,
+    skillForm,
+    skillIconDir,
+    onChangeSkillForm,
+    staticSkillForm,
+    onChangeStaticSkillForm,
     talentTypeOptions,
     buffTypeOptions,
     buffTriggerOptions,
     buffRemoveTriggerOptions,
     buffOverlayTypeOptions,
+    skillAttackTypeOptions,
     onOpenSeidEditor,
     seidDisplayRows,
 }: EditorPanelProps) {
@@ -87,6 +101,24 @@ export function EditorPanel({
                             buffTriggerOptions={buffTriggerOptions}
                             buffRemoveTriggerOptions={buffRemoveTriggerOptions}
                             buffOverlayTypeOptions={buffOverlayTypeOptions}
+                        />
+                    ) : activeModule === 'skill' ? (
+                        <SkillForm
+                            skillIconDir={skillIconDir}
+                            onOpenSeidEditor={onOpenSeidEditor}
+                            seidDisplayRows={seidDisplayRows}
+                            values={skillForm}
+                            onChange={onChangeSkillForm}
+                            attackTypeOptions={skillAttackTypeOptions}
+                        />
+                    ) : activeModule === 'staticskill' ? (
+                        <StaticSkillForm
+                            skillIconDir={skillIconDir}
+                            onOpenSeidEditor={onOpenSeidEditor}
+                            seidDisplayRows={seidDisplayRows}
+                            values={staticSkillForm}
+                            onChange={onChangeStaticSkillForm}
+                            attackTypeOptions={skillAttackTypeOptions}
                         />
                     ) : (
                         <div className="todo-box">TODO: {activeModuleLabel}</div>

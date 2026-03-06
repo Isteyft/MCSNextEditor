@@ -497,6 +497,31 @@ body,
     align-items: center;
 }
 
+.multi-check-list {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--panel);
+    max-height: 160px;
+    overflow: auto;
+    padding: 6px;
+    display: grid;
+    gap: 4px;
+}
+
+.multi-check-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--ink);
+    padding: 4px 6px;
+    border-radius: 6px;
+}
+
+.multi-check-item:hover {
+    background: var(--scroll-track);
+}
+
 .seid-preview-wrap {
     display: grid;
     gap: 8px;
@@ -583,6 +608,25 @@ body,
     display: flex;
     gap: 6px;
     margin-bottom: 8px;
+    align-items: center;
+}
+
+.table-search-input {
+    height: 28px;
+    min-width: 180px;
+    width: 100%;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--panel);
+    color: var(--ink);
+    font-size: 12px;
+}
+
+.table-search-input:focus,
+.modal-search-input:focus {
+    outline: none;
+    border-color: var(--accent);
 }
 
 .icon-btn {
@@ -717,6 +761,43 @@ body,
     overflow: auto;
     display: grid;
     gap: 6px;
+}
+
+.modal-search-input {
+    height: 30px;
+    width: 100%;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--panel);
+    color: var(--ink);
+    font-size: 12px;
+}
+
+.search-input-wrap {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 6px;
+    min-width: 220px;
+    width: min(360px, 100%);
+}
+
+.search-action-btn {
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--panel);
+    color: var(--ink);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.search-action-btn:hover {
+    background: var(--selected-bg);
 }
 
 .seid-picker-row {

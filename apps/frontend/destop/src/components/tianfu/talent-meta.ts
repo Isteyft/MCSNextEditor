@@ -95,7 +95,9 @@ export async function readEnumOptionsByFileName(params: {
                 .map(item => ({
                     id: Number(
                         (item as Record<string, unknown>).TypeID ??
+                            (item as Record<string, unknown>).TypeId ??
                             (item as Record<string, unknown>).ID ??
+                            (item as Record<string, unknown>).Id ??
                             (item as Record<string, unknown>).id ??
                             0
                     ),

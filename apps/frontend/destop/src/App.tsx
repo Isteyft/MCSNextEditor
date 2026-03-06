@@ -13,6 +13,22 @@ import {
 import { CreateProjectModal } from './components/project/CreateProjectModal'
 import { FolderContextMenu } from './components/project/FolderContextMenu'
 import { RenameFolderModal } from './components/project/RenameFolderModal'
+import {
+    createEmptySkill,
+    loadSkillFiles,
+    mergeSkillSeidFiles,
+    saveSkillFiles,
+    saveSkillSeidFiles,
+    toSkillRows,
+} from './components/skill/skill-domain'
+import {
+    createEmptyStaticSkill,
+    mergeStaticSkillSeidFiles,
+    normalizeStaticSkillMap,
+    saveStaticSkillFile,
+    saveStaticSkillSeidFiles,
+    toStaticSkillRows,
+} from './components/staticskill/staticskill-domain'
 import { AddTalentModal } from './components/tianfu/AddTalentModal'
 import { SeidEditorModal } from './components/tianfu/SeidEditorModal'
 import { SeidMetaItem, SeidPickerModal } from './components/tianfu/SeidPickerModal'
@@ -40,7 +56,7 @@ import {
     renameModFolder,
     saveFilePayload,
 } from './services/project-api'
-import type { BuffEntry, CreateAvatarEntry, TalentTypeOption } from './types'
+import type { BuffEntry, CreateAvatarEntry, SkillEntry, StaticSkillEntry, TalentTypeOption } from './types'
 import { findModRoot, inferModRootPath, isModRootPath, joinWinPath, pickLeafName, pickProjectTail } from './utils/path'
 
 const appWindow = getCurrentWindow()
@@ -79,6 +95,20 @@ export function App() {
     const [selectedBuffKeys, setSelectedBuffKeys] = useState<string[]>([])
     const [buffSelectionAnchor, setBuffSelectionAnchor] = useState('')
     const [buffClipboard, setBuffClipboard] = useState<BuffEntry[]>([])
+    const [skillMap, setSkillMap] = useState<Record<string, SkillEntry>>({})
+    const [skillCachePath, setSkillCachePath] = useState('')
+    const [skillDirty, setSkillDirty] = useState(false)
+    const [selectedSkillKey, setSelectedSkillKey] = useState('')
+    const [selectedSkillKeys, setSelectedSkillKeys] = useState<string[]>([])
+    const [skillSelectionAnchor, setSkillSelectionAnchor] = useState('')
+    const [skillClipboard, setSkillClipboard] = useState<SkillEntry[]>([])
+    const [staticSkillMap, setStaticSkillMap] = useState<Record<string, StaticSkillEntry>>({})
+    const [staticSkillCachePath, setStaticSkillCachePath] = useState('')
+    const [staticSkillDirty, setStaticSkillDirty] = useState(false)
+    const [selectedStaticSkillKey, setSelectedStaticSkillKey] = useState('')
+    const [selectedStaticSkillKeys, setSelectedStaticSkillKeys] = useState<string[]>([])
+    const [staticSkillSelectionAnchor, setStaticSkillSelectionAnchor] = useState('')
+    const [staticSkillClipboard, setStaticSkillClipboard] = useState<StaticSkillEntry[]>([])
     const [talentTypeOptions, setTalentTypeOptions] = useState<TalentTypeOption[]>([])
     const [seidMetaMap, setSeidMetaMap] = useState<Record<number, SeidMetaItem>>({})
     const [buffSeidMetaMap, setBuffSeidMetaMap] = useState<Record<number, SeidMetaItem>>({})
@@ -86,6 +116,9 @@ export function App() {
     const [buffTriggerOptions, setBuffTriggerOptions] = useState<TalentTypeOption[]>([])
     const [buffRemoveTriggerOptions, setBuffRemoveTriggerOptions] = useState<TalentTypeOption[]>([])
     const [buffOverlayTypeOptions, setBuffOverlayTypeOptions] = useState<TalentTypeOption[]>([])
+    const [skillAttackTypeOptions, setSkillAttackTypeOptions] = useState<TalentTypeOption[]>([])
+    const [skillSeidMetaMap, setSkillSeidMetaMap] = useState<Record<number, SeidMetaItem>>({})
+    const [staticSkillSeidMetaMap, setStaticSkillSeidMetaMap] = useState<Record<number, SeidMetaItem>>({})
     const [drawerOptionsMap, setDrawerOptionsMap] = useState<Record<string, TalentTypeOption[]>>({})
     const [buffDrawerFallbackOptions, setBuffDrawerFallbackOptions] = useState<TalentTypeOption[]>([])
     const [seidEditorOpen, setSeidEditorOpen] = useState(false)
@@ -93,6 +126,9 @@ export function App() {
     const [activeSeidId, setActiveSeidId] = useState<number | null>(null)
     const [addTalentOpen, setAddTalentOpen] = useState(false)
     const [addBuffOpen, setAddBuffOpen] = useState(false)
+    const [addSkillOpen, setAddSkillOpen] = useState(false)
+    const [addStaticSkillOpen, setAddStaticSkillOpen] = useState(false)
+    const [tableSearchText, setTableSearchText] = useState('')
 
     const [treeExpanded, setTreeExpanded] = useState(true)
     const [createOpen, setCreateOpen] = useState(false)
@@ -109,30 +145,93 @@ export function App() {
     )
     const buffDirPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Data', 'BuffJsonData') : ''), [modRootPath])
     const buffIconDirPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Assets', 'Buff Icon') : ''), [modRootPath])
+    const skillDirPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Data', 'skillJsonData') : ''), [modRootPath])
+    const skillIconDirPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Assets', 'skill Icon') : ''), [modRootPath])
+    const staticSkillPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Data', 'StaticSkillJsonData.json') : ''), [modRootPath])
     const modFolderName = useMemo(() => pickLeafName(modRootPath) || 'mod默认', [modRootPath])
     const avatarRows = useMemo(() => toTalentRows(talentMap), [talentMap])
     const buffRows = useMemo(() => toBuffRows(buffMap), [buffMap])
+    const skillRows = useMemo(() => toSkillRows(skillMap), [skillMap])
+    const staticSkillRows = useMemo(() => toStaticSkillRows(staticSkillMap), [staticSkillMap])
+    const filteredAvatarRows = useMemo(() => {
+        const keyword = tableSearchText.trim().toLowerCase()
+        if (!keyword) return avatarRows
+        return avatarRows.filter(row => {
+            const source = talentMap[row.key]
+            const haystack = `${row.id} ${row.title} ${row.desc} ${source?.Info ?? ''}`.toLowerCase()
+            return haystack.includes(keyword)
+        })
+    }, [avatarRows, talentMap, tableSearchText])
+    const filteredBuffRows = useMemo(() => {
+        const keyword = tableSearchText.trim().toLowerCase()
+        if (!keyword) return buffRows
+        return buffRows.filter(row => {
+            const source = buffMap[row.key]
+            const haystack = `${row.id} ${row.title} ${row.desc} ${source?.skillEffect ?? ''}`.toLowerCase()
+            return haystack.includes(keyword)
+        })
+    }, [buffRows, buffMap, tableSearchText])
+    const filteredSkillRows = useMemo(() => {
+        const keyword = tableSearchText.trim().toLowerCase()
+        if (!keyword) return skillRows
+        return skillRows.filter(row => {
+            const source = skillMap[row.key]
+            const haystack =
+                `${row.id} ${source?.Skill_ID ?? ''} ${row.title} ${row.desc} ${source?.TuJiandescr ?? ''} ${source?.skillEffect ?? ''}`.toLowerCase()
+            return haystack.includes(keyword)
+        })
+    }, [skillRows, skillMap, tableSearchText])
+    const filteredStaticSkillRows = useMemo(() => {
+        const keyword = tableSearchText.trim().toLowerCase()
+        if (!keyword) return staticSkillRows
+        return staticSkillRows.filter(row => {
+            const source = staticSkillMap[row.key]
+            const haystack = `${row.id} ${source?.Skill_ID ?? ''} ${row.title} ${row.desc} ${source?.TuJiandescr ?? ''}`.toLowerCase()
+            return haystack.includes(keyword)
+        })
+    }, [staticSkillRows, staticSkillMap, tableSearchText])
     const selectedTalent = useMemo(
         () => (selectedTalentKey ? (talentMap[selectedTalentKey] ?? null) : null),
         [talentMap, selectedTalentKey]
     )
     const selectedBuff = useMemo(() => (selectedBuffKey ? (buffMap[selectedBuffKey] ?? null) : null), [buffMap, selectedBuffKey])
-    const activeModuleLabel = useMemo(() => MODULES.find(item => item.key === activeModule)?.label ?? '-', [activeModule])
-    const activeSeidMetaMap = useMemo(
-        () => (activeModule === 'buff' ? buffSeidMetaMap : seidMetaMap),
-        [activeModule, buffSeidMetaMap, seidMetaMap]
+    const selectedSkill = useMemo(() => (selectedSkillKey ? (skillMap[selectedSkillKey] ?? null) : null), [skillMap, selectedSkillKey])
+    const selectedStaticSkill = useMemo(
+        () => (selectedStaticSkillKey ? (staticSkillMap[selectedStaticSkillKey] ?? null) : null),
+        [staticSkillMap, selectedStaticSkillKey]
     )
+    const activeModuleLabel = useMemo(() => MODULES.find(item => item.key === activeModule)?.label ?? '-', [activeModule])
+    const activeSeidMetaMap = useMemo(() => {
+        if (activeModule === 'buff') return buffSeidMetaMap
+        if (activeModule === 'skill') return skillSeidMetaMap
+        if (activeModule === 'staticskill') return staticSkillSeidMetaMap
+        return seidMetaMap
+    }, [activeModule, buffSeidMetaMap, skillSeidMetaMap, staticSkillSeidMetaMap, seidMetaMap])
     const seidPickerItems = useMemo(() => Object.values(activeSeidMetaMap).sort((a, b) => a.id - b.id), [activeSeidMetaMap])
     const selectedSeidDisplayRows = useMemo(() => {
-        const currentSeid = activeModule === 'buff' ? (selectedBuff?.seid ?? []) : (selectedTalent?.seid ?? [])
+        const currentSeid =
+            activeModule === 'buff'
+                ? (selectedBuff?.seid ?? [])
+                : activeModule === 'skill'
+                  ? (selectedSkill?.seid ?? [])
+                  : activeModule === 'staticskill'
+                    ? (selectedStaticSkill?.seid ?? [])
+                    : (selectedTalent?.seid ?? [])
         return currentSeid.map(id => ({
             id,
             name: activeSeidMetaMap[id]?.name ?? '',
         }))
-    }, [activeModule, selectedTalent, selectedBuff, activeSeidMetaMap])
+    }, [activeModule, selectedTalent, selectedBuff, selectedSkill, selectedStaticSkill, activeSeidMetaMap])
     const currentSeidOwner = useMemo(
-        () => (activeModule === 'buff' ? selectedBuff : selectedTalent),
-        [activeModule, selectedBuff, selectedTalent]
+        () =>
+            activeModule === 'buff'
+                ? selectedBuff
+                : activeModule === 'skill'
+                  ? selectedSkill
+                  : activeModule === 'staticskill'
+                    ? selectedStaticSkill
+                    : selectedTalent,
+        [activeModule, selectedBuff, selectedSkill, selectedStaticSkill, selectedTalent]
     )
 
     function cloneTalentEntry(entry: CreateAvatarEntry): CreateAvatarEntry {
@@ -144,6 +243,29 @@ export function App() {
     }
 
     function cloneBuffEntry(entry: BuffEntry): BuffEntry {
+        return {
+            ...entry,
+            Affix: [...entry.Affix],
+            seid: [...entry.seid],
+            seidData: JSON.parse(JSON.stringify(entry.seidData ?? {})) as Record<string, Record<string, string | number | number[]>>,
+        }
+    }
+
+    function cloneSkillEntry(entry: SkillEntry): SkillEntry {
+        return {
+            ...entry,
+            seid: [...entry.seid],
+            Affix: [...entry.Affix],
+            Affix2: [...entry.Affix2],
+            AttackType: [...entry.AttackType],
+            skill_SameCastNum: [...entry.skill_SameCastNum],
+            skill_CastType: [...entry.skill_CastType],
+            skill_Cast: [...entry.skill_Cast],
+            seidData: JSON.parse(JSON.stringify(entry.seidData ?? {})) as Record<string, Record<string, string | number | number[]>>,
+        }
+    }
+
+    function cloneStaticSkillEntry(entry: StaticSkillEntry): StaticSkillEntry {
         return {
             ...entry,
             Affix: [...entry.Affix],
@@ -184,6 +306,28 @@ export function App() {
     }, [buffRows, selectedBuffKey])
 
     useEffect(() => {
+        const validKeys = new Set(skillRows.map(row => row.key))
+        setSelectedSkillKeys(prev => prev.filter(key => validKeys.has(key)))
+        if (selectedSkillKey && !validKeys.has(selectedSkillKey)) {
+            const fallback = skillRows[0]?.key ?? ''
+            setSelectedSkillKey(fallback)
+            setSelectedSkillKeys(fallback ? [fallback] : [])
+            setSkillSelectionAnchor(fallback)
+        }
+    }, [skillRows, selectedSkillKey])
+
+    useEffect(() => {
+        const validKeys = new Set(staticSkillRows.map(row => row.key))
+        setSelectedStaticSkillKeys(prev => prev.filter(key => validKeys.has(key)))
+        if (selectedStaticSkillKey && !validKeys.has(selectedStaticSkillKey)) {
+            const fallback = staticSkillRows[0]?.key ?? ''
+            setSelectedStaticSkillKey(fallback)
+            setSelectedStaticSkillKeys(fallback ? [fallback] : [])
+            setStaticSkillSelectionAnchor(fallback)
+        }
+    }, [staticSkillRows, selectedStaticSkillKey])
+
+    useEffect(() => {
         let active = true
         ;(async () => {
             try {
@@ -192,7 +336,10 @@ export function App() {
                 setWorkspaceRoot(root)
                 await preloadMeta([root], true)
                 await loadBuffSeidMeta([root], true)
+                await loadSkillSeidMeta([root], true)
+                await loadStaticSkillSeidMeta([root], true)
                 await loadBuffEnumMeta([root], true)
+                await loadSkillEnumMeta([root], true)
                 await loadSpecialDrawerOptions([root], '', true)
             } catch {
                 // ignore startup preload failures
@@ -205,12 +352,16 @@ export function App() {
 
     useEffect(() => {
         function onKeyDown(event: KeyboardEvent) {
-            if (activeModule !== 'talent' && activeModule !== 'buff') return
+            if (activeModule !== 'talent' && activeModule !== 'buff' && activeModule !== 'skill' && activeModule !== 'staticskill') return
             if (isEditableElement(event.target)) return
             if (event.key === 'Delete') {
                 event.preventDefault()
                 if (activeModule === 'buff') {
                     handleDeleteBuffs()
+                } else if (activeModule === 'skill') {
+                    handleDeleteSkills()
+                } else if (activeModule === 'staticskill') {
+                    handleDeleteStaticSkills()
                 } else {
                     handleDeleteTalents()
                 }
@@ -222,6 +373,10 @@ export function App() {
                 event.preventDefault()
                 if (activeModule === 'buff') {
                     handleCopyBuff()
+                } else if (activeModule === 'skill') {
+                    handleCopySkill()
+                } else if (activeModule === 'staticskill') {
+                    handleCopyStaticSkill()
                 } else {
                     handleCopyTalent()
                 }
@@ -229,6 +384,10 @@ export function App() {
                 event.preventDefault()
                 if (activeModule === 'buff') {
                     handlePasteBuff()
+                } else if (activeModule === 'skill') {
+                    handlePasteSkill()
+                } else if (activeModule === 'staticskill') {
+                    handlePasteStaticSkill()
                 } else {
                     handlePasteTalent()
                 }
@@ -243,15 +402,27 @@ export function App() {
         activeModule,
         avatarRows,
         buffRows,
+        skillRows,
+        staticSkillRows,
         selectedTalent,
         selectedTalentKey,
         selectedTalentKeys,
         selectedBuffKey,
         selectedBuffKeys,
+        selectedSkill,
+        selectedSkillKey,
+        selectedSkillKeys,
+        selectedStaticSkill,
+        selectedStaticSkillKey,
+        selectedStaticSkillKeys,
         talentClipboard,
         buffClipboard,
+        skillClipboard,
+        staticSkillClipboard,
         talentMap,
         buffMap,
+        skillMap,
+        staticSkillMap,
     ])
 
     async function preloadMeta(roots: string[], silent = false) {
@@ -302,6 +473,50 @@ export function App() {
         return false
     }
 
+    async function loadSkillSeidMeta(roots: string[], silent = false) {
+        const candidates = Array.from(new Set(roots.filter(Boolean)))
+        for (const root of candidates) {
+            const result = await readSeidMetaByFileName({
+                rootPath: root,
+                fileName: 'SkillSeidMeta.json',
+                readFilePayload,
+            })
+            if (Object.keys(result.metaMap).length > 0) {
+                setSkillSeidMetaMap(result.metaMap)
+                if (!silent) {
+                    setStatus(`已加载 Skill Seid 元数据: ${result.loadedPath} (${Object.keys(result.metaMap).length} 条)`)
+                }
+                return true
+            }
+        }
+        if (!silent) {
+            setSkillSeidMetaMap({})
+        }
+        return false
+    }
+
+    async function loadStaticSkillSeidMeta(roots: string[], silent = false) {
+        const candidates = Array.from(new Set(roots.filter(Boolean)))
+        for (const root of candidates) {
+            const result = await readSeidMetaByFileName({
+                rootPath: root,
+                fileName: 'StaticSkillSeidMeta.json',
+                readFilePayload,
+            })
+            if (Object.keys(result.metaMap).length > 0) {
+                setStaticSkillSeidMetaMap(result.metaMap)
+                if (!silent) {
+                    setStatus(`已加载 StaticSkill Seid 元数据: ${result.loadedPath} (${Object.keys(result.metaMap).length} 条)`)
+                }
+                return true
+            }
+        }
+        if (!silent) {
+            setStaticSkillSeidMetaMap({})
+        }
+        return false
+    }
+
     async function loadBuffEnumMeta(roots: string[], silent = false) {
         const candidates = Array.from(new Set(roots.filter(Boolean)))
         const fileMap: Array<{ file: string; setter: (value: TalentTypeOption[]) => void; preferDesc?: boolean }> = [
@@ -339,6 +554,24 @@ export function App() {
         return loaded.length > 0
     }
 
+    async function loadSkillEnumMeta(roots: string[], silent = false) {
+        const candidates = Array.from(new Set(roots.filter(Boolean)))
+        for (const root of candidates) {
+            const result = await readEnumOptionsByFileName({
+                rootPath: root,
+                fileName: 'AttackType.json',
+                preferDesc: true,
+                readFilePayload,
+            })
+            if (result.options.length > 0) {
+                setSkillAttackTypeOptions(result.options)
+                return true
+            }
+        }
+        if (!silent) setSkillAttackTypeOptions([])
+        return false
+    }
+
     async function readIdNameOptionsFromDir(dirPath: string) {
         const options: TalentTypeOption[] = []
         let entries: Array<{ path: string; name: string; is_dir: boolean }> = []
@@ -352,7 +585,15 @@ export function App() {
             try {
                 const payload = await readFilePayload(entry.path)
                 const parsed = JSON.parse(payload.content) as Record<string, unknown>
-                const id = Number(parsed.id ?? parsed.ID ?? parsed.buffid ?? parsed.skillid ?? entry.name.replace(/\.json$/i, ''))
+                const id = Number(
+                    parsed.id ??
+                        parsed.ID ??
+                        parsed.Id ??
+                        parsed.buffid ??
+                        parsed.skillid ??
+                        parsed.Skill_ID ??
+                        entry.name.replace(/\.json$/i, '')
+                )
                 if (!Number.isFinite(id)) continue
                 const name = String(parsed.name ?? parsed.Name ?? parsed.Title ?? parsed.title ?? '')
                 options.push({ id, name })
@@ -431,6 +672,7 @@ export function App() {
         setActiveModule('')
         setViewMode('todo')
         setActivePath('')
+        setTableSearchText('')
         setConfigForm({ name: '', author: '', version: '0.0.1', description: '' })
         setRawConfigObject({})
         setPreservedSettings([])
@@ -447,10 +689,27 @@ export function App() {
         setSelectedBuffKeys([])
         setBuffSelectionAnchor('')
         setBuffClipboard([])
+        setSkillMap({})
+        setSkillCachePath('')
+        setSkillDirty(false)
+        setSelectedSkillKey('')
+        setSelectedSkillKeys([])
+        setSkillSelectionAnchor('')
+        setSkillClipboard([])
+        setStaticSkillMap({})
+        setStaticSkillCachePath('')
+        setStaticSkillDirty(false)
+        setSelectedStaticSkillKey('')
+        setSelectedStaticSkillKeys([])
+        setStaticSkillSelectionAnchor('')
+        setStaticSkillClipboard([])
         setBuffTypeOptions([])
         setBuffTriggerOptions([])
         setBuffRemoveTriggerOptions([])
         setBuffOverlayTypeOptions([])
+        setSkillAttackTypeOptions([])
+        setSkillSeidMetaMap({})
+        setStaticSkillSeidMetaMap({})
         setDrawerOptionsMap({})
         setBuffDrawerFallbackOptions([])
         setSelectedTalentKey('')
@@ -463,9 +722,14 @@ export function App() {
         setActiveSeidId(null)
         setTreeExpanded(true)
         setAddBuffOpen(false)
+        setAddSkillOpen(false)
+        setAddStaticSkillOpen(false)
         await preloadMeta([rootPath, nextModRoot, workspaceRoot], true)
         await loadBuffSeidMeta([rootPath, nextModRoot, workspaceRoot], true)
+        await loadSkillSeidMeta([rootPath, nextModRoot, workspaceRoot], true)
+        await loadStaticSkillSeidMeta([rootPath, nextModRoot, workspaceRoot], true)
         await loadBuffEnumMeta([rootPath, nextModRoot, workspaceRoot], true)
+        await loadSkillEnumMeta([rootPath, nextModRoot, workspaceRoot], true)
         await loadSpecialDrawerOptions([rootPath, nextModRoot, workspaceRoot], nextModRoot, true)
         setStatus(modRoot ? `项目已打开: ${rootPath}` : `项目已打开，未发现 mod 目录，按预设路径加载: ${nextModRoot}`)
     }
@@ -616,8 +880,93 @@ export function App() {
         }
     }
 
+    async function loadSkillTable() {
+        setViewMode('table')
+        setActivePath(skillDirPath)
+        if (!modRootPath || !skillDirPath) return
+        await preloadMeta([modRootPath, projectPath, workspaceRoot], true)
+        await loadSkillSeidMeta([modRootPath, projectPath, workspaceRoot], true)
+        await loadSkillEnumMeta([modRootPath, projectPath, workspaceRoot], true)
+        if (skillCachePath === skillDirPath) {
+            setStatus(skillDirty ? '已加载 Skill 数据（缓存，未保存）。' : '已加载 Skill 数据（缓存）。')
+            return
+        }
+        try {
+            const loaded = await loadSkillFiles({
+                modRootPath,
+                joinWinPath,
+                loadProjectEntries,
+                readFilePayload,
+            })
+            const finalData = await mergeSkillSeidFiles({
+                source: loaded,
+                modRootPath,
+                joinWinPath,
+                loadProjectEntries,
+                readFilePayload,
+            })
+            const firstKey = Object.keys(finalData).sort((a, b) => Number(a) - Number(b))[0] ?? ''
+            setSkillMap(finalData)
+            setSkillCachePath(skillDirPath)
+            setSkillDirty(false)
+            setSelectedSkillKey(firstKey)
+            setSelectedSkillKeys(firstKey ? [firstKey] : [])
+            setSkillSelectionAnchor(firstKey)
+            setStatus('已加载 Skill 数据（skillJsonData）。')
+        } catch (error) {
+            setStatus(`读取 Skill 数据失败: ${String(error)}`)
+        }
+    }
+
+    async function loadStaticSkillTable() {
+        setViewMode('table')
+        setActivePath(staticSkillPath)
+        if (!modRootPath || !staticSkillPath) return
+        await preloadMeta([modRootPath, projectPath, workspaceRoot], true)
+        await loadStaticSkillSeidMeta([modRootPath, projectPath, workspaceRoot], true)
+        await loadSkillEnumMeta([modRootPath, projectPath, workspaceRoot], true)
+        if (staticSkillCachePath === staticSkillPath) {
+            setStatus(staticSkillDirty ? '已加载功法数据（缓存，未保存）。' : '已加载功法数据（缓存）。')
+            return
+        }
+        try {
+            let payload
+            try {
+                payload = await readFilePayload(staticSkillPath)
+            } catch {
+                await saveFilePayload(staticSkillPath, '{}\n')
+                payload = await readFilePayload(staticSkillPath)
+            }
+            let parsed: unknown = {}
+            try {
+                parsed = JSON.parse(payload.content)
+            } catch {
+                parsed = {}
+            }
+            const normalized = normalizeStaticSkillMap(parsed)
+            const finalData = await mergeStaticSkillSeidFiles({
+                source: normalized,
+                modRootPath,
+                joinWinPath,
+                loadProjectEntries,
+                readFilePayload,
+            })
+            const firstKey = Object.keys(finalData).sort((a, b) => Number(a) - Number(b))[0] ?? ''
+            setStaticSkillMap(finalData)
+            setStaticSkillCachePath(staticSkillPath)
+            setStaticSkillDirty(false)
+            setSelectedStaticSkillKey(firstKey)
+            setSelectedStaticSkillKeys(firstKey ? [firstKey] : [])
+            setStaticSkillSelectionAnchor(firstKey)
+            setStatus('已加载功法数据（StaticSkillJsonData）。')
+        } catch (error) {
+            setStatus(`读取功法数据失败: ${String(error)}`)
+        }
+    }
+
     async function handleSelectModule(key: ModuleKey) {
         setActiveModule(key)
+        setTableSearchText('')
         if (key === 'project-config') {
             await loadConfigForm()
             return
@@ -630,9 +979,12 @@ export function App() {
             await loadBuffTable()
             return
         }
-        if (key === 'skill' || key === 'staticskill') {
-            setViewMode('table')
-            setActivePath('')
+        if (key === 'skill') {
+            await loadSkillTable()
+            return
+        }
+        if (key === 'staticskill') {
+            await loadStaticSkillTable()
             return
         }
         setViewMode('todo')
@@ -640,11 +992,12 @@ export function App() {
     }
 
     function handleSelectTalent(key: string, index: number, options: { shift: boolean; ctrl: boolean }) {
+        const sourceRows = filteredAvatarRows
         if (options.shift && talentSelectionAnchor) {
-            const anchorIndex = avatarRows.findIndex(row => row.key === talentSelectionAnchor)
+            const anchorIndex = sourceRows.findIndex(row => row.key === talentSelectionAnchor)
             if (anchorIndex >= 0) {
                 const [start, end] = anchorIndex <= index ? [anchorIndex, index] : [index, anchorIndex]
-                const nextKeys = avatarRows.slice(start, end + 1).map(row => row.key)
+                const nextKeys = sourceRows.slice(start, end + 1).map(row => row.key)
                 setSelectedTalentKeys(nextKeys)
                 setSelectedTalentKey(key)
                 return
@@ -853,11 +1206,12 @@ export function App() {
     }
 
     function handleSelectBuff(key: string, index: number, options: { shift: boolean; ctrl: boolean }) {
+        const sourceRows = filteredBuffRows
         if (options.shift && buffSelectionAnchor) {
-            const anchorIndex = buffRows.findIndex(row => row.key === buffSelectionAnchor)
+            const anchorIndex = sourceRows.findIndex(row => row.key === buffSelectionAnchor)
             if (anchorIndex >= 0) {
                 const [start, end] = anchorIndex <= index ? [anchorIndex, index] : [index, anchorIndex]
-                const nextKeys = buffRows.slice(start, end + 1).map(row => row.key)
+                const nextKeys = sourceRows.slice(start, end + 1).map(row => row.key)
                 setSelectedBuffKeys(nextKeys)
                 setSelectedBuffKey(key)
                 return
@@ -1060,6 +1414,403 @@ export function App() {
         setBuffDirty(true)
     }
 
+    function handleSelectSkill(key: string, index: number, options: { shift: boolean; ctrl: boolean }) {
+        const sourceRows = filteredSkillRows
+        if (options.shift && skillSelectionAnchor) {
+            const anchorIndex = sourceRows.findIndex(row => row.key === skillSelectionAnchor)
+            if (anchorIndex >= 0) {
+                const [start, end] = anchorIndex <= index ? [anchorIndex, index] : [index, anchorIndex]
+                const nextKeys = sourceRows.slice(start, end + 1).map(row => row.key)
+                setSelectedSkillKeys(nextKeys)
+                setSelectedSkillKey(key)
+                return
+            }
+        }
+        if (options.ctrl) {
+            setSelectedSkillKeys(prev => {
+                if (prev.includes(key)) {
+                    const next = prev.filter(item => item !== key)
+                    const active = next[next.length - 1] ?? ''
+                    setSelectedSkillKey(active)
+                    return next
+                }
+                return [...prev, key]
+            })
+            setSelectedSkillKey(key)
+            setSkillSelectionAnchor(key)
+            return
+        }
+        setSelectedSkillKeys([key])
+        setSelectedSkillKey(key)
+        setSkillSelectionAnchor(key)
+    }
+
+    function handleDeleteSkills() {
+        const targets = selectedSkillKeys.length > 0 ? selectedSkillKeys : selectedSkillKey ? [selectedSkillKey] : []
+        if (targets.length === 0) return
+        const targetSet = new Set(targets)
+        const remainingRows = skillRows.filter(row => !targetSet.has(row.key))
+        const nextActive = remainingRows[0]?.key ?? ''
+
+        setSkillMap(prev => {
+            const draft = { ...prev }
+            targets.forEach(key => delete draft[key])
+            return draft
+        })
+        setSelectedSkillKey(nextActive)
+        setSelectedSkillKeys(nextActive ? [nextActive] : [])
+        setSkillSelectionAnchor(nextActive)
+        setSkillDirty(true)
+        setStatus(`已删除 ${targets.length} 条 Skill 数据。`)
+    }
+
+    function handleBatchPrefixSkillIds(prefix: string) {
+        if (!/^\d+$/.test(prefix)) {
+            setStatus('批量修改ID失败：请输入数字开头。')
+            return
+        }
+        const targets = selectedSkillKeys.length > 0 ? selectedSkillKeys : selectedSkillKey ? [selectedSkillKey] : []
+        if (targets.length === 0) {
+            setStatus('请先选中要修改的 Skill。')
+            return
+        }
+        const orderedTargets = [...targets].sort((a, b) => (skillMap[a]?.id ?? 0) - (skillMap[b]?.id ?? 0))
+        const nextKeys = orderedTargets.map((_, index) => String(Number(`${prefix}${index + 1}`)))
+        const nextKeySet = new Set(nextKeys)
+        if (nextKeySet.size !== nextKeys.length) {
+            setStatus('批量修改ID失败：新ID出现重复。')
+            return
+        }
+        const occupied = new Set(Object.keys(skillMap).filter(key => !orderedTargets.includes(key)))
+        const conflict = nextKeys.find(key => occupied.has(key))
+        if (conflict) {
+            setStatus(`批量修改ID失败：目标ID ${conflict} 已存在。`)
+            return
+        }
+
+        setSkillMap(prev => {
+            const draft = { ...prev }
+            orderedTargets.forEach(oldKey => delete draft[oldKey])
+            orderedTargets.forEach((oldKey, index) => {
+                const nextKey = nextKeys[index]
+                const row = prev[oldKey]
+                if (!row) return
+                draft[nextKey] = { ...row, id: Number(nextKey) }
+            })
+            return draft
+        })
+        const nextActive = nextKeys[0] ?? ''
+        setSelectedSkillKey(nextActive)
+        setSelectedSkillKeys(nextKeys)
+        setSkillSelectionAnchor(nextActive)
+        setSkillDirty(true)
+        setStatus(`已批量修改 ${targets.length} 条 Skill 主ID，开头为 ${prefix}。`)
+    }
+
+    function handleAddSkill(id: number) {
+        const key = String(id)
+        setAddSkillOpen(false)
+        if (skillMap[key]) {
+            setSelectedSkillKey(key)
+            setSelectedSkillKeys([key])
+            setSkillSelectionAnchor(key)
+            setStatus(`Skill ID ${id} 已存在，已定位到该条目。`)
+            return
+        }
+        setSkillMap(prev => ({ ...prev, [key]: createEmptySkill(id) }))
+        setSelectedSkillKey(key)
+        setSelectedSkillKeys([key])
+        setSkillSelectionAnchor(key)
+        setSkillDirty(true)
+    }
+
+    function handleCopySkill() {
+        const targets = selectedSkillKeys.length > 0 ? selectedSkillKeys : selectedSkillKey ? [selectedSkillKey] : []
+        if (targets.length === 0) return
+        const copied = targets
+            .map(key => skillMap[key])
+            .filter((item): item is SkillEntry => Boolean(item))
+            .sort((a, b) => a.id - b.id)
+            .map(item => cloneSkillEntry(item))
+        if (copied.length === 0) return
+        setSkillClipboard(copied)
+        setStatus(copied.length === 1 ? `已复制 Skill ${copied[0].id}` : `已复制 ${copied.length} 条 Skill 数据`)
+    }
+
+    function handlePasteSkill() {
+        if (skillClipboard.length === 0) return
+        const existingKeys = new Set(Object.keys(skillMap))
+        const inserts: Array<{ key: string; row: SkillEntry }> = []
+        const conflicts: SkillEntry[] = []
+        skillClipboard.forEach(item => {
+            const id = Number(item.id)
+            if (!Number.isFinite(id) || id <= 0) return
+            const key = String(id)
+            if (existingKeys.has(key)) {
+                conflicts.push(item)
+                return
+            }
+            inserts.push({ key, row: { ...cloneSkillEntry(item), id } })
+            existingKeys.add(key)
+        })
+        if (conflicts.length > 0) {
+            const prefixText = window.prompt(`检测到 ${conflicts.length} 条Skill 主ID重复，请输入新的ID前缀（例如 25）`)
+            if (prefixText === null) return
+            const prefix = prefixText.trim()
+            if (!/^\d+$/.test(prefix)) {
+                setStatus('粘贴失败：请输入数字前缀。')
+                return
+            }
+            for (let index = 0; index < conflicts.length; index += 1) {
+                const nextKey = String(Number(`${prefix}${index + 1}`))
+                if (existingKeys.has(nextKey)) {
+                    setStatus(`粘贴失败：批量重命名ID冲突（${nextKey}）。`)
+                    return
+                }
+                inserts.push({ key: nextKey, row: { ...cloneSkillEntry(conflicts[index]), id: Number(nextKey) } })
+                existingKeys.add(nextKey)
+            }
+        }
+        if (inserts.length === 0) return
+        setSkillMap(prev => {
+            const draft = { ...prev }
+            inserts.forEach(({ key, row }) => {
+                draft[key] = row
+            })
+            return draft
+        })
+        const nextKeys = inserts.map(item => item.key)
+        setSelectedSkillKey(nextKeys[0] ?? '')
+        setSelectedSkillKeys(nextKeys)
+        setSkillSelectionAnchor(nextKeys[0] ?? '')
+        setSkillDirty(true)
+        setStatus(`已粘贴 ${inserts.length} 条 Skill 数据。`)
+    }
+
+    function handleChangeSkillForm(patch: Partial<SkillEntry>) {
+        if (!selectedSkillKey || !skillMap[selectedSkillKey]) return
+        const current = skillMap[selectedSkillKey]
+        const next = { ...current, ...patch }
+        const nextId = Number(next.id || 0)
+        if (!Number.isFinite(nextId) || nextId <= 0) return
+        const nextKey = String(nextId)
+        next.id = nextId
+
+        setSkillMap(prev => {
+            if (nextKey !== selectedSkillKey && prev[nextKey]) {
+                setStatus(`Skill 主ID ${nextId} 已存在，不能重复。`)
+                return prev
+            }
+            const draft = { ...prev }
+            delete draft[selectedSkillKey]
+            draft[nextKey] = next
+            return draft
+        })
+        setSelectedSkillKey(nextKey)
+        setSelectedSkillKeys(prev =>
+            prev.map(key => (key === selectedSkillKey ? nextKey : key)).filter((key, idx, arr) => arr.indexOf(key) === idx)
+        )
+        setSkillSelectionAnchor(nextKey)
+        setSkillDirty(true)
+    }
+
+    function handleSelectStaticSkill(key: string, index: number, options: { shift: boolean; ctrl: boolean }) {
+        const sourceRows = filteredStaticSkillRows
+        if (options.shift && staticSkillSelectionAnchor) {
+            const anchorIndex = sourceRows.findIndex(row => row.key === staticSkillSelectionAnchor)
+            if (anchorIndex >= 0) {
+                const [start, end] = anchorIndex <= index ? [anchorIndex, index] : [index, anchorIndex]
+                const nextKeys = sourceRows.slice(start, end + 1).map(row => row.key)
+                setSelectedStaticSkillKeys(nextKeys)
+                setSelectedStaticSkillKey(key)
+                return
+            }
+        }
+        if (options.ctrl) {
+            setSelectedStaticSkillKeys(prev => {
+                if (prev.includes(key)) {
+                    const next = prev.filter(item => item !== key)
+                    const active = next[next.length - 1] ?? ''
+                    setSelectedStaticSkillKey(active)
+                    return next
+                }
+                return [...prev, key]
+            })
+            setSelectedStaticSkillKey(key)
+            setStaticSkillSelectionAnchor(key)
+            return
+        }
+        setSelectedStaticSkillKeys([key])
+        setSelectedStaticSkillKey(key)
+        setStaticSkillSelectionAnchor(key)
+    }
+
+    function handleDeleteStaticSkills() {
+        const targets =
+            selectedStaticSkillKeys.length > 0 ? selectedStaticSkillKeys : selectedStaticSkillKey ? [selectedStaticSkillKey] : []
+        if (targets.length === 0) return
+        const targetSet = new Set(targets)
+        const remainingRows = staticSkillRows.filter(row => !targetSet.has(row.key))
+        const nextActive = remainingRows[0]?.key ?? ''
+        setStaticSkillMap(prev => {
+            const draft = { ...prev }
+            targets.forEach(key => delete draft[key])
+            return draft
+        })
+        setSelectedStaticSkillKey(nextActive)
+        setSelectedStaticSkillKeys(nextActive ? [nextActive] : [])
+        setStaticSkillSelectionAnchor(nextActive)
+        setStaticSkillDirty(true)
+        setStatus(`已删除 ${targets.length} 条功法数据。`)
+    }
+
+    function handleBatchPrefixStaticSkillIds(prefix: string) {
+        if (!/^\d+$/.test(prefix)) {
+            setStatus('批量修改ID失败：请输入数字开头。')
+            return
+        }
+        const targets =
+            selectedStaticSkillKeys.length > 0 ? selectedStaticSkillKeys : selectedStaticSkillKey ? [selectedStaticSkillKey] : []
+        if (targets.length === 0) {
+            setStatus('请先选中要修改的功法。')
+            return
+        }
+        const orderedTargets = [...targets].sort((a, b) => (staticSkillMap[a]?.id ?? 0) - (staticSkillMap[b]?.id ?? 0))
+        const nextKeys = orderedTargets.map((_, index) => String(Number(`${prefix}${index + 1}`)))
+        const nextKeySet = new Set(nextKeys)
+        if (nextKeySet.size !== nextKeys.length) {
+            setStatus('批量修改ID失败：新ID出现重复。')
+            return
+        }
+        const occupied = new Set(Object.keys(staticSkillMap).filter(key => !orderedTargets.includes(key)))
+        const conflict = nextKeys.find(key => occupied.has(key))
+        if (conflict) {
+            setStatus(`批量修改ID失败：目标ID ${conflict} 已存在。`)
+            return
+        }
+        setStaticSkillMap(prev => {
+            const draft = { ...prev }
+            orderedTargets.forEach(oldKey => delete draft[oldKey])
+            orderedTargets.forEach((oldKey, index) => {
+                const nextKey = nextKeys[index]
+                const row = prev[oldKey]
+                if (!row) return
+                draft[nextKey] = { ...row, id: Number(nextKey) }
+            })
+            return draft
+        })
+        const nextActive = nextKeys[0] ?? ''
+        setSelectedStaticSkillKey(nextActive)
+        setSelectedStaticSkillKeys(nextKeys)
+        setStaticSkillSelectionAnchor(nextActive)
+        setStaticSkillDirty(true)
+    }
+
+    function handleAddStaticSkill(id: number) {
+        const key = String(id)
+        setAddStaticSkillOpen(false)
+        if (staticSkillMap[key]) {
+            setSelectedStaticSkillKey(key)
+            setSelectedStaticSkillKeys([key])
+            setStaticSkillSelectionAnchor(key)
+            setStatus(`功法 ID ${id} 已存在，已定位到该条目。`)
+            return
+        }
+        setStaticSkillMap(prev => ({ ...prev, [key]: createEmptyStaticSkill(id) }))
+        setSelectedStaticSkillKey(key)
+        setSelectedStaticSkillKeys([key])
+        setStaticSkillSelectionAnchor(key)
+        setStaticSkillDirty(true)
+    }
+
+    function handleCopyStaticSkill() {
+        const targets =
+            selectedStaticSkillKeys.length > 0 ? selectedStaticSkillKeys : selectedStaticSkillKey ? [selectedStaticSkillKey] : []
+        if (targets.length === 0) return
+        const copied = targets
+            .map(key => staticSkillMap[key])
+            .filter((item): item is StaticSkillEntry => Boolean(item))
+            .sort((a, b) => a.id - b.id)
+            .map(item => cloneStaticSkillEntry(item))
+        if (copied.length === 0) return
+        setStaticSkillClipboard(copied)
+        setStatus(copied.length === 1 ? `已复制功法 ${copied[0].id}` : `已复制 ${copied.length} 条功法数据`)
+    }
+
+    function handlePasteStaticSkill() {
+        if (staticSkillClipboard.length === 0) return
+        const existingKeys = new Set(Object.keys(staticSkillMap))
+        const inserts: Array<{ key: string; row: StaticSkillEntry }> = []
+        const conflicts: StaticSkillEntry[] = []
+        staticSkillClipboard.forEach(item => {
+            const id = Number(item.id)
+            if (!Number.isFinite(id) || id <= 0) return
+            const key = String(id)
+            if (existingKeys.has(key)) {
+                conflicts.push(item)
+                return
+            }
+            inserts.push({ key, row: { ...cloneStaticSkillEntry(item), id } })
+            existingKeys.add(key)
+        })
+        if (conflicts.length > 0) {
+            const prefixText = window.prompt(`检测到 ${conflicts.length} 条功法ID重复，请输入新的ID前缀（例如 26）`)
+            if (prefixText === null) return
+            const prefix = prefixText.trim()
+            if (!/^\d+$/.test(prefix)) {
+                setStatus('粘贴失败：请输入数字前缀。')
+                return
+            }
+            for (let index = 0; index < conflicts.length; index += 1) {
+                const nextKey = String(Number(`${prefix}${index + 1}`))
+                if (existingKeys.has(nextKey)) {
+                    setStatus(`粘贴失败：批量重命名ID冲突（${nextKey}）。`)
+                    return
+                }
+                inserts.push({ key: nextKey, row: { ...cloneStaticSkillEntry(conflicts[index]), id: Number(nextKey) } })
+                existingKeys.add(nextKey)
+            }
+        }
+        if (inserts.length === 0) return
+        setStaticSkillMap(prev => {
+            const draft = { ...prev }
+            inserts.forEach(({ key, row }) => {
+                draft[key] = row
+            })
+            return draft
+        })
+        const nextKeys = inserts.map(item => item.key)
+        setSelectedStaticSkillKey(nextKeys[0] ?? '')
+        setSelectedStaticSkillKeys(nextKeys)
+        setStaticSkillSelectionAnchor(nextKeys[0] ?? '')
+        setStaticSkillDirty(true)
+    }
+
+    function handleChangeStaticSkillForm(patch: Partial<StaticSkillEntry>) {
+        if (!selectedStaticSkillKey || !staticSkillMap[selectedStaticSkillKey]) return
+        const current = staticSkillMap[selectedStaticSkillKey]
+        const next = { ...current, ...patch }
+        const nextId = Number(next.id || 0)
+        if (!Number.isFinite(nextId) || nextId <= 0) return
+        const nextKey = String(nextId)
+        setStaticSkillMap(prev => {
+            if (nextKey !== selectedStaticSkillKey && prev[nextKey]) {
+                setStatus(`功法 ID ${nextId} 已存在，不能重复。`)
+                return prev
+            }
+            const draft = { ...prev }
+            delete draft[selectedStaticSkillKey]
+            draft[nextKey] = { ...next, id: nextId }
+            return draft
+        })
+        setSelectedStaticSkillKey(nextKey)
+        setSelectedStaticSkillKeys(prev =>
+            prev.map(key => (key === selectedStaticSkillKey ? nextKey : key)).filter((key, idx, arr) => arr.indexOf(key) === idx)
+        )
+        setStaticSkillSelectionAnchor(nextKey)
+        setStaticSkillDirty(true)
+    }
+
     function updateSelectedSeidOwner(
         updater: (current: { seid: number[]; seidData: Record<string, Record<string, string | number | number[]>> }) => {
             seid: number[]
@@ -1077,6 +1828,28 @@ export function App() {
             return
         }
 
+        if (activeModule === 'skill') {
+            if (!selectedSkillKey || !skillMap[selectedSkillKey]) return
+            setSkillMap(prev => {
+                const current = prev[selectedSkillKey]
+                if (!current) return prev
+                return { ...prev, [selectedSkillKey]: { ...current, ...updater(current) } }
+            })
+            setSkillDirty(true)
+            return
+        }
+
+        if (activeModule === 'staticskill') {
+            if (!selectedStaticSkillKey || !staticSkillMap[selectedStaticSkillKey]) return
+            setStaticSkillMap(prev => {
+                const current = prev[selectedStaticSkillKey]
+                if (!current) return prev
+                return { ...prev, [selectedStaticSkillKey]: { ...current, ...updater(current) } }
+            })
+            setStaticSkillDirty(true)
+            return
+        }
+
         if (!selectedTalentKey || !talentMap[selectedTalentKey]) return
         setTalentMap(prev => {
             const current = prev[selectedTalentKey]
@@ -1091,20 +1864,39 @@ export function App() {
             if (Object.keys(buffSeidMetaMap).length > 0) return true
             return loadBuffSeidMeta([workspaceRoot, projectPath, modRootPath], true)
         }
+        if (activeModule === 'skill') {
+            if (Object.keys(skillSeidMetaMap).length > 0) return true
+            return loadSkillSeidMeta([workspaceRoot, projectPath, modRootPath], true)
+        }
+        if (activeModule === 'staticskill') {
+            if (Object.keys(staticSkillSeidMetaMap).length > 0) return true
+            return loadStaticSkillSeidMeta([workspaceRoot, projectPath, modRootPath], true)
+        }
         if (Object.keys(seidMetaMap).length > 0) return true
         const result = await preloadMeta([workspaceRoot, projectPath, modRootPath], true)
         return result.seidLoaded
     }
 
     async function handleOpenSeidEditor() {
-        const selected = activeModule === 'buff' ? selectedBuff : selectedTalent
+        const selected =
+            activeModule === 'buff'
+                ? selectedBuff
+                : activeModule === 'skill'
+                  ? selectedSkill
+                  : activeModule === 'staticskill'
+                    ? selectedStaticSkill
+                    : selectedTalent
         if (!selected) return
         const ok = await ensureSeidMetaLoaded()
         if (!ok) {
             setStatus(
                 activeModule === 'buff'
                     ? '未加载到 Buff Seid 元数据，请确认 editorMeta/BuffSeidMeta.json 路径和 JSON 格式。'
-                    : '未加载到 Seid 元数据，请确认 editorMeta/CreateAvatarSeidMeta.json 路径和 JSON 格式。'
+                    : activeModule === 'skill'
+                      ? '未加载到 Skill Seid 元数据，请确认 editorMeta/SkillSeidMeta.json 路径和 JSON 格式。'
+                      : activeModule === 'staticskill'
+                        ? '未加载到 StaticSkill Seid 元数据，请确认 editorMeta/StaticSkillSeidMeta.json 路径和 JSON 格式。'
+                        : '未加载到 Seid 元数据，请确认 editorMeta/CreateAvatarSeidMeta.json 路径和 JSON 格式。'
             )
         }
         const first = selected.seid[0] ?? null
@@ -1140,7 +1932,14 @@ export function App() {
             delete nextData[String(activeSeidId)]
             return { ...current, seid: nextSeid, seidData: nextData }
         })
-        const currentList = activeModule === 'buff' ? (selectedBuff?.seid ?? []) : (selectedTalent?.seid ?? [])
+        const currentList =
+            activeModule === 'buff'
+                ? (selectedBuff?.seid ?? [])
+                : activeModule === 'skill'
+                  ? (selectedSkill?.seid ?? [])
+                  : activeModule === 'staticskill'
+                    ? (selectedStaticSkill?.seid ?? [])
+                    : (selectedTalent?.seid ?? [])
         const nextId = currentList.find(id => id !== activeSeidId) ?? null
         setActiveSeidId(nextId)
     }
@@ -1204,6 +2003,18 @@ export function App() {
             setBuffMap({})
             setBuffCachePath('')
             setBuffDirty(false)
+            setSelectedSkillKey('')
+            setSelectedSkillKeys([])
+            setSkillSelectionAnchor('')
+            setSkillMap({})
+            setSkillCachePath('')
+            setSkillDirty(false)
+            setSelectedStaticSkillKey('')
+            setSelectedStaticSkillKeys([])
+            setStaticSkillSelectionAnchor('')
+            setStaticSkillMap({})
+            setStaticSkillCachePath('')
+            setStaticSkillDirty(false)
             setStatus(`已删除文件夹，后续按预设路径加载: ${inferred}`)
         } catch (error) {
             setStatus(`删除失败: ${String(error)}`)
@@ -1253,14 +2064,41 @@ export function App() {
                 joinWinPath,
                 saveFilePayload,
             })
+            const skillFileCount = await saveSkillFiles({
+                skillMap,
+                modRootPath,
+                joinWinPath,
+                saveFilePayload,
+            })
+            const skillSeidFileCount = await saveSkillSeidFiles({
+                skillMap,
+                modRootPath,
+                joinWinPath,
+                saveFilePayload,
+            })
+            const staticSkillFileCount = await saveStaticSkillFile({
+                staticSkillMap,
+                staticSkillPath,
+                saveFilePayload,
+            })
+            const staticSkillSeidFileCount = await saveStaticSkillSeidFiles({
+                staticSkillMap,
+                modRootPath,
+                joinWinPath,
+                saveFilePayload,
+            })
 
             setConfigDirty(false)
             setTalentDirty(false)
             setBuffDirty(false)
+            setSkillDirty(false)
+            setStaticSkillDirty(false)
             setTalentCachePath(talentTarget)
             setBuffCachePath(buffDirPath)
+            setSkillCachePath(skillDirPath)
+            setStaticSkillCachePath(staticSkillPath)
             setStatus(
-                `项目已保存：${moduleConfigPath}；天赋Seid ${seidFileCount} 个；Buff ${buffFileCount} 个，BuffSeid ${buffSeidFileCount} 个`
+                `项目已保存：${moduleConfigPath}；天赋Seid ${seidFileCount} 个；Buff ${buffFileCount} 个，BuffSeid ${buffSeidFileCount} 个；Skill ${skillFileCount} 个，SkillSeid ${skillSeidFileCount} 个；StaticSkill ${staticSkillFileCount} 条，StaticSkillSeid ${staticSkillSeidFileCount} 个`
             )
         } catch (error) {
             setStatus(`保存项目失败: ${String(error)}`)
@@ -1279,7 +2117,7 @@ export function App() {
     return (
         <div className="app-shell" data-active-path={activePath} data-status={status}>
             <AppTopBarMenu
-                configDirty={configDirty || talentDirty || buffDirty}
+                configDirty={configDirty || talentDirty || buffDirty || skillDirty || staticSkillDirty}
                 onClose={() => appWindow.close()}
                 onCreateProject={() => setCreateOpen(true)}
                 onMinimize={() => appWindow.minimize()}
@@ -1313,6 +2151,22 @@ export function App() {
                 confirmText="确认新增"
                 placeholder="例如: 52000"
             />
+            <AddTalentModal
+                open={addSkillOpen}
+                onClose={() => setAddSkillOpen(false)}
+                onSubmit={handleAddSkill}
+                title="新增神通"
+                confirmText="确认新增"
+                placeholder="例如: 250000"
+            />
+            <AddTalentModal
+                open={addStaticSkillOpen}
+                onClose={() => setAddStaticSkillOpen(false)}
+                onSubmit={handleAddStaticSkill}
+                title="新增功法"
+                confirmText="确认新增"
+                placeholder="例如: 253000"
+            />
             <SeidEditorModal
                 activeSeidId={activeSeidId}
                 drawerOptionsMap={{
@@ -1339,15 +2193,39 @@ export function App() {
                 onRequestAdd={handleOpenSeidPicker}
                 onSelectSeid={setActiveSeidId}
                 open={seidEditorOpen}
-                seidData={activeModule === 'buff' ? (selectedBuff?.seidData ?? {}) : (selectedTalent?.seidData ?? {})}
-                seidIds={activeModule === 'buff' ? (selectedBuff?.seid ?? []) : (selectedTalent?.seid ?? [])}
+                seidData={
+                    activeModule === 'buff'
+                        ? (selectedBuff?.seidData ?? {})
+                        : activeModule === 'skill'
+                          ? (selectedSkill?.seidData ?? {})
+                          : activeModule === 'staticskill'
+                            ? (selectedStaticSkill?.seidData ?? {})
+                            : (selectedTalent?.seidData ?? {})
+                }
+                seidIds={
+                    activeModule === 'buff'
+                        ? (selectedBuff?.seid ?? [])
+                        : activeModule === 'skill'
+                          ? (selectedSkill?.seid ?? [])
+                          : activeModule === 'staticskill'
+                            ? (selectedStaticSkill?.seid ?? [])
+                            : (selectedTalent?.seid ?? [])
+                }
             />
             <SeidPickerModal
                 items={seidPickerItems}
                 onClose={() => setSeidPickerOpen(false)}
                 onPick={handleAddSeidFromPicker}
                 open={seidPickerOpen}
-                selectedIds={activeModule === 'buff' ? (selectedBuff?.seid ?? []) : (selectedTalent?.seid ?? [])}
+                selectedIds={
+                    activeModule === 'buff'
+                        ? (selectedBuff?.seid ?? [])
+                        : activeModule === 'skill'
+                          ? (selectedSkill?.seid ?? [])
+                          : activeModule === 'staticskill'
+                            ? (selectedStaticSkill?.seid ?? [])
+                            : (selectedTalent?.seid ?? [])
+                }
             />
             <FolderContextMenu
                 onClose={() => setContextMenu({ open: false, x: 0, y: 0 })}
@@ -1374,19 +2252,77 @@ export function App() {
                 {activeModule && activeModule !== 'project-config' ? (
                     <InfoPanel
                         activeModule={activeModule}
-                        onAddTalent={() => (activeModule === 'buff' ? setAddBuffOpen(true) : setAddTalentOpen(true))}
-                        onBatchPrefixIds={prefix =>
-                            activeModule === 'buff' ? handleBatchPrefixBuffIds(prefix) : handleBatchPrefixIds(prefix)
+                        searchText={tableSearchText}
+                        onSearchTextChange={setTableSearchText}
+                        onAddTalent={() =>
+                            activeModule === 'buff'
+                                ? setAddBuffOpen(true)
+                                : activeModule === 'skill'
+                                  ? setAddSkillOpen(true)
+                                  : activeModule === 'staticskill'
+                                    ? setAddStaticSkillOpen(true)
+                                    : setAddTalentOpen(true)
                         }
-                        onDeleteTalents={() => (activeModule === 'buff' ? handleDeleteBuffs() : handleDeleteTalents())}
-                        onCopyTalent={() => (activeModule === 'buff' ? handleCopyBuff() : handleCopyTalent())}
-                        onPasteTalent={() => (activeModule === 'buff' ? handlePasteBuff() : handlePasteTalent())}
+                        onBatchPrefixIds={prefix => {
+                            if (activeModule === 'buff') return handleBatchPrefixBuffIds(prefix)
+                            if (activeModule === 'skill') return handleBatchPrefixSkillIds(prefix)
+                            if (activeModule === 'staticskill') return handleBatchPrefixStaticSkillIds(prefix)
+                            return handleBatchPrefixIds(prefix)
+                        }}
+                        onDeleteTalents={() => {
+                            if (activeModule === 'buff') return handleDeleteBuffs()
+                            if (activeModule === 'skill') return handleDeleteSkills()
+                            if (activeModule === 'staticskill') return handleDeleteStaticSkills()
+                            return handleDeleteTalents()
+                        }}
+                        onCopyTalent={() => {
+                            if (activeModule === 'buff') return handleCopyBuff()
+                            if (activeModule === 'skill') return handleCopySkill()
+                            if (activeModule === 'staticskill') return handleCopyStaticSkill()
+                            return handleCopyTalent()
+                        }}
+                        onPasteTalent={() => {
+                            if (activeModule === 'buff') return handlePasteBuff()
+                            if (activeModule === 'skill') return handlePasteSkill()
+                            if (activeModule === 'staticskill') return handlePasteStaticSkill()
+                            return handlePasteTalent()
+                        }}
                         onSelectTalent={(key, index, options) =>
-                            activeModule === 'buff' ? handleSelectBuff(key, index, options) : handleSelectTalent(key, index, options)
+                            activeModule === 'buff'
+                                ? handleSelectBuff(key, index, options)
+                                : activeModule === 'skill'
+                                  ? handleSelectSkill(key, index, options)
+                                  : activeModule === 'staticskill'
+                                    ? handleSelectStaticSkill(key, index, options)
+                                    : handleSelectTalent(key, index, options)
                         }
-                        rows={activeModule === 'buff' ? buffRows : avatarRows}
-                        selectedTalentKey={activeModule === 'buff' ? selectedBuffKey : selectedTalentKey}
-                        selectedTalentKeys={activeModule === 'buff' ? selectedBuffKeys : selectedTalentKeys}
+                        rows={
+                            activeModule === 'buff'
+                                ? filteredBuffRows
+                                : activeModule === 'skill'
+                                  ? filteredSkillRows
+                                  : activeModule === 'staticskill'
+                                    ? filteredStaticSkillRows
+                                    : filteredAvatarRows
+                        }
+                        selectedTalentKey={
+                            activeModule === 'buff'
+                                ? selectedBuffKey
+                                : activeModule === 'skill'
+                                  ? selectedSkillKey
+                                  : activeModule === 'staticskill'
+                                    ? selectedStaticSkillKey
+                                    : selectedTalentKey
+                        }
+                        selectedTalentKeys={
+                            activeModule === 'buff'
+                                ? selectedBuffKeys
+                                : activeModule === 'skill'
+                                  ? selectedSkillKeys
+                                  : activeModule === 'staticskill'
+                                    ? selectedStaticSkillKeys
+                                    : selectedTalentKeys
+                        }
                     />
                 ) : null}
 
@@ -1402,11 +2338,17 @@ export function App() {
                         onChangeTalentForm={handleChangeTalentForm}
                         buffForm={selectedBuff}
                         onChangeBuffForm={handleChangeBuffForm}
+                        skillForm={selectedSkill}
+                        onChangeSkillForm={handleChangeSkillForm}
+                        staticSkillForm={selectedStaticSkill}
+                        onChangeStaticSkillForm={handleChangeStaticSkillForm}
                         buffIconDir={buffIconDirPath}
+                        skillIconDir={skillIconDirPath}
                         buffTypeOptions={buffTypeOptions}
                         buffTriggerOptions={buffTriggerOptions}
                         buffRemoveTriggerOptions={buffRemoveTriggerOptions}
                         buffOverlayTypeOptions={buffOverlayTypeOptions}
+                        skillAttackTypeOptions={skillAttackTypeOptions}
                         onOpenSeidEditor={handleOpenSeidEditor}
                         seidDisplayRows={selectedSeidDisplayRows}
                         talentForm={selectedTalent}

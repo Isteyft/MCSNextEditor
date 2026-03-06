@@ -1,4 +1,4 @@
-import { Check, ChevronDown, ChevronUp, Minus, PenLine, Plus, X } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, Minus, PenLine, Plus, Search, X } from 'lucide-react'
 import { useState } from 'react'
 
 import { SeidMetaItem } from './SeidPickerModal'
@@ -64,6 +64,13 @@ function isArrayDrawer(drawerType: string) {
     return drawerType.toLowerCase().includes('array')
 }
 
+function includesText(...fields: Array<string | number | undefined>) {
+    return fields
+        .map(item => String(item ?? '').toLowerCase())
+        .join(' ')
+        .trim()
+}
+
 export function SeidEditorModal({
     open,
     seidIds,
@@ -81,14 +88,28 @@ export function SeidEditorModal({
 }: SeidEditorModalProps) {
     const [drawerState, setDrawerState] = useState<DrawerState | null>(null)
     const [drawerSelected, setDrawerSelected] = useState<number[]>([])
-
-    if (!open) return null
+    const [seidSearchDraft, setSeidSearchDraft] = useState('')
+    const [seidSearchText, setSeidSearchText] = useState('')
+    const [drawerSearchDraft, setDrawerSearchDraft] = useState('')
+    const [drawerSearchText, setDrawerSearchText] = useState('')
 
     const hasActive = activeSeidId !== null
     const meta = hasActive ? metaMap[activeSeidId] : undefined
     const values = hasActive ? (seidData[String(activeSeidId)] ?? {}) : {}
+    const seidKeyword = seidSearchText.trim().toLowerCase()
+    const filteredSeidIds = seidIds.filter(id => {
+        if (!seidKeyword) return true
+        const item = metaMap[id]
+        return includesText(id, item?.name, item?.desc).includes(seidKeyword)
+    })
 
     const activeDrawerOptions = drawerState ? (drawerOptionsMap[drawerState.drawerType] ?? []) : []
+    const drawerKeyword = drawerSearchText.trim().toLowerCase()
+    const filteredDrawerOptions = !drawerKeyword
+        ? activeDrawerOptions
+        : activeDrawerOptions.filter(item => includesText(item.id, item.name).includes(drawerKeyword))
+
+    if (!open) return null
 
     function openDrawer(
         seidId: number,
@@ -100,11 +121,15 @@ export function SeidEditorModal({
         const multiple = isArrayDrawer(drawerType)
         setDrawerState({ seidId, propertyId, drawerType, title, multiple })
         setDrawerSelected(multiple ? normalizeToNumberArray(currentValue) : [normalizeToNumber(currentValue)])
+        setDrawerSearchDraft('')
+        setDrawerSearchText('')
     }
 
     function closeDrawer() {
         setDrawerState(null)
         setDrawerSelected([])
+        setDrawerSearchDraft('')
+        setDrawerSearchText('')
     }
 
     function applyDrawerSelection() {
@@ -140,8 +165,27 @@ export function SeidEditorModal({
                                 <ChevronDown size={14} />
                             </button>
                         </div>
+                        <div className="search-input-wrap">
+                            <input
+                                className="modal-search-input"
+                                onChange={event => setSeidSearchDraft(event.target.value)}
+                                onKeyDown={event => {
+                                    if (event.key === 'Enter') setSeidSearchText(seidSearchDraft)
+                                }}
+                                placeholder="搜索 Seid id/name/desc"
+                                value={seidSearchDraft}
+                            />
+                            <button
+                                className="search-action-btn"
+                                onClick={() => setSeidSearchText(seidSearchDraft)}
+                                title="搜索"
+                                type="button"
+                            >
+                                <Search size={14} />
+                            </button>
+                        </div>
                         <div className="seid-list">
-                            {seidIds.map(id => {
+                            {filteredSeidIds.map(id => {
                                 const item = metaMap[id]
                                 const text = `${id} ${item?.name ?? ''}`
                                 return (
@@ -155,6 +199,7 @@ export function SeidEditorModal({
                                     </button>
                                 )
                             })}
+                            {filteredSeidIds.length === 0 ? <div className="todo-box">没有匹配的 Seid</div> : null}
                         </div>
                     </section>
 
@@ -248,9 +293,28 @@ export function SeidEditorModal({
                                 <X size={14} />
                             </button>
                         </div>
+                        <div className="search-input-wrap">
+                            <input
+                                className="modal-search-input"
+                                onChange={event => setDrawerSearchDraft(event.target.value)}
+                                onKeyDown={event => {
+                                    if (event.key === 'Enter') setDrawerSearchText(drawerSearchDraft)
+                                }}
+                                placeholder="搜索 id/name"
+                                value={drawerSearchDraft}
+                            />
+                            <button
+                                className="search-action-btn"
+                                onClick={() => setDrawerSearchText(drawerSearchDraft)}
+                                title="搜索"
+                                type="button"
+                            >
+                                <Search size={14} />
+                            </button>
+                        </div>
                         <div className="drawer-list">
-                            {activeDrawerOptions.length === 0 ? <div className="todo-box">当前 Drawer 没有可选数据</div> : null}
-                            {activeDrawerOptions.map(option => {
+                            {filteredDrawerOptions.length === 0 ? <div className="todo-box">当前 Drawer 没有可选数据</div> : null}
+                            {filteredDrawerOptions.map(option => {
                                 const checked = drawerSelected.includes(option.id)
                                 return (
                                     <button
