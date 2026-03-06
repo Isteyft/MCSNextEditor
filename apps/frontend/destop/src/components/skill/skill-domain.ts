@@ -5,7 +5,7 @@ export function createEmptySkill(id: number): SkillEntry {
     return {
         id,
         Skill_ID: id,
-        Skill_Lv: 1,
+        Skill_Lv: 0,
         skillEffect: '',
         Skill_Type: 0,
         name: '',

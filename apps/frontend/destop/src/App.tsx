@@ -508,6 +508,16 @@ export function App() {
     }, [modRootPath])
 
     useEffect(() => {
+        const handleContextMenu = (event: MouseEvent) => {
+            event.preventDefault()
+        }
+        window.addEventListener('contextmenu', handleContextMenu)
+        return () => {
+            window.removeEventListener('contextmenu', handleContextMenu)
+        }
+    }, [])
+
+    useEffect(() => {
         if (!modRootPath) return
         const cacheKey = normalizePath(modRootPath)
         setRootSnapshotCache(prev => ({
@@ -2814,6 +2824,95 @@ export function App() {
         setSkillDirty(true)
     }
 
+    function handleGenerateSkillGroup() {
+        if (!selectedSkillKey || !skillMap[selectedSkillKey]) return
+        const base = skillMap[selectedSkillKey]
+        if (selectedSkillKeys.length > 1) {
+            setStatus('生成技能组失败：请只选中一条神通。')
+            return
+        }
+        if (Number(base.Skill_Lv) !== 0) {
+            setStatus('生成技能组仅支持 0 级神通。')
+            return
+        }
+
+        const baseId = Number(base.id)
+        const targetIds = [baseId, baseId + 1, baseId + 2, baseId + 3, baseId + 4]
+        const conflict = targetIds
+            .slice(1)
+            .find(id => String(id) !== selectedSkillKey && Object.prototype.hasOwnProperty.call(skillMap, String(id)))
+        if (conflict) {
+            setStatus(`生成技能组失败：ID ${conflict} 已存在。`)
+            return
+        }
+
+        setSkillMap(prev => {
+            const draft = { ...prev }
+            draft[String(baseId)] = { ...cloneSkillEntry(base), id: baseId, Skill_Lv: 1 }
+            for (let level = 2; level <= 5; level += 1) {
+                const id = baseId + (level - 1)
+                draft[String(id)] = { ...cloneSkillEntry(base), id, Skill_Lv: level }
+            }
+            return draft
+        })
+        const nextKeys = targetIds.map(id => String(id))
+        setSelectedSkillKey(nextKeys[0])
+        setSelectedSkillKeys(nextKeys)
+        setSkillSelectionAnchor(nextKeys[0])
+        setSkillDirty(true)
+        setStatus(`已生成神通技能组（${baseId} -> ${baseId + 4}，1-5级）。`)
+    }
+
+    function handleGenerateSkillBooksFromSkill() {
+        const targets = selectedSkillKeys.length > 0 ? selectedSkillKeys : selectedSkillKey ? [selectedSkillKey] : []
+        if (targets.length === 0) return
+        const inserts: Array<{ key: string; row: ItemEntry }> = []
+        const existed: number[] = []
+        const dedupe = new Set<string>()
+
+        targets.forEach(key => {
+            const source = skillMap[key]
+            if (!source) return
+            const uniqueId = Number(source.Skill_ID)
+            if (!Number.isFinite(uniqueId) || uniqueId <= 0) return
+            const itemKey = String(uniqueId)
+            if (dedupe.has(itemKey)) return
+            dedupe.add(itemKey)
+            if (Object.prototype.hasOwnProperty.call(itemMap, itemKey)) {
+                existed.push(uniqueId)
+                return
+            }
+            const next = createEmptyItem(uniqueId)
+            next.name = source.name
+            next.type = 3
+            next.desc = String(uniqueId)
+            next.desc2 = source.descr
+            next.seid = [1]
+            next.seidData = { '1': { value1: uniqueId } }
+            inserts.push({ key: itemKey, row: next })
+        })
+
+        if (inserts.length === 0) {
+            if (existed.length > 0) {
+                setStatus(`生成技能书失败：ID 已存在（${existed.join(', ')}）。`)
+            }
+            return
+        }
+        setItemMap(prev => {
+            const draft = { ...prev }
+            inserts.forEach(item => {
+                draft[item.key] = item.row
+            })
+            return draft
+        })
+        setItemDirty(true)
+        setStatus(
+            existed.length > 0
+                ? `已生成 ${inserts.length} 个技能书，以下ID已存在被跳过：${existed.join(', ')}`
+                : `已生成 ${inserts.length} 个技能书。`
+        )
+    }
+
     function handleSelectStaticSkill(key: string, index: number, options: { shift: boolean; ctrl: boolean }) {
         const sourceRows = filteredStaticSkillRows
         if (options.shift && staticSkillSelectionAnchor) {
@@ -3009,6 +3108,97 @@ export function App() {
         )
         setStaticSkillSelectionAnchor(nextKey)
         setStaticSkillDirty(true)
+    }
+
+    function handleGenerateStaticSkillGroup() {
+        if (!selectedStaticSkillKey || !staticSkillMap[selectedStaticSkillKey]) return
+        const base = staticSkillMap[selectedStaticSkillKey]
+        if (selectedStaticSkillKeys.length > 1) {
+            setStatus('生成功法组失败：请只选中一条功法。')
+            return
+        }
+        if (Number(base.Skill_Lv) !== 0) {
+            setStatus('生成功法组仅支持 0 级功法。')
+            return
+        }
+
+        const baseId = Number(base.id)
+        const baseSpeed = Number(base.Skill_Speed ?? 0)
+        const targetIds = [baseId, baseId + 1, baseId + 2, baseId + 3, baseId + 4]
+        const conflict = targetIds
+            .slice(1)
+            .find(id => String(id) !== selectedStaticSkillKey && Object.prototype.hasOwnProperty.call(staticSkillMap, String(id)))
+        if (conflict) {
+            setStatus(`生成功法组失败：ID ${conflict} 已存在。`)
+            return
+        }
+
+        setStaticSkillMap(prev => {
+            const draft = { ...prev }
+            draft[String(baseId)] = { ...cloneStaticSkillEntry(base), id: baseId, Skill_Lv: 1, Skill_Speed: baseSpeed * 1 }
+            for (let level = 2; level <= 5; level += 1) {
+                const id = baseId + (level - 1)
+                draft[String(id)] = { ...cloneStaticSkillEntry(base), id, Skill_Lv: level, Skill_Speed: baseSpeed * level }
+            }
+            return draft
+        })
+        const nextKeys = targetIds.map(id => String(id))
+        setSelectedStaticSkillKey(nextKeys[0])
+        setSelectedStaticSkillKeys(nextKeys)
+        setStaticSkillSelectionAnchor(nextKeys[0])
+        setStaticSkillDirty(true)
+        setStatus(`已生成功法技能组（${baseId} -> ${baseId + 4}，1-5级）。`)
+    }
+
+    function handleGenerateSkillBooksFromStaticSkill() {
+        const targets =
+            selectedStaticSkillKeys.length > 0 ? selectedStaticSkillKeys : selectedStaticSkillKey ? [selectedStaticSkillKey] : []
+        if (targets.length === 0) return
+        const inserts: Array<{ key: string; row: ItemEntry }> = []
+        const existed: number[] = []
+        const dedupe = new Set<string>()
+
+        targets.forEach(key => {
+            const source = staticSkillMap[key]
+            if (!source) return
+            const uniqueId = Number(source.Skill_ID)
+            if (!Number.isFinite(uniqueId) || uniqueId <= 0) return
+            const itemKey = String(uniqueId)
+            if (dedupe.has(itemKey)) return
+            dedupe.add(itemKey)
+            if (Object.prototype.hasOwnProperty.call(itemMap, itemKey)) {
+                existed.push(uniqueId)
+                return
+            }
+            const next = createEmptyItem(uniqueId)
+            next.name = source.name
+            next.type = 4
+            next.desc = String(uniqueId)
+            next.desc2 = source.descr
+            next.seid = [2]
+            next.seidData = { '2': { value1: uniqueId } }
+            inserts.push({ key: itemKey, row: next })
+        })
+
+        if (inserts.length === 0) {
+            if (existed.length > 0) {
+                setStatus(`生成技能书失败：ID 已存在（${existed.join(', ')}）。`)
+            }
+            return
+        }
+        setItemMap(prev => {
+            const draft = { ...prev }
+            inserts.forEach(item => {
+                draft[item.key] = item.row
+            })
+            return draft
+        })
+        setItemDirty(true)
+        setStatus(
+            existed.length > 0
+                ? `已生成 ${inserts.length} 个技能书，以下ID已存在被跳过：${existed.join(', ')}`
+                : `已生成 ${inserts.length} 个技能书。`
+        )
     }
 
     function updateSelectedSeidOwner(
@@ -3587,6 +3777,40 @@ export function App() {
                             if (activeModule === 'staticskill') return handlePasteStaticSkill()
                             return handlePasteTalent()
                         }}
+                        onGenerateGroup={
+                            activeModule === 'skill'
+                                ? handleGenerateSkillGroup
+                                : activeModule === 'staticskill'
+                                  ? handleGenerateStaticSkillGroup
+                                  : undefined
+                        }
+                        canGenerateGroup={
+                            activeModule === 'skill'
+                                ? selectedSkillKeys.length === 1 &&
+                                  Boolean(selectedSkillKey) &&
+                                  Number(skillMap[selectedSkillKey]?.Skill_Lv ?? -1) === 0
+                                : activeModule === 'staticskill'
+                                  ? selectedStaticSkillKeys.length === 1 &&
+                                    Boolean(selectedStaticSkillKey) &&
+                                    Number(staticSkillMap[selectedStaticSkillKey]?.Skill_Lv ?? -1) === 0
+                                  : false
+                        }
+                        generateGroupLabel={activeModule === 'staticskill' ? '生成功法组' : '生成技能组'}
+                        onGenerateBook={
+                            activeModule === 'skill'
+                                ? handleGenerateSkillBooksFromSkill
+                                : activeModule === 'staticskill'
+                                  ? handleGenerateSkillBooksFromStaticSkill
+                                  : undefined
+                        }
+                        canGenerateBook={
+                            activeModule === 'skill'
+                                ? selectedSkillKeys.length > 0 || Boolean(selectedSkillKey)
+                                : activeModule === 'staticskill'
+                                  ? selectedStaticSkillKeys.length > 0 || Boolean(selectedStaticSkillKey)
+                                  : false
+                        }
+                        generateBookLabel="生成技能书"
                         onSelectTalent={(key, index, options) =>
                             activeModule === 'affix'
                                 ? handleSelectAffix(key, index, options)

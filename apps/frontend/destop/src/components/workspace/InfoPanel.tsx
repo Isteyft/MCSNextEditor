@@ -24,6 +24,12 @@ type InfoPanelProps = {
     onBatchPrefixIds: (prefix: string) => void
     onCopyTalent: () => void
     onPasteTalent: () => void
+    onGenerateGroup?: () => void
+    canGenerateGroup?: boolean
+    generateGroupLabel?: string
+    onGenerateBook?: () => void
+    canGenerateBook?: boolean
+    generateBookLabel?: string
 }
 
 export function InfoPanel({
@@ -39,6 +45,12 @@ export function InfoPanel({
     onBatchPrefixIds,
     onCopyTalent,
     onPasteTalent,
+    onGenerateGroup,
+    canGenerateGroup = false,
+    generateGroupLabel = '生成技能组',
+    onGenerateBook,
+    canGenerateBook = false,
+    generateBookLabel = '生成技能书',
 }: InfoPanelProps) {
     const [menu, setMenu] = useState({ open: false, x: 0, y: 0 })
     const [searchDraft, setSearchDraft] = useState(searchText)
@@ -184,6 +196,34 @@ export function InfoPanel({
                                     >
                                         批量修改 ID 开头
                                     </button>
+                                    {onGenerateGroup ? (
+                                        <button
+                                            className="folder-menu-item"
+                                            disabled={!canGenerateGroup}
+                                            onClick={() => {
+                                                if (!canGenerateGroup) return
+                                                setMenu({ open: false, x: 0, y: 0 })
+                                                onGenerateGroup()
+                                            }}
+                                            type="button"
+                                        >
+                                            {generateGroupLabel}
+                                        </button>
+                                    ) : null}
+                                    {onGenerateBook ? (
+                                        <button
+                                            className="folder-menu-item"
+                                            disabled={!canGenerateBook}
+                                            onClick={() => {
+                                                if (!canGenerateBook) return
+                                                setMenu({ open: false, x: 0, y: 0 })
+                                                onGenerateBook()
+                                            }}
+                                            type="button"
+                                        >
+                                            {generateBookLabel}
+                                        </button>
+                                    ) : null}
                                 </div>
                             </>
                         ) : null}

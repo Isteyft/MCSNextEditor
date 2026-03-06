@@ -1,4 +1,4 @@
-import { convertFileSrc } from '@tauri-apps/api/core'
+﻿import { convertFileSrc } from '@tauri-apps/api/core'
 import { Plus, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
@@ -100,6 +100,10 @@ export function SkillForm({
             </div>
 
             <label className="config-field">
+                <span>神通名称</span>
+                <input onChange={event => onChange({ name: event.target.value })} value={values.name} />
+            </label>
+            <label className="config-field">
                 <span>神通等级</span>
                 <input
                     inputMode="numeric"
@@ -118,10 +122,6 @@ export function SkillForm({
                     onChange={event => onChange({ Skill_Type: toSafeNumber(event.target.value) })}
                     value={values.Skill_Type}
                 />
-            </label>
-            <label className="config-field">
-                <span>神通名称</span>
-                <input onChange={event => onChange({ name: event.target.value })} value={values.name} />
             </label>
             <label className="config-field">
                 <span>请教类型</span>
