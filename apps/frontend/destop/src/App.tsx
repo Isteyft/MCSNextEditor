@@ -117,6 +117,9 @@ export function App() {
     const [buffRemoveTriggerOptions, setBuffRemoveTriggerOptions] = useState<TalentTypeOption[]>([])
     const [buffOverlayTypeOptions, setBuffOverlayTypeOptions] = useState<TalentTypeOption[]>([])
     const [skillAttackTypeOptions, setSkillAttackTypeOptions] = useState<TalentTypeOption[]>([])
+    const [skillConsultTypeOptions, setSkillConsultTypeOptions] = useState<TalentTypeOption[]>([])
+    const [skillPhaseOptions, setSkillPhaseOptions] = useState<TalentTypeOption[]>([])
+    const [skillQualityOptions, setSkillQualityOptions] = useState<TalentTypeOption[]>([])
     const [skillSeidMetaMap, setSkillSeidMetaMap] = useState<Record<number, SeidMetaItem>>({})
     const [staticSkillSeidMetaMap, setStaticSkillSeidMetaMap] = useState<Record<number, SeidMetaItem>>({})
     const [drawerOptionsMap, setDrawerOptionsMap] = useState<Record<string, TalentTypeOption[]>>({})
@@ -556,20 +559,37 @@ export function App() {
 
     async function loadSkillEnumMeta(roots: string[], silent = false) {
         const candidates = Array.from(new Set(roots.filter(Boolean)))
-        for (const root of candidates) {
-            const result = await readEnumOptionsByFileName({
-                rootPath: root,
-                fileName: 'AttackType.json',
-                preferDesc: true,
-                readFilePayload,
-            })
-            if (result.options.length > 0) {
-                setSkillAttackTypeOptions(result.options)
-                return true
+        const loaders: Array<{
+            fileName: string
+            setter: (rows: TalentTypeOption[]) => void
+            preferDesc?: boolean
+        }> = [
+            { fileName: 'AttackType.json', setter: setSkillAttackTypeOptions, preferDesc: true },
+            { fileName: 'SkillConsultType.json', setter: setSkillConsultTypeOptions, preferDesc: true },
+            { fileName: 'SkillPhase.json', setter: setSkillPhaseOptions, preferDesc: true },
+            { fileName: 'SkillQuality.json', setter: setSkillQualityOptions, preferDesc: true },
+        ]
+
+        let loadedAny = false
+        for (const loader of loaders) {
+            let loaded = false
+            for (const root of candidates) {
+                const result = await readEnumOptionsByFileName({
+                    rootPath: root,
+                    fileName: loader.fileName,
+                    preferDesc: loader.preferDesc,
+                    readFilePayload,
+                })
+                if (result.options.length > 0) {
+                    loader.setter(result.options)
+                    loaded = true
+                    loadedAny = true
+                    break
+                }
             }
+            if (!loaded && !silent) loader.setter([])
         }
-        if (!silent) setSkillAttackTypeOptions([])
-        return false
+        return loadedAny
     }
 
     async function readIdNameOptionsFromDir(dirPath: string) {
@@ -708,6 +728,9 @@ export function App() {
         setBuffRemoveTriggerOptions([])
         setBuffOverlayTypeOptions([])
         setSkillAttackTypeOptions([])
+        setSkillConsultTypeOptions([])
+        setSkillPhaseOptions([])
+        setSkillQualityOptions([])
         setSkillSeidMetaMap({})
         setStaticSkillSeidMetaMap({})
         setDrawerOptionsMap({})
@@ -2349,6 +2372,9 @@ export function App() {
                         buffRemoveTriggerOptions={buffRemoveTriggerOptions}
                         buffOverlayTypeOptions={buffOverlayTypeOptions}
                         skillAttackTypeOptions={skillAttackTypeOptions}
+                        skillConsultTypeOptions={skillConsultTypeOptions}
+                        skillPhaseOptions={skillPhaseOptions}
+                        skillQualityOptions={skillQualityOptions}
                         onOpenSeidEditor={handleOpenSeidEditor}
                         seidDisplayRows={selectedSeidDisplayRows}
                         talentForm={selectedTalent}

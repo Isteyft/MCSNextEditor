@@ -4,13 +4,18 @@ import { useEffect, useMemo, useState } from 'react'
 
 import type { SkillEntry } from '../../types'
 
+type Option = { id: number; name: string }
+
 type SkillFormProps = {
     values: SkillEntry | null
     skillIconDir: string
     onChange: (patch: Partial<SkillEntry>) => void
     onOpenSeidEditor: () => void
     seidDisplayRows: { id: number; name: string }[]
-    attackTypeOptions: { id: number; name: string }[]
+    attackTypeOptions: Option[]
+    skillConsultTypeOptions: Option[]
+    skillPhaseOptions: Option[]
+    skillQualityOptions: Option[]
 }
 
 function toSafeNumber(input: string) {
@@ -25,7 +30,21 @@ function toNumberList(input: string) {
         .filter(item => Number.isFinite(item))
 }
 
-export function SkillForm({ values, skillIconDir, onChange, onOpenSeidEditor, seidDisplayRows, attackTypeOptions }: SkillFormProps) {
+function withCurrent(options: Option[], current: number) {
+    return options.some(item => item.id === current) ? options : [{ id: current, name: '未定义' }, ...options]
+}
+
+export function SkillForm({
+    values,
+    skillIconDir,
+    onChange,
+    onOpenSeidEditor,
+    seidDisplayRows,
+    attackTypeOptions,
+    skillConsultTypeOptions,
+    skillPhaseOptions,
+    skillQualityOptions,
+}: SkillFormProps) {
     const [imgError, setImgError] = useState(false)
 
     useEffect(() => {
@@ -51,7 +70,6 @@ export function SkillForm({ values, skillIconDir, onChange, onOpenSeidEditor, se
                 <span>ID</span>
                 <input inputMode="numeric" onChange={event => onChange({ id: toSafeNumber(event.target.value) })} value={values.id} />
             </label>
-
             <label className="config-field">
                 <span>Skill_ID (唯一ID)</span>
                 <input
@@ -60,7 +78,6 @@ export function SkillForm({ values, skillIconDir, onChange, onOpenSeidEditor, se
                     value={values.Skill_ID}
                 />
             </label>
-
             <label className="config-field">
                 <span>神通图标</span>
                 <input
@@ -72,7 +89,6 @@ export function SkillForm({ values, skillIconDir, onChange, onOpenSeidEditor, se
                     value={values.icon}
                 />
             </label>
-
             <div className="buff-icon-preview">
                 <div className="buff-icon-box">
                     {!imgError && iconSrc ? (
@@ -109,13 +125,14 @@ export function SkillForm({ values, skillIconDir, onChange, onOpenSeidEditor, se
             </label>
             <label className="config-field">
                 <span>请教类型</span>
-                <input
-                    inputMode="numeric"
-                    onChange={event => onChange({ qingjiaotype: toSafeNumber(event.target.value) })}
-                    value={values.qingjiaotype}
-                />
+                <select onChange={event => onChange({ qingjiaotype: toSafeNumber(event.target.value) })} value={values.qingjiaotype}>
+                    {withCurrent(skillConsultTypeOptions, values.qingjiaotype).map(option => (
+                        <option key={option.id} value={option.id}>
+                            {option.id}.{option.name}
+                        </option>
+                    ))}
+                </select>
             </label>
-
             <label className="config-field">
                 <span>技能描述</span>
                 <textarea className="config-desc-input" onChange={event => onChange({ descr: event.target.value })} value={values.descr} />
@@ -128,15 +145,17 @@ export function SkillForm({ values, skillIconDir, onChange, onOpenSeidEditor, se
                     value={values.TuJiandescr}
                 />
             </label>
-
             <label className="config-field">
-                <span>神通品阶</span>
-                <input
-                    inputMode="numeric"
-                    onChange={event => onChange({ Skill_LV: toSafeNumber(event.target.value) })}
-                    value={values.Skill_LV}
-                />
+                <span>神通等阶</span>
+                <select onChange={event => onChange({ Skill_LV: toSafeNumber(event.target.value) })} value={values.Skill_LV}>
+                    {withCurrent(skillQualityOptions, values.Skill_LV).map(option => (
+                        <option key={option.id} value={option.id}>
+                            {option.id}.{option.name}
+                        </option>
+                    ))}
+                </select>
             </label>
+
             <div className="config-field">
                 <span>攻击类型</span>
                 <div className="multi-check-list">
@@ -163,19 +182,22 @@ export function SkillForm({ values, skillIconDir, onChange, onOpenSeidEditor, se
                     {attackTypeOptions.length === 0 ? (
                         <input
                             onChange={event => onChange({ AttackType: toNumberList(event.target.value) })}
-                            placeholder="未加载到 AttackType.json，输入例如: 28,30"
+                            placeholder="未加载 AttackType.json，输入例如: 28,30"
                             value={values.AttackType.join(',')}
                         />
                     ) : null}
                 </div>
             </div>
+
             <label className="config-field">
-                <span>品阶</span>
-                <input
-                    inputMode="numeric"
-                    onChange={event => onChange({ typePinJie: toSafeNumber(event.target.value) })}
-                    value={values.typePinJie}
-                />
+                <span>品级</span>
+                <select onChange={event => onChange({ typePinJie: toSafeNumber(event.target.value) })} value={values.typePinJie}>
+                    {withCurrent(skillPhaseOptions, values.typePinJie).map(option => (
+                        <option key={option.id} value={option.id}>
+                            {option.id}.{option.name}
+                        </option>
+                    ))}
+                </select>
             </label>
             <label className="config-field">
                 <span>攻击目标</span>
@@ -252,7 +274,6 @@ export function SkillForm({ values, skillIconDir, onChange, onOpenSeidEditor, se
                 <span>斗法是否显示</span>
                 <input checked={values.DF === 1} onChange={event => onChange({ DF: event.target.checked ? 1 : 0 })} type="checkbox" />
             </div>
-
             <label className="config-field">
                 <span>图鉴类型</span>
                 <input

@@ -42,6 +42,9 @@ type EditorPanelProps = {
     buffRemoveTriggerOptions: { id: number; name: string }[]
     buffOverlayTypeOptions: { id: number; name: string }[]
     skillAttackTypeOptions: { id: number; name: string }[]
+    skillConsultTypeOptions: { id: number; name: string }[]
+    skillPhaseOptions: { id: number; name: string }[]
+    skillQualityOptions: { id: number; name: string }[]
     onOpenSeidEditor: () => void
     seidDisplayRows: { id: number; name: string }[]
 }
@@ -68,6 +71,9 @@ export function EditorPanel({
     buffRemoveTriggerOptions,
     buffOverlayTypeOptions,
     skillAttackTypeOptions,
+    skillConsultTypeOptions,
+    skillPhaseOptions,
+    skillQualityOptions,
     onOpenSeidEditor,
     seidDisplayRows,
 }: EditorPanelProps) {
@@ -110,6 +116,9 @@ export function EditorPanel({
                             values={skillForm}
                             onChange={onChangeSkillForm}
                             attackTypeOptions={skillAttackTypeOptions}
+                            skillConsultTypeOptions={skillConsultTypeOptions}
+                            skillPhaseOptions={skillPhaseOptions}
+                            skillQualityOptions={skillQualityOptions}
                         />
                     ) : activeModule === 'staticskill' ? (
                         <StaticSkillForm
@@ -119,6 +128,9 @@ export function EditorPanel({
                             values={staticSkillForm}
                             onChange={onChangeStaticSkillForm}
                             attackTypeOptions={skillAttackTypeOptions}
+                            skillConsultTypeOptions={skillConsultTypeOptions}
+                            skillPhaseOptions={skillPhaseOptions}
+                            skillQualityOptions={skillQualityOptions}
                         />
                     ) : (
                         <div className="todo-box">TODO: {activeModuleLabel}</div>

@@ -4,10 +4,15 @@ import { useEffect, useMemo, useState } from 'react'
 
 import type { StaticSkillEntry } from '../../types'
 
+type Option = { id: number; name: string }
+
 type StaticSkillFormProps = {
     values: StaticSkillEntry | null
     skillIconDir: string
-    attackTypeOptions: { id: number; name: string }[]
+    attackTypeOptions: Option[]
+    skillConsultTypeOptions: Option[]
+    skillPhaseOptions: Option[]
+    skillQualityOptions: Option[]
     onChange: (patch: Partial<StaticSkillEntry>) => void
     onOpenSeidEditor: () => void
     seidDisplayRows: { id: number; name: string }[]
@@ -18,10 +23,17 @@ function toSafeNumber(input: string) {
     return Number.isFinite(value) ? value : 0
 }
 
+function withCurrent(options: Option[], current: number) {
+    return options.some(item => item.id === current) ? options : [{ id: current, name: '未定义' }, ...options]
+}
+
 export function StaticSkillForm({
     values,
     skillIconDir,
     attackTypeOptions,
+    skillConsultTypeOptions,
+    skillPhaseOptions,
+    skillQualityOptions,
     onChange,
     onOpenSeidEditor,
     seidDisplayRows,
@@ -94,11 +106,13 @@ export function StaticSkillForm({
             </label>
             <label className="config-field">
                 <span>请教类型</span>
-                <input
-                    inputMode="numeric"
-                    onChange={event => onChange({ qingjiaotype: toSafeNumber(event.target.value) })}
-                    value={values.qingjiaotype}
-                />
+                <select onChange={event => onChange({ qingjiaotype: toSafeNumber(event.target.value) })} value={values.qingjiaotype}>
+                    {withCurrent(skillConsultTypeOptions, values.qingjiaotype).map(option => (
+                        <option key={option.id} value={option.id}>
+                            {option.id}.{option.name}
+                        </option>
+                    ))}
+                </select>
             </label>
             <label className="config-field">
                 <span>图鉴显示</span>
@@ -115,7 +129,7 @@ export function StaticSkillForm({
             <label className="config-field">
                 <span>攻击属性</span>
                 <select onChange={event => onChange({ AttackType: toSafeNumber(event.target.value) })} value={values.AttackType}>
-                    {attackTypeOptions.map(option => (
+                    {withCurrent(attackTypeOptions, values.AttackType).map(option => (
                         <option key={option.id} value={option.id}>
                             {option.id}.{option.name}
                         </option>
@@ -124,19 +138,23 @@ export function StaticSkillForm({
             </label>
             <label className="config-field">
                 <span>功法等阶</span>
-                <input
-                    inputMode="numeric"
-                    onChange={event => onChange({ Skill_LV: toSafeNumber(event.target.value) })}
-                    value={values.Skill_LV}
-                />
+                <select onChange={event => onChange({ Skill_LV: toSafeNumber(event.target.value) })} value={values.Skill_LV}>
+                    {withCurrent(skillQualityOptions, values.Skill_LV).map(option => (
+                        <option key={option.id} value={option.id}>
+                            {option.id}.{option.name}
+                        </option>
+                    ))}
+                </select>
             </label>
             <label className="config-field">
                 <span>功法品级</span>
-                <input
-                    inputMode="numeric"
-                    onChange={event => onChange({ typePinJie: toSafeNumber(event.target.value) })}
-                    value={values.typePinJie}
-                />
+                <select onChange={event => onChange({ typePinJie: toSafeNumber(event.target.value) })} value={values.typePinJie}>
+                    {withCurrent(skillPhaseOptions, values.typePinJie).map(option => (
+                        <option key={option.id} value={option.id}>
+                            {option.id}.{option.name}
+                        </option>
+                    ))}
+                </select>
             </label>
             <label className="config-field">
                 <span>参悟时间</span>
