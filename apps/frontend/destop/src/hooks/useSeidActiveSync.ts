@@ -1,10 +1,8 @@
 import { useEffect } from 'react'
 
-import type { CreateAvatarEntry } from '../types'
-
 type UseSeidActiveSyncParams = {
     seidEditorOpen: boolean
-    selectedTalent: CreateAvatarEntry | null
+    selectedTalent: { seid: number[] } | null
     activeSeidId: number | null
     setActiveSeidId: (id: number | null) => void
 }

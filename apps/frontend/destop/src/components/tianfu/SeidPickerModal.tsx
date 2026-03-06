@@ -4,6 +4,7 @@ export type SeidMetaProperty = {
     ID: string
     Type: string
     Desc: string
+    SpecialDrawer?: string[]
 }
 
 export type SeidMetaItem = {

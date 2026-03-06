@@ -10,6 +10,15 @@
     "frontendDist": "../dist"
   },
   "app": {
+    "security": {
+      "csp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": [
+          "**"
+        ]
+      }
+    },
     "windows": [
       {
         "title": "Next编辑器",

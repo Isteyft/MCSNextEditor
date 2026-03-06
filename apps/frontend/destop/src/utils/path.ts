@@ -22,3 +22,7 @@ export function inferModRootPath(rootPath: string) {
 export function findModRoot(entries: FsEntry[]) {
     return entries.find(entry => entry.is_dir && /[\\/]plugins[\\/]Next[\\/]mod[^\\/]+$/i.test(entry.path.replace(/\\/g, '/')))
 }
+
+export function isModRootPath(path: string) {
+    return /[\\/]plugins[\\/]Next[\\/]mod[^\\/]+$/i.test(path.replace(/\\/g, '/'))
+}

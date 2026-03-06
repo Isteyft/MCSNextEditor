@@ -74,9 +74,63 @@ export async function readTalentTypeOptions(params: {
     return { options: [] as { id: number; name: string }[], loadedPath: '', candidates }
 }
 
+export async function readEnumOptionsByFileName(params: {
+    rootPath: string
+    fileName: string
+    preferDesc?: boolean
+    readFilePayload: (filePath: string) => Promise<{ content: string }>
+}) {
+    const { rootPath, fileName, readFilePayload, preferDesc = false } = params
+    const candidates = collectMetaFileCandidates(rootPath, fileName)
+    for (const filePath of candidates) {
+        try {
+            const payload = await readFilePayload(filePath)
+            const parsed = JSON.parse(payload.content) as unknown
+            const source = Array.isArray(parsed)
+                ? parsed
+                : parsed && typeof parsed === 'object'
+                  ? Object.values(parsed as Record<string, unknown>).filter(item => item && typeof item === 'object')
+                  : []
+            const options = source
+                .map(item => ({
+                    id: Number(
+                        (item as Record<string, unknown>).TypeID ??
+                            (item as Record<string, unknown>).ID ??
+                            (item as Record<string, unknown>).id ??
+                            0
+                    ),
+                    name: String(
+                        (preferDesc ? (item as Record<string, unknown>).Desc : undefined) ??
+                            (item as Record<string, unknown>).TypeName ??
+                            (item as Record<string, unknown>).Name ??
+                            (item as Record<string, unknown>).name ??
+                            (item as Record<string, unknown>).Desc ??
+                            ''
+                    ),
+                }))
+                .filter(item => Number.isFinite(item.id))
+                .sort((a, b) => a.id - b.id)
+            if (options.length > 0) {
+                return { options, loadedPath: filePath, candidates }
+            }
+        } catch {
+            // try next
+        }
+    }
+    return { options: [] as { id: number; name: string }[], loadedPath: '', candidates }
+}
+
 export async function readSeidMeta(params: { rootPath: string; readFilePayload: (filePath: string) => Promise<{ content: string }> }) {
+    return readSeidMetaByFileName({ ...params, fileName: 'CreateAvatarSeidMeta.json' })
+}
+
+export async function readSeidMetaByFileName(params: {
+    rootPath: string
+    fileName: string
+    readFilePayload: (filePath: string) => Promise<{ content: string }>
+}) {
     const { rootPath, readFilePayload } = params
-    const candidates = collectMetaFileCandidates(rootPath, 'CreateAvatarSeidMeta.json')
+    const candidates = collectMetaFileCandidates(rootPath, params.fileName)
 
     for (const filePath of candidates) {
         try {
@@ -95,6 +149,9 @@ export async function readSeidMeta(params: { rootPath: string; readFilePayload: 
                         ID: String((property as Record<string, unknown>).ID ?? ''),
                         Type: String((property as Record<string, unknown>).Type ?? ''),
                         Desc: String((property as Record<string, unknown>).Desc ?? ''),
+                        SpecialDrawer: Array.isArray((property as Record<string, unknown>).SpecialDrawer)
+                            ? ((property as Record<string, unknown>).SpecialDrawer as unknown[]).map(item => String(item))
+                            : undefined,
                     })),
                 }
             }
@@ -242,6 +299,9 @@ function parseSeidMetaFromUnknown(raw: unknown) {
                 ID: String((property as Record<string, unknown>).ID ?? ''),
                 Type: String((property as Record<string, unknown>).Type ?? ''),
                 Desc: String((property as Record<string, unknown>).Desc ?? ''),
+                SpecialDrawer: Array.isArray((property as Record<string, unknown>).SpecialDrawer)
+                    ? ((property as Record<string, unknown>).SpecialDrawer as unknown[]).map(item => String(item))
+                    : undefined,
             })),
         }
     }

@@ -1,6 +1,20 @@
-﻿import { ChevronDown, ChevronUp, Minus, Plus, X } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, Minus, PenLine, Plus, X } from 'lucide-react'
+import { useState } from 'react'
 
 import { SeidMetaItem } from './SeidPickerModal'
+
+type DrawerOption = {
+    id: number
+    name: string
+}
+
+type DrawerState = {
+    seidId: number
+    propertyId: string
+    drawerType: string
+    title: string
+    multiple: boolean
+}
 
 type SeidEditorModalProps = {
     open: boolean
@@ -8,6 +22,7 @@ type SeidEditorModalProps = {
     activeSeidId: number | null
     seidData: Record<string, Record<string, string | number | number[]>>
     metaMap: Record<number, SeidMetaItem>
+    drawerOptionsMap: Record<string, DrawerOption[]>
     onClose: () => void
     onSelectSeid: (id: number) => void
     onRequestAdd: () => void
@@ -23,12 +38,39 @@ function toArrayText(value: string | number | number[] | undefined) {
     return value ?? ''
 }
 
+function normalizeToNumberArray(value: string | number | number[] | undefined) {
+    if (Array.isArray(value)) return value.map(item => Number(item)).filter(item => Number.isFinite(item))
+    if (typeof value === 'number') return Number.isFinite(value) ? [value] : []
+    if (typeof value === 'string') {
+        return value
+            .split(',')
+            .map(item => Number(item.trim()))
+            .filter(item => Number.isFinite(item))
+    }
+    return []
+}
+
+function normalizeToNumber(value: string | number | number[] | undefined) {
+    if (Array.isArray(value)) return Number(value[0] ?? 0)
+    if (typeof value === 'number') return Number.isFinite(value) ? value : 0
+    if (typeof value === 'string') {
+        const num = Number(value.trim())
+        return Number.isFinite(num) ? num : 0
+    }
+    return 0
+}
+
+function isArrayDrawer(drawerType: string) {
+    return drawerType.toLowerCase().includes('array')
+}
+
 export function SeidEditorModal({
     open,
     seidIds,
     activeSeidId,
     seidData,
     metaMap,
+    drawerOptionsMap,
     onClose,
     onSelectSeid,
     onRequestAdd,
@@ -37,11 +79,40 @@ export function SeidEditorModal({
     onMoveDown,
     onChangeProperty,
 }: SeidEditorModalProps) {
+    const [drawerState, setDrawerState] = useState<DrawerState | null>(null)
+    const [drawerSelected, setDrawerSelected] = useState<number[]>([])
+
     if (!open) return null
 
     const hasActive = activeSeidId !== null
     const meta = hasActive ? metaMap[activeSeidId] : undefined
     const values = hasActive ? (seidData[String(activeSeidId)] ?? {}) : {}
+
+    const activeDrawerOptions = drawerState ? (drawerOptionsMap[drawerState.drawerType] ?? []) : []
+
+    function openDrawer(
+        seidId: number,
+        propertyId: string,
+        drawerType: string,
+        title: string,
+        currentValue: string | number | number[] | undefined
+    ) {
+        const multiple = isArrayDrawer(drawerType)
+        setDrawerState({ seidId, propertyId, drawerType, title, multiple })
+        setDrawerSelected(multiple ? normalizeToNumberArray(currentValue) : [normalizeToNumber(currentValue)])
+    }
+
+    function closeDrawer() {
+        setDrawerState(null)
+        setDrawerSelected([])
+    }
+
+    function applyDrawerSelection() {
+        if (!drawerState) return
+        const value = drawerState.multiple ? drawerSelected : Number(drawerSelected[0] ?? 0)
+        onChangeProperty(drawerState.seidId, drawerState.propertyId, value)
+        closeDrawer()
+    }
 
     return (
         <div className="modal-mask" onClick={onClose}>
@@ -98,56 +169,64 @@ export function SeidEditorModal({
                                     meta.properties.map(property => {
                                         const value = values[property.ID]
                                         const type = (property.Type || '').toLowerCase()
+                                        const specialDrawer = property.SpecialDrawer?.[0]
 
-                                        if (type === 'intarray') {
-                                            return (
-                                                <label className="config-field" key={property.ID}>
-                                                    <span>
-                                                        {property.ID} ({property.Type}) - {property.Desc || '-'}
-                                                    </span>
-                                                    <input
-                                                        onChange={event => {
-                                                            const list = event.target.value
-                                                                .split(',')
-                                                                .map(item => Number(item.trim()))
-                                                                .filter(item => Number.isFinite(item))
-                                                            onChangeProperty(activeSeidId, property.ID, list)
-                                                        }}
-                                                        placeholder="例如: 1,2,3"
-                                                        value={toArrayText(value)}
-                                                    />
-                                                </label>
+                                        const inputNode =
+                                            type === 'intarray' ? (
+                                                <input
+                                                    onChange={event => {
+                                                        const list = event.target.value
+                                                            .split(',')
+                                                            .map(item => Number(item.trim()))
+                                                            .filter(item => Number.isFinite(item))
+                                                        onChangeProperty(activeSeidId, property.ID, list)
+                                                    }}
+                                                    placeholder="例如: 1,2,3"
+                                                    value={toArrayText(value)}
+                                                />
+                                            ) : type === 'int' || type === 'float' || type === 'number' ? (
+                                                <input
+                                                    inputMode="numeric"
+                                                    onChange={event => {
+                                                        const raw = event.target.value.trim()
+                                                        const num = raw === '' ? 0 : Number(raw)
+                                                        onChangeProperty(activeSeidId, property.ID, Number.isFinite(num) ? num : 0)
+                                                    }}
+                                                    value={String(value ?? 0)}
+                                                />
+                                            ) : (
+                                                <input
+                                                    onChange={event => onChangeProperty(activeSeidId, property.ID, event.target.value)}
+                                                    value={String(value ?? '')}
+                                                />
                                             )
-                                        }
-
-                                        if (type === 'int' || type === 'float' || type === 'number') {
-                                            return (
-                                                <label className="config-field" key={property.ID}>
-                                                    <span>
-                                                        {property.ID} ({property.Type}) - {property.Desc || '-'}
-                                                    </span>
-                                                    <input
-                                                        inputMode="numeric"
-                                                        onChange={event => {
-                                                            const raw = event.target.value.trim()
-                                                            const num = raw === '' ? 0 : Number(raw)
-                                                            onChangeProperty(activeSeidId, property.ID, Number.isFinite(num) ? num : 0)
-                                                        }}
-                                                        value={String(value ?? 0)}
-                                                    />
-                                                </label>
-                                            )
-                                        }
 
                                         return (
                                             <label className="config-field" key={property.ID}>
                                                 <span>
                                                     {property.ID} ({property.Type}) - {property.Desc || '-'}
                                                 </span>
-                                                <input
-                                                    onChange={event => onChangeProperty(activeSeidId, property.ID, event.target.value)}
-                                                    value={String(value ?? '')}
-                                                />
+                                                <div className="drawer-input-row">
+                                                    {inputNode}
+                                                    {specialDrawer ? (
+                                                        <button
+                                                            className="icon-btn"
+                                                            onClick={() =>
+                                                                openDrawer(
+                                                                    activeSeidId,
+                                                                    property.ID,
+                                                                    specialDrawer,
+                                                                    `${property.ID} - ${property.Desc || specialDrawer}`,
+                                                                    value
+                                                                )
+                                                            }
+                                                            title={`打开 ${specialDrawer}`}
+                                                            type="button"
+                                                        >
+                                                            <PenLine size={14} />
+                                                        </button>
+                                                    ) : null}
+                                                </div>
                                             </label>
                                         )
                                     })
@@ -159,6 +238,56 @@ export function SeidEditorModal({
                     </section>
                 </div>
             </div>
+
+            {drawerState ? (
+                <div className="modal-mask drawer-mask" onClick={closeDrawer}>
+                    <div className="create-modal drawer-modal" onClick={event => event.stopPropagation()}>
+                        <div className="create-modal-head">
+                            <strong>{drawerState.title}</strong>
+                            <button className="modal-close" onClick={closeDrawer} type="button">
+                                <X size={14} />
+                            </button>
+                        </div>
+                        <div className="drawer-list">
+                            {activeDrawerOptions.length === 0 ? <div className="todo-box">当前 Drawer 没有可选数据</div> : null}
+                            {activeDrawerOptions.map(option => {
+                                const checked = drawerSelected.includes(option.id)
+                                return (
+                                    <button
+                                        className={`drawer-row ${checked ? 'active' : ''}`}
+                                        key={option.id}
+                                        onClick={() => {
+                                            if (drawerState.multiple) {
+                                                setDrawerSelected(prev =>
+                                                    prev.includes(option.id)
+                                                        ? prev.filter(item => item !== option.id)
+                                                        : [...prev, option.id]
+                                                )
+                                            } else {
+                                                setDrawerSelected([option.id])
+                                            }
+                                        }}
+                                        type="button"
+                                    >
+                                        <span className="drawer-row-main">
+                                            {option.id}. {option.name || '-'}
+                                        </span>
+                                        {checked ? <Check size={14} /> : null}
+                                    </button>
+                                )
+                            })}
+                        </div>
+                        <div className="drawer-actions">
+                            <button className="cancel-btn" onClick={closeDrawer} type="button">
+                                取消
+                            </button>
+                            <button className="save-btn" onClick={applyDrawerSelection} type="button">
+                                确认
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
         </div>
     )
 }

@@ -1,4 +1,6 @@
-﻿import { ViewMode } from '../../modules'
+import { ViewMode } from '../../modules'
+import type { BuffEntry } from '../../types'
+import { BuffForm } from '../buff/BuffForm'
 import { TalentForm } from '../tianfu/TalentForm'
 import { ProjectConfigForm } from './ProjectConfigForm'
 
@@ -24,7 +26,14 @@ type EditorPanelProps = {
         Info: string
     } | null
     onChangeTalentForm: (patch: Partial<NonNullable<EditorPanelProps['talentForm']>>) => void
+    buffForm: BuffEntry | null
+    buffIconDir: string
+    onChangeBuffForm: (patch: Partial<BuffEntry>) => void
     talentTypeOptions: { id: number; name: string }[]
+    buffTypeOptions: { id: number; name: string }[]
+    buffTriggerOptions: { id: number; name: string }[]
+    buffRemoveTriggerOptions: { id: number; name: string }[]
+    buffOverlayTypeOptions: { id: number; name: string }[]
     onOpenSeidEditor: () => void
     seidDisplayRows: { id: number; name: string }[]
 }
@@ -37,7 +46,14 @@ export function EditorPanel({
     onChangeConfigForm,
     talentForm,
     onChangeTalentForm,
+    buffForm,
+    buffIconDir,
+    onChangeBuffForm,
     talentTypeOptions,
+    buffTypeOptions,
+    buffTriggerOptions,
+    buffRemoveTriggerOptions,
+    buffOverlayTypeOptions,
     onOpenSeidEditor,
     seidDisplayRows,
 }: EditorPanelProps) {
@@ -59,6 +75,18 @@ export function EditorPanel({
                             typeOptions={talentTypeOptions}
                             values={talentForm}
                             onChange={onChangeTalentForm}
+                        />
+                    ) : activeModule === 'buff' ? (
+                        <BuffForm
+                            buffIconDir={buffIconDir}
+                            onOpenSeidEditor={onOpenSeidEditor}
+                            seidDisplayRows={seidDisplayRows}
+                            values={buffForm}
+                            onChange={onChangeBuffForm}
+                            buffTypeOptions={buffTypeOptions}
+                            buffTriggerOptions={buffTriggerOptions}
+                            buffRemoveTriggerOptions={buffRemoveTriggerOptions}
+                            buffOverlayTypeOptions={buffOverlayTypeOptions}
                         />
                     ) : (
                         <div className="todo-box">TODO: {activeModuleLabel}</div>

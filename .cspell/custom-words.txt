@@ -14,3 +14,16 @@ jiesuo
 nums
 tauri
 intarray
+buffid
+panduan
+Ybuf
+Ybuff
+bufficon
+Abuff
+Xbuf
+Xbuff
+skillid
+bufftype
+descr
+looptime
+totaltime
