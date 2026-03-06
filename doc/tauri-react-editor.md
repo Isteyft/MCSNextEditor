@@ -1,130 +1,85 @@
-# Next编辑器（Tauri + React）开发记录
+﻿# Next编辑器（Tauri + React）开发日志
 
-## 当前应用信息
+## 项目定位
 
--   应用名称：`Next编辑器`
+用于编辑 Next Mod 数据的桌面工具，当前采用 `Tauri + React + Vite`。
+
+## 应用信息
+
+-   应用名：`Next编辑器`
 -   Tauri Product Name：`Next编辑器`
--   窗口标题：`Next编辑器`
--   应用图标：`apps/frontend/destop/src-tauri/icons/icon.ico`
+-   图标：`apps/frontend/destop/src-tauri/icons/icon.ico`
+-   主要入口：`apps/frontend/destop/src/App.tsx`
 
 ## 目录结构（前端）
 
--   `apps/frontend/destop/src/components/project/*`
--   `apps/frontend/destop/src/components/topbar/*`
--   `apps/frontend/destop/src/components/workspace/*`
--   `apps/frontend/destop/src/components/tianfu/*`
--   `apps/frontend/destop/src/hooks/*`
--   `apps/frontend/destop/src/services/*`
--   `apps/frontend/destop/src/types/*`
--   `apps/frontend/destop/src/utils/*`
+-   `apps/frontend/destop/src/components/project`
+-   `apps/frontend/destop/src/components/topbar`
+-   `apps/frontend/destop/src/components/workspace`
+-   `apps/frontend/destop/src/components/tianfu`
+-   `apps/frontend/destop/src/components/buff`
+-   `apps/frontend/destop/src/components/item`
+-   `apps/frontend/destop/src/components/skill`
+-   `apps/frontend/destop/src/components/staticskill`
+-   `apps/frontend/destop/src/services`
+-   `apps/frontend/destop/src/types`
 
-## 主要功能状态
+## 关键能力状态
 
-### 1. 顶部栏与窗口控制
+-   顶部自定义标题栏、窗口拖拽、最小化/最大化/关闭
+-   文件菜单：新建项目、打开项目、保存项目
+-   三栏布局：左侧模块树 / 中间表格 / 右侧表单
+-   模块：项目配置、天赋、词缀、Buff、Item、神通、功法
+-   表格支持：搜索、多选、复制粘贴、删除、批量改ID
+-   Seid 编辑器：按元数据渲染属性、支持特殊抽屉选择
 
--   自定义顶部栏（无系统默认标题栏）
--   支持窗口拖拽移动（系统级）
--   支持最小化、最大化/还原、关闭
--   顶部菜单保留“文件”
--   文件菜单支持：新建项目、打开项目、保存项目
+## 元数据加载规则
 
-### 2. 布局与模块
+-   内置元数据来源：`editorMeta/*.json`
+-   扩展元数据来源：`config/*.json`
+-   枚举读取支持多文件合并（同ID后者覆盖前者）
+-   可通过 `./config/AttackType.json` 等文件扩展/覆盖选项
 
--   三栏布局：
-    -   左侧：项目文件夹（模块树）
-    -   中间：数据内容（表格）
-    -   右侧：编辑区域（表单）
--   当前模块键：
-    -   项目配置：`project-config`
-    -   天赋：`talent`
-    -   神通：`skill`
-    -   功法：`staticskill`
+## 保存策略（当前）
 
-### 3. 天赋（CreateAvatarJsonData）
+-   先缓存，点击“保存项目”统一落盘
+-   Seid 文件保存规则：
+    -   天赋/Buff/Item 使用标识字段 `id`
+    -   Skill/StaticSkill 使用标识字段 `skillid`
+    -   只写标识字段 + 业务值字段（value/target等）
+-   Seid 保存会先读取旧文件并按同条目合并：
+    -   未修改字段保留旧值
+    -   不会因编辑器未显示字段而清空自定义值
 
--   表格列：`ID / 天赋名字 / 分类 / 描述`
--   点击行可在右侧编辑表单中修改
--   支持新增（弹窗输入 ID）
--   支持多选：
-    -   普通点击单选
-    -   `Shift` 连续多选
-    -   `Ctrl/Cmd` 离散多选
--   支持删除：
-    -   工具栏垃圾桶
-    -   `Delete` 快捷键
-    -   右键菜单“删除所选”
--   支持批量改 ID：
-    -   右键菜单“批量修改ID开头”
-    -   输入前缀后按顺序生成 `prefix1/prefix2/...`
--   表格文字不可选中（避免系统文字高亮干扰多选）
+## 最近修改日志
 
-### 4. 复制/粘贴（软件内）
+### 2026-03-06
 
--   `Ctrl/Cmd + C`：复制当前选中条目（支持多条）
--   `Ctrl/Cmd + V`：粘贴到当前天赋表
--   重复 ID 处理：
-    -   检测到冲突时提示输入“新 ID 前缀”
-    -   对冲突项执行批量重命名生成新 ID
-    -   若新 ID 仍冲突则中断并提示
-
-### 5. Seid 编辑
-
--   支持打开 Seid 编辑弹窗
--   支持新增/删除/上下移动 Seid
--   支持读取 Seid 元数据并按 Properties 渲染表单
--   Seid 数据缓存并可随项目保存到 `Data/CrateAvatarSeidJsonData/*.json`
-
-### 6. 项目配置（modConfig.json）
-
--   打开路径：`<modRoot>/Config/modConfig.json`
--   右侧表单编辑：名称、作者、版本、描述
--   `Settings` 隐藏但保留原值
--   保存项目时统一落盘
-
-### 7. 缓存与保存策略
-
--   编辑后先保存到内存缓存（不立即写盘）
--   文件菜单“保存项目”时统一写入：
-    -   `Config/modConfig.json`
-    -   `Data/CreateAvatarJsonData.json`
-    -   `Data/CrateAvatarSeidJsonData/*.json`
-
-## 元数据加载（重点）
-
-### 内置元数据
-
--   来源：`editorMeta/*`
--   目前使用：
-    -   `CreateAvatarTalentType.json`
-    -   `CreateAvatarSeidMeta.json`
-
-### 自定义元数据扩展
-
--   新增来源：`./config/*.json`
--   行为：
-    -   启动/打开项目/进入天赋模块时自动预加载
-    -   自动识别并合并天赋分类与 Seid 元数据
-    -   自定义数据可覆盖内置同 ID 项
--   统一入口方法：
-    -   `preloadEditorMeta(...)`
-    -   文件：`apps/frontend/destop/src/components/tianfu/talent-meta.ts`
-
-## 主题与样式
-
--   已按 GitHub 亮色主题系调整（白底、灰边、黑字）
--   关键色：
-    -   主背景：`#FFFFFF`
-    -   边框：`#E1E4E8`
-    -   滚动轨道：`#F2F3F4`
-    -   选中背景：`#EDEFF2`
-
-## 最近修复
-
--   修复 `tauri.conf.json` 因编码/BOM导致的 JSON 解析失败
--   已重写为 UTF-8 无 BOM
+-   修复批量改ID逻辑：输入起始值 `40` 且选中15条时，结果为 `40-54`（不再拼接为 `401-4015`）。
+-   统一 Seid 标识符：
+    -   Skill/StaticSkill 改为 `skillid`。
+    -   其他模块保持 `id`。
+-   Seid 持久化增强：
+    -   过滤多余字段，避免写入无关字段。
+    -   保存时合并旧行数据，保留未修改字段。
+-   Seid 编辑体验优化：
+    -   按字段类型展示默认值：`Int/Float/Number=0`、`String=''`、`IntArray=[]`。
+-   元数据扩展增强：
+    -   `config/*.json` 参与枚举候选路径。
+    -   同名枚举支持多文件合并。
+-   菜单显示修复：
+    -   顶部下拉菜单和右键菜单增加边界修正与最大高度滚动，底部不再显示不全。
+-   删除行为调整：
+    -   删除目录改为直接删除，不再弹系统确认框。
 
 ## 运行
 
 ```bash
 pnpm -C apps/frontend/destop tauri:dev
+```
+
+## 类型检查
+
+```bash
+pnpm -C apps/frontend/destop typecheck
 ```

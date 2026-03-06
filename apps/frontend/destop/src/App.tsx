@@ -1,4 +1,5 @@
-﻿import { getCurrentWindow } from '@tauri-apps/api/window'
+﻿import { executableDir } from '@tauri-apps/api/path'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 import { open } from '@tauri-apps/plugin-dialog'
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 
@@ -200,7 +201,12 @@ export function App() {
     const [rootSnapshotCache, setRootSnapshotCache] = useState<Record<string, RootModuleSnapshot>>({})
     const [newProjectName, setNewProjectName] = useState('')
     const [newModName, setNewModName] = useState('')
+    const [exeMetaRoot, setExeMetaRoot] = useState('')
     const [status, setStatus] = useState('请先从“文件”菜单打开项目。')
+
+    function withMetaRoots(roots: string[]) {
+        return Array.from(new Set([...roots.filter(Boolean), ...(exeMetaRoot ? [exeMetaRoot] : [])]))
+    }
 
     const moduleConfigPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Config', 'modConfig.json') : ''), [modRootPath])
     const affixPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Data', 'TuJianChunWenBen.json') : ''), [modRootPath])
@@ -557,6 +563,38 @@ export function App() {
         let active = true
         ;(async () => {
             try {
+                const dir = await executableDir()
+                if (!active) return
+                setExeMetaRoot(dir)
+            } catch {
+                // running in pure web mode or path API unavailable
+            }
+        })()
+        return () => {
+            active = false
+        }
+    }, [])
+
+    useEffect(() => {
+        if (!workspaceRoot || !exeMetaRoot) return
+        ;(async () => {
+            await preloadMeta([workspaceRoot], true)
+            await loadBuffSeidMeta([workspaceRoot], true)
+            await loadItemSeidMeta([workspaceRoot], true)
+            await loadSkillSeidMeta([workspaceRoot], true)
+            await loadStaticSkillSeidMeta([workspaceRoot], true)
+            await loadBuffEnumMeta([workspaceRoot], true)
+            await loadAffixEnumMeta([workspaceRoot], true)
+            await loadItemEnumMeta([workspaceRoot], true)
+            await loadSkillEnumMeta([workspaceRoot], true)
+            await loadSpecialDrawerOptions([workspaceRoot], modRootPath, true)
+        })()
+    }, [workspaceRoot, exeMetaRoot, modRootPath])
+
+    useEffect(() => {
+        let active = true
+        ;(async () => {
+            try {
                 const root = await getWorkspaceRoot()
                 if (!active) return
                 setWorkspaceRoot(root)
@@ -685,7 +723,7 @@ export function App() {
     ])
 
     async function preloadMeta(roots: string[], silent = false) {
-        const result = await preloadEditorMeta({ roots, readFilePayload, loadProjectEntries })
+        const result = await preloadEditorMeta({ roots: withMetaRoots(roots), readFilePayload, loadProjectEntries })
         const talentLoaded = Boolean(result.talentOptions?.length)
         const seidLoaded = Boolean(result.seidMetaMap && Object.keys(result.seidMetaMap).length > 0)
 
@@ -711,7 +749,7 @@ export function App() {
     }
 
     async function loadBuffSeidMeta(roots: string[], silent = false) {
-        const candidates = Array.from(new Set(roots.filter(Boolean)))
+        const candidates = withMetaRoots(roots)
         for (const root of candidates) {
             const result = await readSeidMetaByFileName({
                 rootPath: root,
@@ -733,7 +771,7 @@ export function App() {
     }
 
     async function loadItemSeidMeta(roots: string[], silent = false) {
-        const candidates = Array.from(new Set(roots.filter(Boolean)))
+        const candidates = withMetaRoots(roots)
         const fileNames = ['ItemUseSeidMeta.json', 'ItemsSeidMeta.json', 'ItemSeidMeta.json']
         for (const root of candidates) {
             for (const fileName of fileNames) {
@@ -756,7 +794,7 @@ export function App() {
     }
 
     async function loadSkillSeidMeta(roots: string[], silent = false) {
-        const candidates = Array.from(new Set(roots.filter(Boolean)))
+        const candidates = withMetaRoots(roots)
         for (const root of candidates) {
             const result = await readSeidMetaByFileName({
                 rootPath: root,
@@ -778,7 +816,7 @@ export function App() {
     }
 
     async function loadStaticSkillSeidMeta(roots: string[], silent = false) {
-        const candidates = Array.from(new Set(roots.filter(Boolean)))
+        const candidates = withMetaRoots(roots)
         for (const root of candidates) {
             const result = await readSeidMetaByFileName({
                 rootPath: root,
@@ -800,7 +838,7 @@ export function App() {
     }
 
     async function loadBuffEnumMeta(roots: string[], silent = false) {
-        const candidates = Array.from(new Set(roots.filter(Boolean)))
+        const candidates = withMetaRoots(roots)
         const fileMap: Array<{ file: string; setter: (value: TalentTypeOption[]) => void; preferDesc?: boolean }> = [
             { file: 'BuffType.json', setter: setBuffTypeOptions },
             { file: 'BuffTriggerType.json', setter: setBuffTriggerOptions, preferDesc: true },
@@ -837,7 +875,7 @@ export function App() {
     }
 
     async function loadAffixEnumMeta(roots: string[], silent = false) {
-        const candidates = Array.from(new Set(roots.filter(Boolean)))
+        const candidates = withMetaRoots(roots)
         const loaders: Array<{
             fileName: string
             setter: (rows: TalentTypeOption[]) => void
@@ -873,7 +911,7 @@ export function App() {
     }
 
     async function loadItemEnumMeta(roots: string[], silent = false) {
-        const candidates = Array.from(new Set(roots.filter(Boolean)))
+        const candidates = withMetaRoots(roots)
         const fileMap: Array<{ file: string; setter: (value: TalentTypeOption[]) => void; preferDesc?: boolean }> = [
             { file: 'GuideType.json', setter: setItemGuideTypeOptions, preferDesc: true },
             { file: 'ItemShopType.json', setter: setItemShopTypeOptions, preferDesc: true },
@@ -906,7 +944,7 @@ export function App() {
     }
 
     async function loadSkillEnumMeta(roots: string[], silent = false) {
-        const candidates = Array.from(new Set(roots.filter(Boolean)))
+        const candidates = withMetaRoots(roots)
         const loaders: Array<{
             fileName: string
             setter: (rows: TalentTypeOption[]) => void
@@ -988,7 +1026,7 @@ export function App() {
             { drawer: 'BuffTypeDrawer', file: 'BuffType.json', preferDesc: false },
             { drawer: 'BuffRemoveTriggerTypeDrawer', file: 'BuffRemoveTriggerType.json', preferDesc: true },
         ]
-        const candidates = Array.from(new Set(roots.filter(Boolean)))
+        const candidates = withMetaRoots(roots)
         for (const mapping of enumMappings) {
             for (const root of candidates) {
                 const result = await readEnumOptionsByFileName({
@@ -1867,7 +1905,7 @@ export function App() {
             return
         }
         const orderedTargets = [...targets].sort((a, b) => (affixMap[a]?.id ?? 0) - (affixMap[b]?.id ?? 0))
-        const nextKeys = orderedTargets.map((_, index) => String(Number(`${prefix}${index + 1}`)))
+        const nextKeys = orderedTargets.map((_, index) => String(Number(prefix) + index))
         const nextKeySet = new Set(nextKeys)
         if (nextKeySet.size !== nextKeys.length) {
             setStatus('批量修改ID失败：新ID出现重复。')
@@ -2073,7 +2111,7 @@ export function App() {
         }
 
         const orderedTargets = [...targets].sort((a, b) => (talentMap[a]?.id ?? 0) - (talentMap[b]?.id ?? 0))
-        const nextKeys = orderedTargets.map((_, index) => String(Number(`${prefix}${index + 1}`)))
+        const nextKeys = orderedTargets.map((_, index) => String(Number(prefix) + index))
         const nextKeySet = new Set(nextKeys)
         if (nextKeySet.size !== nextKeys.length) {
             setStatus('批量修改ID失败：新ID出现重复。')
@@ -2287,7 +2325,7 @@ export function App() {
         }
 
         const orderedTargets = [...targets].sort((a, b) => (buffMap[a]?.buffid ?? 0) - (buffMap[b]?.buffid ?? 0))
-        const nextKeys = orderedTargets.map((_, index) => String(Number(`${prefix}${index + 1}`)))
+        const nextKeys = orderedTargets.map((_, index) => String(Number(prefix) + index))
         const nextKeySet = new Set(nextKeys)
         if (nextKeySet.size !== nextKeys.length) {
             setStatus('批量修改ID失败：新ID出现重复。')
@@ -2490,7 +2528,7 @@ export function App() {
             return
         }
         const orderedTargets = [...targets].sort((a, b) => (itemMap[a]?.id ?? 0) - (itemMap[b]?.id ?? 0))
-        const nextKeys = orderedTargets.map((_, index) => String(Number(`${prefix}${index + 1}`)))
+        const nextKeys = orderedTargets.map((_, index) => String(Number(prefix) + index))
         const nextKeySet = new Set(nextKeys)
         if (nextKeySet.size !== nextKeys.length) {
             setStatus('批量修改ID失败：新ID出现重复。')
@@ -2685,7 +2723,7 @@ export function App() {
             return
         }
         const orderedTargets = [...targets].sort((a, b) => (skillMap[a]?.id ?? 0) - (skillMap[b]?.id ?? 0))
-        const nextKeys = orderedTargets.map((_, index) => String(Number(`${prefix}${index + 1}`)))
+        const nextKeys = orderedTargets.map((_, index) => String(Number(prefix) + index))
         const nextKeySet = new Set(nextKeys)
         if (nextKeySet.size !== nextKeys.length) {
             setStatus('批量修改ID失败：新ID出现重复。')
@@ -2975,7 +3013,7 @@ export function App() {
             return
         }
         const orderedTargets = [...targets].sort((a, b) => (staticSkillMap[a]?.id ?? 0) - (staticSkillMap[b]?.id ?? 0))
-        const nextKeys = orderedTargets.map((_, index) => String(Number(`${prefix}${index + 1}`)))
+        const nextKeys = orderedTargets.map((_, index) => String(Number(prefix) + index))
         const nextKeySet = new Set(nextKeys)
         if (nextKeySet.size !== nextKeys.length) {
             setStatus('批量修改ID失败：新ID出现重复。')
@@ -3402,7 +3440,6 @@ export function App() {
         setContextMenu({ open: false, x: 0, y: 0, kind: 'root', targetPath: '' })
         const pathToDelete = targetPath || modRootPath
         if (!pathToDelete) return
-        if (!window.confirm(`确认删除文件夹 ${pickLeafName(pathToDelete)} 吗？`)) return
         try {
             await deleteModFolder(pathToDelete)
             const siblings = await collectSiblingModFolders(modRootPath)
@@ -3446,6 +3483,7 @@ export function App() {
                 talentMap,
                 modRootPath,
                 joinWinPath,
+                readFilePayload,
                 saveFilePayload,
             })
             const affixFileCount = await saveAffixFile({
@@ -3464,6 +3502,7 @@ export function App() {
                 buffMap,
                 modRootPath,
                 joinWinPath,
+                readFilePayload,
                 saveFilePayload,
             })
             const itemFileCount = await saveItemFiles({
@@ -3476,6 +3515,7 @@ export function App() {
                 itemMap,
                 modRootPath,
                 joinWinPath,
+                readFilePayload,
                 saveFilePayload,
             })
             const skillFileCount = await saveSkillFiles({
@@ -3488,6 +3528,7 @@ export function App() {
                 skillMap,
                 modRootPath,
                 joinWinPath,
+                readFilePayload,
                 saveFilePayload,
             })
             const staticSkillFileCount = await saveStaticSkillFile({
@@ -3499,6 +3540,7 @@ export function App() {
                 staticSkillMap,
                 modRootPath,
                 joinWinPath,
+                readFilePayload,
                 saveFilePayload,
             })
 

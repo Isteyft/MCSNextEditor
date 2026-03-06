@@ -1,5 +1,5 @@
 ﻿import { ClipboardPaste, Copy, Plus, Search, Trash2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { ModuleKey } from '../../modules'
 
@@ -53,6 +53,17 @@ export function InfoPanel({
     generateBookLabel = '生成技能书',
 }: InfoPanelProps) {
     const [menu, setMenu] = useState({ open: false, x: 0, y: 0 })
+    const menuPosition = useMemo(() => {
+        const itemCount = 2 + (onGenerateGroup ? 1 : 0) + (onGenerateBook ? 1 : 0)
+        const menuWidth = 140
+        const menuHeight = 12 + itemCount * 36
+        const maxX = Math.max(8, window.innerWidth - menuWidth - 8)
+        const maxY = Math.max(8, window.innerHeight - menuHeight - 8)
+        return {
+            left: Math.min(Math.max(menu.x, 8), maxX),
+            top: Math.min(Math.max(menu.y, 8), maxY),
+        }
+    }, [menu.x, menu.y, onGenerateBook, onGenerateGroup])
     const [searchDraft, setSearchDraft] = useState(searchText)
 
     useEffect(() => {
@@ -175,7 +186,7 @@ export function InfoPanel({
                         {menu.open ? (
                             <>
                                 <div className="context-mask" onClick={() => setMenu({ open: false, x: 0, y: 0 })} />
-                                <div className="folder-menu" style={{ left: menu.x, top: menu.y }}>
+                                <div className="folder-menu" style={{ left: menuPosition.left, top: menuPosition.top }}>
                                     <button
                                         className="folder-menu-item danger"
                                         onClick={() => {

@@ -32,6 +32,7 @@ export function collectMetaFileCandidates(rootPath: string, fileName: string) {
     let current = normalized
     for (let i = 0; i < 7; i += 1) {
         addCandidate(joinWinPath(current, 'editorMeta', fileName))
+        addCandidate(joinWinPath(current, 'config', fileName))
         const parent = dirname(current)
         if (!parent || parent === current) break
         current = parent
@@ -41,6 +42,7 @@ export function collectMetaFileCandidates(rootPath: string, fileName: string) {
     if (marker > 0) {
         const repoRoot = normalized.slice(0, marker)
         addCandidate(joinWinPath(repoRoot, 'editorMeta', fileName))
+        addCandidate(joinWinPath(repoRoot, 'config', fileName))
     }
 
     return results
@@ -82,6 +84,8 @@ export async function readEnumOptionsByFileName(params: {
 }) {
     const { rootPath, fileName, readFilePayload, preferDesc = false } = params
     const candidates = collectMetaFileCandidates(rootPath, fileName)
+    const merged = new Map<number, { id: number; name: string }>()
+    const loadedPaths: string[] = []
     for (const filePath of candidates) {
         try {
             const payload = await readFilePayload(filePath)
@@ -114,13 +118,21 @@ export async function readEnumOptionsByFileName(params: {
                 .filter(item => Number.isFinite(item.id))
                 .sort((a, b) => a.id - b.id)
             if (options.length > 0) {
-                return { options, loadedPath: filePath, candidates }
+                for (const option of options) {
+                    merged.set(option.id, option)
+                }
+                loadedPaths.push(filePath)
             }
         } catch {
             // try next
         }
     }
-    return { options: [] as { id: number; name: string }[], loadedPath: '', candidates }
+    const options = Array.from(merged.values()).sort((a, b) => a.id - b.id)
+    return {
+        options,
+        loadedPath: loadedPaths[0] ?? '',
+        candidates,
+    }
 }
 
 export async function readSeidMeta(params: { rootPath: string; readFilePayload: (filePath: string) => Promise<{ content: string }> }) {

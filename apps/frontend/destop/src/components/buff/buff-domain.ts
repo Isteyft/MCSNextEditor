@@ -1,6 +1,12 @@
 import type { BuffEntry, FsEntry } from '../../types'
 import type { CreateAvatarRow } from '../workspace/InfoPanel'
 
+const RESERVED_SEID_FIELDS = new Set(['id', 'skillid', 'buffid', 'Skill_ID'])
+
+function shouldPersistSeidProp(propKey: string) {
+    return !RESERVED_SEID_FIELDS.has(propKey)
+}
+
 export function createEmptyBuff(id: number): BuffEntry {
     return {
         buffid: id,
@@ -139,7 +145,7 @@ export async function mergeBuffSeidFiles(params: {
                 const seidDataKey = String(seidId)
                 const dataRow = { ...(target.seidData[seidDataKey] ?? {}) }
                 for (const [propKey, propValue] of Object.entries(row)) {
-                    if (propKey === 'id' || propKey === 'buffid') continue
+                    if (!shouldPersistSeidProp(propKey)) continue
                     if (Array.isArray(propValue)) {
                         const numbers = propValue.map(item => Number(item))
                         dataRow[propKey] = numbers.every(item => Number.isFinite(item)) ? numbers : String(propValue.join(','))
@@ -196,9 +202,10 @@ export async function saveBuffSeidFiles(params: {
     buffMap: Record<string, BuffEntry>
     modRootPath: string
     joinWinPath: (base: string, ...parts: string[]) => string
+    readFilePayload: (filePath: string) => Promise<{ content: string }>
     saveFilePayload: (filePath: string, content: string) => Promise<unknown>
 }) {
-    const { buffMap, modRootPath, joinWinPath, saveFilePayload } = params
+    const { buffMap, modRootPath, joinWinPath, readFilePayload, saveFilePayload } = params
     const seidDirPath = joinWinPath(modRootPath, 'Data', 'BuffSeidJsonData')
     const seidFilePayload: Record<string, Record<string, Record<string, unknown>>> = {}
 
@@ -210,6 +217,7 @@ export async function saveBuffSeidFiles(params: {
             const rowPayload: Record<string, unknown> = { id: row.buffid }
             const cached = row.seidData[seidKey] ?? {}
             for (const [propKey, propValue] of Object.entries(cached)) {
+                if (!shouldPersistSeidProp(propKey)) continue
                 rowPayload[propKey] = propValue
             }
             fileRows[String(row.buffid)] = rowPayload
@@ -218,10 +226,37 @@ export async function saveBuffSeidFiles(params: {
 
     for (const [seidKey, fileRows] of Object.entries(seidFilePayload)) {
         const filePath = joinWinPath(seidDirPath, `${seidKey}.json`)
-        await saveFilePayload(filePath, `${JSON.stringify(fileRows, null, 2)}\n`)
+        const existing = await readExistingSeidFileRows(filePath, readFilePayload)
+        const mergedRows: Record<string, Record<string, unknown>> = {}
+        for (const [ownerKey, rowPayload] of Object.entries(fileRows)) {
+            mergedRows[ownerKey] = {
+                ...(existing[ownerKey] ?? {}),
+                ...rowPayload,
+            }
+        }
+        await saveFilePayload(filePath, `${JSON.stringify(mergedRows, null, 2)}\n`)
     }
 
     return Object.keys(seidFilePayload).length
+}
+
+async function readExistingSeidFileRows(
+    filePath: string,
+    readFilePayload: (filePath: string) => Promise<{ content: string }>
+): Promise<Record<string, Record<string, unknown>>> {
+    try {
+        const payload = await readFilePayload(filePath)
+        const parsed = JSON.parse(payload.content) as unknown
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
+        const rows: Record<string, Record<string, unknown>> = {}
+        for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+            if (!value || typeof value !== 'object' || Array.isArray(value)) continue
+            rows[key] = value as Record<string, unknown>
+        }
+        return rows
+    } catch {
+        return {}
+    }
 }
 
 function normalizeSeidPayload(

@@ -71,6 +71,13 @@ function includesText(...fields: Array<string | number | undefined>) {
         .trim()
 }
 
+function getDefaultByType(type: string) {
+    const lower = type.toLowerCase()
+    if (lower === 'int' || lower === 'float' || lower === 'number') return 0
+    if (lower === 'intarray') return [] as number[]
+    return ''
+}
+
 export function SeidEditorModal({
     open,
     seidIds,
@@ -212,8 +219,8 @@ export function SeidEditorModal({
                                     <div className="todo-box">该 Seid 没有可编辑属性</div>
                                 ) : (
                                     meta.properties.map(property => {
-                                        const value = values[property.ID]
                                         const type = (property.Type || '').toLowerCase()
+                                        const value = values[property.ID] ?? getDefaultByType(type)
                                         const specialDrawer = property.SpecialDrawer?.[0]
 
                                         const inputNode =

@@ -1,6 +1,12 @@
 import type { FsEntry, StaticSkillEntry } from '../../types'
 import type { CreateAvatarRow } from '../workspace/InfoPanel'
 
+const RESERVED_SEID_FIELDS = new Set(['id', 'skillid', 'buffid', 'Skill_ID'])
+
+function shouldPersistSeidProp(propKey: string) {
+    return !RESERVED_SEID_FIELDS.has(propKey)
+}
+
 export function createEmptyStaticSkill(id: number): StaticSkillEntry {
     return {
         id,
@@ -114,7 +120,7 @@ export async function mergeStaticSkillSeidFiles(params: {
             for (const [skillKey, rawValue] of Object.entries(parsed)) {
                 if (!rawValue || typeof rawValue !== 'object') continue
                 const row = rawValue as Record<string, unknown>
-                const staticId = Number(row.id ?? Number(skillKey))
+                const staticId = Number(row.skillid ?? row.id ?? Number(skillKey))
                 if (!Number.isFinite(staticId) || staticId <= 0) continue
                 const target = next[String(staticId)]
                 if (!target) continue
@@ -123,7 +129,7 @@ export async function mergeStaticSkillSeidFiles(params: {
                 const dataKey = String(seidId)
                 const dataRow = { ...(target.seidData[dataKey] ?? {}) }
                 for (const [propKey, propValue] of Object.entries(row)) {
-                    if (propKey === 'id' || propKey === 'Skill_ID') continue
+                    if (!shouldPersistSeidProp(propKey)) continue
                     if (Array.isArray(propValue)) {
                         const numbers = propValue.map(item => Number(item))
                         dataRow[propKey] = numbers.every(item => Number.isFinite(item)) ? numbers : String(propValue.join(','))
@@ -157,9 +163,10 @@ export async function saveStaticSkillSeidFiles(params: {
     staticSkillMap: Record<string, StaticSkillEntry>
     modRootPath: string
     joinWinPath: (base: string, ...parts: string[]) => string
+    readFilePayload: (filePath: string) => Promise<{ content: string }>
     saveFilePayload: (filePath: string, content: string) => Promise<unknown>
 }) {
-    const { staticSkillMap, modRootPath, joinWinPath, saveFilePayload } = params
+    const { staticSkillMap, modRootPath, joinWinPath, readFilePayload, saveFilePayload } = params
     const seidDirPath = joinWinPath(modRootPath, 'Data', 'StaticSkillSeidJsonData')
     const seidFilePayload: Record<string, Record<string, Record<string, unknown>>> = {}
     for (const row of Object.values(staticSkillMap)) {
@@ -167,9 +174,10 @@ export async function saveStaticSkillSeidFiles(params: {
             if (!Number.isFinite(seidId) || seidId <= 0) continue
             const seidKey = String(seidId)
             const fileRows = (seidFilePayload[seidKey] ??= {})
-            const rowPayload: Record<string, unknown> = { id: row.id, Skill_ID: row.Skill_ID }
+            const rowPayload: Record<string, unknown> = { skillid: row.id }
             const cachedProps = row.seidData[seidKey] ?? {}
             for (const [propKey, propValue] of Object.entries(cachedProps)) {
+                if (!shouldPersistSeidProp(propKey)) continue
                 rowPayload[propKey] = propValue
             }
             fileRows[String(row.id)] = rowPayload
@@ -177,9 +185,36 @@ export async function saveStaticSkillSeidFiles(params: {
     }
     for (const [seidKey, fileRows] of Object.entries(seidFilePayload)) {
         const filePath = joinWinPath(seidDirPath, `${seidKey}.json`)
-        await saveFilePayload(filePath, `${JSON.stringify(fileRows, null, 2)}\n`)
+        const existing = await readExistingSeidFileRows(filePath, readFilePayload)
+        const mergedRows: Record<string, Record<string, unknown>> = {}
+        for (const [ownerKey, rowPayload] of Object.entries(fileRows)) {
+            mergedRows[ownerKey] = {
+                ...(existing[ownerKey] ?? {}),
+                ...rowPayload,
+            }
+        }
+        await saveFilePayload(filePath, `${JSON.stringify(mergedRows, null, 2)}\n`)
     }
     return Object.keys(seidFilePayload).length
+}
+
+async function readExistingSeidFileRows(
+    filePath: string,
+    readFilePayload: (filePath: string) => Promise<{ content: string }>
+): Promise<Record<string, Record<string, unknown>>> {
+    try {
+        const payload = await readFilePayload(filePath)
+        const parsed = JSON.parse(payload.content) as unknown
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
+        const rows: Record<string, Record<string, unknown>> = {}
+        for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+            if (!value || typeof value !== 'object' || Array.isArray(value)) continue
+            rows[key] = value as Record<string, unknown>
+        }
+        return rows
+    } catch {
+        return {}
+    }
 }
 
 function normalizeSeidPayload(
