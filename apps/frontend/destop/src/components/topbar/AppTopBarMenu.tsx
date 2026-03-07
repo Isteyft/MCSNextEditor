@@ -8,6 +8,7 @@ type AppTopBarMenuProps = {
     onCreateProject: () => void
     onOpenProject: () => void
     onSaveProject: () => void
+    onOpenSettings: () => void
     onClose: () => void
     onMinimize: () => void
     onToggleMaximize: () => void
@@ -19,56 +20,78 @@ export function AppTopBarMenu({
     onCreateProject,
     onOpenProject,
     onSaveProject,
+    onOpenSettings,
     onClose,
     onMinimize,
     onToggleMaximize,
     onStartDragging,
 }: AppTopBarMenuProps) {
     const menuGroupRef = useRef<HTMLDivElement | null>(null)
-    const [menuOpen, setMenuOpen] = useState(false)
+    const [menuOpen, setMenuOpen] = useState<'file' | 'help' | null>(null)
 
-    useOutsideClick(menuGroupRef, () => setMenuOpen(false), true)
+    useOutsideClick(menuGroupRef, () => setMenuOpen(null), true)
 
     return (
         <TopBar onClose={onClose} onMinimize={onMinimize} onStartDragging={onStartDragging} onToggleMaximize={onToggleMaximize}>
-            <div className="menu-group" ref={menuGroupRef}>
-                <button className="menu-trigger" onClick={() => setMenuOpen(prev => !prev)} type="button">
-                    文件
-                </button>
-                {menuOpen ? (
-                    <div className="menu-dropdown">
-                        <button
-                            className="menu-item"
-                            onClick={() => {
-                                setMenuOpen(false)
-                                onCreateProject()
-                            }}
-                            type="button"
-                        >
-                            新建项目
-                        </button>
-                        <button
-                            className="menu-item"
-                            onClick={() => {
-                                setMenuOpen(false)
-                                onOpenProject()
-                            }}
-                            type="button"
-                        >
-                            打开项目
-                        </button>
-                        <button
-                            className="menu-item"
-                            onClick={() => {
-                                setMenuOpen(false)
-                                onSaveProject()
-                            }}
-                            type="button"
-                        >
-                            保存项目{configDirty ? ' *' : ''}
-                        </button>
-                    </div>
-                ) : null}
+            <div className="menu-row" ref={menuGroupRef}>
+                <div className="menu-group">
+                    <button className="menu-trigger" onClick={() => setMenuOpen(prev => (prev === 'file' ? null : 'file'))} type="button">
+                        文件
+                    </button>
+                    {menuOpen === 'file' ? (
+                        <div className="menu-dropdown">
+                            <button
+                                className="menu-item"
+                                onClick={() => {
+                                    setMenuOpen(null)
+                                    onCreateProject()
+                                }}
+                                type="button"
+                            >
+                                新建项目
+                            </button>
+                            <button
+                                className="menu-item"
+                                onClick={() => {
+                                    setMenuOpen(null)
+                                    onOpenProject()
+                                }}
+                                type="button"
+                            >
+                                打开项目
+                            </button>
+                            <button
+                                className="menu-item"
+                                onClick={() => {
+                                    setMenuOpen(null)
+                                    onSaveProject()
+                                }}
+                                type="button"
+                            >
+                                保存项目{configDirty ? ' *' : ''}
+                            </button>
+                        </div>
+                    ) : null}
+                </div>
+                <div className="menu-group">
+                    <button className="menu-trigger" onClick={() => setMenuOpen(prev => (prev === 'help' ? null : 'help'))} type="button">
+                        帮助
+                    </button>
+                    {menuOpen === 'help' ? (
+                        <div className="menu-dropdown">
+                            <button
+                                className="menu-item"
+                                onClick={() => {
+                                    setMenuOpen(null)
+                                    onOpenSettings()
+                                }}
+                                type="button"
+                            >
+                                设置
+                            </button>
+                        </div>
+                    ) : null}
+                </div>
             </div>
         </TopBar>
     )

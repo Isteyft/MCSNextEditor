@@ -3,6 +3,7 @@ import type { AffixEntry, BuffEntry, ItemEntry, SkillEntry, StaticSkillEntry } f
 import { AffixForm } from '../affix/AffixForm'
 import { BuffForm } from '../buff/BuffForm'
 import { ItemForm } from '../item/ItemForm'
+import { SettingsForm } from '../settings/SettingsForm'
 import { SkillForm } from '../skill/SkillForm'
 import { StaticSkillForm } from '../staticskill/StaticSkillForm'
 import { TalentForm } from '../tianfu/TalentForm'
@@ -62,6 +63,16 @@ type EditorPanelProps = {
     affixProjectTypeOptions: { id: number; name: string }[]
     onOpenSeidEditor: () => void
     seidDisplayRows: { id: number; name: string }[]
+    settingsForm: {
+        jsonImportFolderPaths: string[]
+        jsonImportFilePaths: string[]
+        uniqueIdSyncEnabled: boolean
+        uniqueIdSyncTriggerLevels: number[]
+        batchIdChangeKeepOriginal: boolean
+        autoSaveEnabled: boolean
+        autoSaveIntervalSeconds: number
+    }
+    onChangeSettingsForm: (patch: Partial<EditorPanelProps['settingsForm']>) => void
 }
 
 export function EditorPanel({
@@ -104,18 +115,22 @@ export function EditorPanel({
     affixProjectTypeOptions,
     onOpenSeidEditor,
     seidDisplayRows,
+    settingsForm,
+    onChangeSettingsForm,
 }: EditorPanelProps) {
     return (
         <section className="panel panel-editor">
             <h2>编辑区域</h2>
             <div className="panel-content editor-wrap">
+                {activeModule === 'settings' ? <SettingsForm values={settingsForm} onChange={onChangeSettingsForm} /> : null}
+
                 {viewMode === 'config-form' ? <ProjectConfigForm values={configForm} onChange={onChangeConfigForm} /> : null}
 
-                {viewMode === 'todo' ? (
+                {activeModule !== 'settings' && viewMode === 'todo' ? (
                     <div className="todo-box">TODO: {activeModuleLabel === '-' ? '请选择模块' : activeModuleLabel}</div>
                 ) : null}
 
-                {viewMode === 'table' ? (
+                {activeModule !== 'settings' && viewMode === 'table' ? (
                     activeModule === 'affix' ? (
                         <AffixForm
                             values={affixForm}

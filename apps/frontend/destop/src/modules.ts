@@ -1,8 +1,9 @@
-﻿export type ModuleKey = 'project-config' | 'affix' | 'talent' | 'buff' | 'item' | 'skill' | 'staticskill'
+export type ModuleKey = 'project-config' | 'settings' | 'affix' | 'talent' | 'buff' | 'item' | 'skill' | 'staticskill'
 export type ViewMode = 'config-form' | 'todo' | 'table'
 
 export const MODULES: { key: ModuleKey; label: string }[] = [
     { key: 'project-config', label: '项目配置' },
+    { key: 'settings', label: '设置' },
     { key: 'affix', label: '词缀' },
     { key: 'talent', label: '天赋' },
     { key: 'buff', label: 'Buff' },

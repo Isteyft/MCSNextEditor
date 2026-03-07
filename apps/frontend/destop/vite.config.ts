@@ -9,7 +9,8 @@ export default defineConfig({
         },
     },
     server: {
-        port: 1420,
+        host: '127.0.0.1',
+        port: 2084,
         strictPort: true,
     },
     clearScreen: false,

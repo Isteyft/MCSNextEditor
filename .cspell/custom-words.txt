@@ -32,3 +32,5 @@ Xbuff
 Ybuf
 Ybuff
 typenum
+contenteditable
+destop

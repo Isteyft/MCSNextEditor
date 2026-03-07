@@ -1,3 +1,4 @@
+import { parseJsonUnknown } from '../../features/json-import/json-import-core'
 import { SeidMetaItem } from './SeidPickerModal'
 
 const EMBEDDED_META_MODULES = import.meta.glob('../../editorMeta/*.json', { eager: true })
@@ -80,7 +81,9 @@ export async function readTalentTypeOptions(params: {
     for (const filePath of candidates) {
         try {
             const payload = await readFilePayload(filePath)
-            const parsed = JSON.parse(payload.content) as Array<Record<string, unknown>>
+            const parsedResult = parseJsonUnknown(payload.content, filePath)
+            if (!parsedResult.ok || !Array.isArray(parsedResult.data)) continue
+            const parsed = parsedResult.data as Array<Record<string, unknown>>
             const options = parsed
                 .map(item => ({
                     id: Number(item.TypeID),
@@ -111,7 +114,9 @@ export async function readTalentTypeOptions(params: {
     if (readBundledMetaPayload) {
         try {
             const payload = await readBundledMetaPayload('CreateAvatarTalentType.json')
-            const parsed = JSON.parse(payload.content) as Array<Record<string, unknown>>
+            const parsedResult = parseJsonUnknown(payload.content, payload.path ?? 'bundled:CreateAvatarTalentType.json')
+            if (!parsedResult.ok || !Array.isArray(parsedResult.data)) throw new Error('invalid bundled talent type')
+            const parsed = parsedResult.data as Array<Record<string, unknown>>
             const options = parsed
                 .map(item => ({
                     id: Number(item.TypeID),
@@ -143,7 +148,9 @@ export async function readEnumOptionsByFileName(params: {
     for (const filePath of candidates) {
         try {
             const payload = await readFilePayload(filePath)
-            const parsed = JSON.parse(payload.content) as unknown
+            const parsedResult = parseJsonUnknown(payload.content, filePath)
+            if (!parsedResult.ok) continue
+            const parsed = parsedResult.data as unknown
             const source = Array.isArray(parsed)
                 ? parsed
                 : parsed && typeof parsed === 'object'
@@ -217,7 +224,9 @@ export async function readEnumOptionsByFileName(params: {
     if (readBundledMetaPayload) {
         try {
             const payload = await readBundledMetaPayload(fileName)
-            const parsed = JSON.parse(payload.content) as unknown
+            const parsedResult = parseJsonUnknown(payload.content, payload.path ?? `bundled:${fileName}`)
+            if (!parsedResult.ok) throw new Error('invalid bundled enum file')
+            const parsed = parsedResult.data as unknown
             const source = Array.isArray(parsed)
                 ? parsed
                 : parsed && typeof parsed === 'object'
@@ -282,7 +291,10 @@ export async function readSeidMetaByFileName(params: {
     for (const filePath of candidates) {
         try {
             const payload = await readFilePayload(filePath)
-            const parsed = JSON.parse(payload.content) as Record<string, Record<string, unknown>>
+            const parsedResult = parseJsonUnknown(payload.content, filePath)
+            if (!parsedResult.ok || !parsedResult.data || typeof parsedResult.data !== 'object' || Array.isArray(parsedResult.data))
+                continue
+            const parsed = parsedResult.data as Record<string, Record<string, unknown>>
             const mapped: Record<number, SeidMetaItem> = {}
             for (const value of Object.values(parsed)) {
                 const id = Number(value.ID)
@@ -339,7 +351,11 @@ export async function readSeidMetaByFileName(params: {
     if (readBundledMetaPayload) {
         try {
             const payload = await readBundledMetaPayload(params.fileName)
-            const parsed = JSON.parse(payload.content) as Record<string, Record<string, unknown>>
+            const parsedResult = parseJsonUnknown(payload.content, payload.path ?? `bundled:${params.fileName}`)
+            if (!parsedResult.ok || !parsedResult.data || typeof parsedResult.data !== 'object' || Array.isArray(parsedResult.data)) {
+                throw new Error('invalid bundled seid meta')
+            }
+            const parsed = parsedResult.data as Record<string, Record<string, unknown>>
             const mapped: Record<number, SeidMetaItem> = {}
             for (const value of Object.values(parsed)) {
                 const id = Number(value.ID)
@@ -408,7 +424,9 @@ export async function preloadEditorMeta(params: {
     for (const filePath of customFiles) {
         try {
             const payload = await readFilePayload(filePath)
-            const parsed = JSON.parse(payload.content) as unknown
+            const parsedResult = parseJsonUnknown(payload.content, filePath)
+            if (!parsedResult.ok) continue
+            const parsed = parsedResult.data as unknown
             const parsedTypes = parseTalentTypeFromUnknown(parsed)
             if (parsedTypes.length > 0) {
                 const merged = mergeTalentTypeOptions(talentOptions ?? [], parsedTypes)

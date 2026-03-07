@@ -1,4 +1,4 @@
-* {
+﻿* {
     box-sizing: border-box;
 }
 
@@ -34,6 +34,41 @@ body,
     display: grid;
     grid-template-rows: 40px 1fr 28px;
     height: 100%;
+}
+
+.settings-window-shell {
+    height: 100%;
+    display: grid;
+    grid-template-rows: 1fr 28px;
+    gap: 10px;
+    padding: 10px;
+}
+
+.settings-window-main {
+    min-height: 0;
+}
+
+.settings-window-panel {
+    height: 100%;
+    max-width: 980px;
+    margin: 0 auto;
+}
+
+.settings-window-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+    background: var(--panel);
+}
+
+.settings-window-status {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    border-top: 1px solid var(--border);
+    background: var(--panel);
 }
 
 .status-bar {
@@ -80,6 +115,12 @@ body,
 
 .menu-group {
     position: relative;
+}
+
+.menu-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .menu-trigger {
@@ -408,6 +449,261 @@ body,
     display: grid;
     gap: 12px;
     align-content: start;
+}
+
+.settings-form-grid {
+    display: grid;
+    gap: 12px;
+    align-content: start;
+}
+
+.settings-section {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--panel);
+    padding: 10px;
+    display: grid;
+    gap: 10px;
+}
+
+.settings-section h3 {
+    margin: 0;
+    font-size: 14px;
+}
+
+.settings-path-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: center;
+}
+
+.settings-buttons-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.settings-toolbar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.settings-pref-page {
+    display: grid;
+    gap: 14px;
+    align-content: start;
+}
+
+.settings-pref-section h3 {
+    margin: 0 0 8px;
+    font-size: 16px;
+}
+
+.settings-pref-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+    overflow: hidden;
+}
+
+.settings-pref-row {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.settings-pref-row:last-child {
+    border-bottom: none;
+}
+
+.settings-pref-row-list {
+    align-items: flex-start;
+}
+
+.settings-pref-list-wrap {
+    width: 70%;
+    display: grid;
+    gap: 6px;
+}
+
+.settings-pref-list-item {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--panel);
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 8px;
+    align-items: center;
+    padding: 6px 8px;
+}
+
+.settings-level-input {
+    width: 140px;
+}
+
+.settings-switch {
+    position: relative;
+    width: 42px;
+    height: 24px;
+    display: inline-block;
+}
+
+.settings-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.settings-switch-slider {
+    position: absolute;
+    inset: 0;
+    cursor: pointer;
+    background: #c9c9cc;
+    transition: background-color 0.2s ease;
+    border-radius: 999px;
+}
+
+.settings-switch-slider::before {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    left: 3px;
+    top: 3px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s ease;
+}
+
+.settings-switch input:checked + .settings-switch-slider {
+    background: #178ae8;
+}
+
+.settings-switch input:checked + .settings-switch-slider::before {
+    transform: translateX(18px);
+}
+
+.settings-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    padding: 8px 10px;
+}
+
+.settings-toggle-row span {
+    font-size: 13px;
+    color: var(--ink);
+}
+
+.settings-merged-paths {
+    margin-top: 8px;
+    display: grid;
+    gap: 8px;
+}
+
+.settings-multi-list {
+    margin-top: 8px;
+    display: grid;
+    gap: 6px;
+}
+
+.settings-list-item {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--panel);
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 8px;
+    align-items: center;
+    padding: 6px 8px;
+}
+
+.settings-kind-tag {
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--bg);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 1px 8px;
+}
+
+.settings-list-item code {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 12px;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.settings-remove-btn {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--panel);
+    color: #cf222e;
+    padding: 3px 8px;
+    cursor: pointer;
+}
+
+.settings-remove-btn:hover {
+    background: #fdecec;
+}
+
+.settings-path-view {
+    display: grid;
+    gap: 4px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    padding: 8px 10px;
+}
+
+.settings-path-view span {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 600;
+}
+
+.settings-path-view code {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 12px;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.settings-action-btn {
+    height: 34px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--panel);
+    color: var(--ink);
+    padding: 0 10px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.settings-action-btn:hover {
+    background: var(--selected-bg);
+}
+
+.settings-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
 .config-field {
@@ -911,5 +1207,14 @@ body,
     .workspace {
         grid-template-columns: 1fr;
         grid-template-rows: minmax(180px, 35%) minmax(180px, 30%) 1fr;
+    }
+
+    .settings-path-row {
+        grid-template-columns: 1fr;
+    }
+
+    .settings-window-shell {
+        padding: 8px;
+        gap: 8px;
     }
 }
