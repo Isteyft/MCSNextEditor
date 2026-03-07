@@ -15,6 +15,7 @@ import { EditorPanel } from './components/workspace/EditorPanel'
 import { InfoPanel } from './components/workspace/InfoPanel'
 import { ModuleSidebar } from './components/workspace/ModuleSidebar'
 import {
+    cloneAffixEntry,
     cloneBuffEntry,
     cloneItemEntry,
     cloneSkillEntry,
@@ -185,6 +186,7 @@ export function App() {
     const [newModName, setNewModName] = useState('')
     const [metaExtraRoots, setMetaExtraRoots] = useState<string[]>([])
     const [status, setStatus] = useState(STATUS_MESSAGES.openProjectHint)
+    const [projectLoading, setProjectLoading] = useState({ open: false, progress: 0, message: '' })
     const autoSaveRunningRef = useRef(false)
     const cacheSaveRunningRef = useRef(false)
     const cacheRestoredRootRef = useRef('')
@@ -519,6 +521,7 @@ export function App() {
         loadItemEnumMeta,
         loadSkillEnumMeta,
         loadSpecialDrawerOptions,
+        onProjectLoadingChange: setProjectLoading,
         setters: {
             setProjectPath,
             setModRootPath,
@@ -979,6 +982,91 @@ export function App() {
         setStatus,
     })
 
+    function parseImportJsonText(jsonText: string) {
+        try {
+            return JSON.parse(jsonText) as unknown
+        } catch (error) {
+            setStatus(`导入 JSON 失败: ${String(error)}`)
+            return null
+        }
+    }
+
+    function collectImportRows(raw: unknown, idKeys: string[]) {
+        if (!raw || typeof raw !== 'object') return [] as Array<Record<string, unknown>>
+        if (Array.isArray(raw)) {
+            return raw.filter(item => item && typeof item === 'object') as Array<Record<string, unknown>>
+        }
+        const one = raw as Record<string, unknown>
+        const hasId = idKeys.some(key => Number.isFinite(Number(one[key])))
+        if (hasId) return [one]
+        return Object.values(one).filter(item => item && typeof item === 'object') as Array<Record<string, unknown>>
+    }
+
+    function handleImportAffixJson(jsonText: string) {
+        const raw = parseImportJsonText(jsonText)
+        if (!raw) return
+        const rows = collectImportRows(raw, ['id'])
+            .map(item => item as AffixEntry)
+            .filter(item => Number.isFinite(Number(item.id)) && Number(item.id) > 0)
+            .map(item => cloneAffixEntry(item))
+        if (rows.length === 0) return setStatus('导入失败：未识别到有效词缀数据。')
+        setAffixClipboard(rows)
+        handlePasteAffix()
+        setStatus(`已导入词缀 JSON：${rows.length} 条。`)
+    }
+
+    function handleImportBuffJson(jsonText: string) {
+        const raw = parseImportJsonText(jsonText)
+        if (!raw) return
+        const rows = collectImportRows(raw, ['buffid'])
+            .map(item => item as BuffEntry)
+            .filter(item => Number.isFinite(Number(item.buffid)) && Number(item.buffid) > 0)
+            .map(item => cloneBuffEntry(item))
+        if (rows.length === 0) return setStatus('导入失败：未识别到有效 Buff 数据。')
+        setBuffClipboard(rows)
+        handlePasteBuff()
+        setStatus(`已导入 Buff JSON：${rows.length} 条。`)
+    }
+
+    function handleImportItemJson(jsonText: string) {
+        const raw = parseImportJsonText(jsonText)
+        if (!raw) return
+        const rows = collectImportRows(raw, ['id'])
+            .map(item => item as ItemEntry)
+            .filter(item => Number.isFinite(Number(item.id)) && Number(item.id) > 0)
+            .map(item => cloneItemEntry(item))
+        if (rows.length === 0) return setStatus('导入失败：未识别到有效物品数据。')
+        setItemClipboard(rows)
+        handlePasteItem()
+        setStatus(`已导入物品 JSON：${rows.length} 条。`)
+    }
+
+    function handleImportSkillJson(jsonText: string) {
+        const raw = parseImportJsonText(jsonText)
+        if (!raw) return
+        const rows = collectImportRows(raw, ['id'])
+            .map(item => item as SkillEntry)
+            .filter(item => Number.isFinite(Number(item.id)) && Number(item.id) > 0)
+            .map(item => cloneSkillEntry(item))
+        if (rows.length === 0) return setStatus('导入失败：未识别到有效神通数据。')
+        setSkillClipboard(rows)
+        handlePasteSkill()
+        setStatus(`已导入神通 JSON：${rows.length} 条。`)
+    }
+
+    function handleImportStaticSkillJson(jsonText: string) {
+        const raw = parseImportJsonText(jsonText)
+        if (!raw) return
+        const rows = collectImportRows(raw, ['id'])
+            .map(item => item as StaticSkillEntry)
+            .filter(item => Number.isFinite(Number(item.id)) && Number(item.id) > 0)
+            .map(item => cloneStaticSkillEntry(item))
+        if (rows.length === 0) return setStatus('导入失败：未识别到有效功法数据。')
+        setStaticSkillClipboard(rows)
+        handlePasteStaticSkill()
+        setStatus(`已导入功法 JSON：${rows.length} 条。`)
+    }
+
     const infoPanelPresenter = useInfoPanelPresenter({
         activeModule,
         setAddTalentOpen,
@@ -1011,6 +1099,12 @@ export function App() {
         handlePasteItem,
         handlePasteSkill,
         handlePasteStaticSkill,
+        handleImportAffix: handleImportAffixJson,
+        handleImportTalent: () => setStatus('天赋模块暂不支持该入口导入，请使用对应 JSON 文件。'),
+        handleImportBuff: handleImportBuffJson,
+        handleImportItem: handleImportItemJson,
+        handleImportSkill: handleImportSkillJson,
+        handleImportStaticSkill: handleImportStaticSkillJson,
         handleGenerateSkillGroup,
         handleGenerateStaticSkillGroup,
         handleGenerateSkillBooksFromSkill,
@@ -1477,6 +1571,23 @@ export function App() {
                     />
                 ) : null}
             </main>
+            {projectLoading.open ? (
+                <div className="modal-mask project-loading-mask">
+                    <div className="create-modal project-loading-modal">
+                        <div className="create-modal-head">
+                            <h3>项目加载中</h3>
+                        </div>
+                        <div className="project-loading-text">{projectLoading.message || '正在加载，请稍候...'}</div>
+                        <div aria-valuemax={100} aria-valuemin={0} aria-valuenow={projectLoading.progress} className="project-loading-bar">
+                            <div
+                                className="project-loading-bar-fill"
+                                style={{ width: `${Math.max(0, Math.min(100, projectLoading.progress))}%` }}
+                            />
+                        </div>
+                        <div className="project-loading-percent">{Math.max(0, Math.min(100, projectLoading.progress))}%</div>
+                    </div>
+                </div>
+            ) : null}
             <div className="status-bar">{status}</div>
         </div>
     )

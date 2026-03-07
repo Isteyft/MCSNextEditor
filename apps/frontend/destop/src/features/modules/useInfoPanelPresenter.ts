@@ -39,6 +39,12 @@ type UseInfoPanelPresenterParams = {
     handlePasteItem: () => void
     handlePasteSkill: () => void
     handlePasteStaticSkill: () => void
+    handleImportAffix: (jsonText: string) => void
+    handleImportTalent: (jsonText: string) => void
+    handleImportBuff: (jsonText: string) => void
+    handleImportItem: (jsonText: string) => void
+    handleImportSkill: (jsonText: string) => void
+    handleImportStaticSkill: (jsonText: string) => void
     handleGenerateSkillGroup: () => void
     handleGenerateStaticSkillGroup: () => void
     handleGenerateSkillBooksFromSkill: () => void
@@ -104,6 +110,12 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         handlePasteItem,
         handlePasteSkill,
         handlePasteStaticSkill,
+        handleImportAffix,
+        handleImportTalent,
+        handleImportBuff,
+        handleImportItem,
+        handleImportSkill,
+        handleImportStaticSkill,
         handleGenerateSkillGroup,
         handleGenerateStaticSkillGroup,
         handleGenerateSkillBooksFromSkill,
@@ -180,6 +192,15 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
             if (activeModule === 'skill') return handlePasteSkill()
             if (activeModule === 'staticskill') return handlePasteStaticSkill()
             return handlePasteTalent()
+        }
+
+        const onImportTalent = (jsonText: string) => {
+            if (activeModule === 'affix') return handleImportAffix(jsonText)
+            if (activeModule === 'buff') return handleImportBuff(jsonText)
+            if (activeModule === 'item') return handleImportItem(jsonText)
+            if (activeModule === 'skill') return handleImportSkill(jsonText)
+            if (activeModule === 'staticskill') return handleImportStaticSkill(jsonText)
+            return handleImportTalent(jsonText)
         }
 
         const onGenerateGroup =
@@ -268,6 +289,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
             onDeleteTalents,
             onCopyTalent,
             onPasteTalent,
+            onImportTalent,
             onGenerateGroup,
             canGenerateGroup,
             generateGroupLabel: activeModule === 'staticskill' ? '生成功法组' : '生成技能组',
@@ -311,6 +333,12 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         handlePasteItem,
         handlePasteSkill,
         handlePasteStaticSkill,
+        handleImportAffix,
+        handleImportTalent,
+        handleImportBuff,
+        handleImportItem,
+        handleImportSkill,
+        handleImportStaticSkill,
         handleGenerateSkillGroup,
         handleGenerateStaticSkillGroup,
         handleGenerateSkillBooksFromSkill,

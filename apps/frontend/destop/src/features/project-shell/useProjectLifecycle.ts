@@ -55,6 +55,7 @@ type LifecycleParams = {
     loadItemEnumMeta: (roots: string[], silent?: boolean) => Promise<any>
     loadSkillEnumMeta: (roots: string[], silent?: boolean) => Promise<any>
     loadSpecialDrawerOptions: (roots: string[], modRoot: string, silent?: boolean) => Promise<any>
+    onProjectLoadingChange?: (payload: { open: boolean; progress: number; message: string }) => void
     setters: LifecycleSetters
 }
 
@@ -191,6 +192,7 @@ export function useProjectLifecycle(params: LifecycleParams) {
         loadItemEnumMeta,
         loadSkillEnumMeta,
         loadSpecialDrawerOptions,
+        onProjectLoadingChange,
         setters,
     } = params
 
@@ -353,37 +355,67 @@ export function useProjectLifecycle(params: LifecycleParams) {
     }
 
     async function reloadProject(rootPath: string) {
-        const loaded = await loadProjectEntries(rootPath)
-        const modRoot = findModRoot(loaded)
-        const nextModRoot = isModRootPath(rootPath) ? rootPath : (modRoot?.path ?? inferModRootPath(rootPath))
-        const siblingFolders = await collectSiblingModFolders(nextModRoot)
+        onProjectLoadingChange?.({ open: true, progress: 0, message: '正在扫描项目目录...' })
+        try {
+            const loaded = await loadProjectEntries(rootPath)
+            const modRoot = findModRoot(loaded)
+            const nextModRoot = isModRootPath(rootPath) ? rootPath : (modRoot?.path ?? inferModRootPath(rootPath))
+            const siblingFolders = await collectSiblingModFolders(nextModRoot)
 
-        setters.setProjectPath(rootPath)
-        setters.setModRootPath(nextModRoot)
-        setters.setModRootFolders(siblingFolders)
-        resetForProjectReload(setters, siblingFolders)
+            const totalSteps = 12 + Math.max(1, siblingFolders.length)
+            let doneSteps = 0
+            const reportStep = (message: string) => {
+                doneSteps += 1
+                const progress = Math.min(99, Math.round((doneSteps / totalSteps) * 100))
+                onProjectLoadingChange?.({ open: true, progress, message })
+            }
 
-        await preloadMeta([rootPath, nextModRoot, workspaceRoot], true)
-        await loadBuffSeidMeta([rootPath, nextModRoot, workspaceRoot], true)
-        await loadItemSeidMeta([rootPath, nextModRoot, workspaceRoot], true)
-        await loadSkillSeidMeta([rootPath, nextModRoot, workspaceRoot], true)
-        await loadStaticSkillSeidMeta([rootPath, nextModRoot, workspaceRoot], true)
-        await loadBuffEnumMeta([rootPath, nextModRoot, workspaceRoot], true)
-        await loadAffixEnumMeta([rootPath, nextModRoot, workspaceRoot], true)
-        await loadItemEnumMeta([rootPath, nextModRoot, workspaceRoot], true)
-        await loadSkillEnumMeta([rootPath, nextModRoot, workspaceRoot], true)
-        await loadSpecialDrawerOptions([rootPath, nextModRoot, workspaceRoot], nextModRoot, true)
+            setters.setProjectPath(rootPath)
+            setters.setModRootPath(nextModRoot)
+            setters.setModRootFolders(siblingFolders)
+            resetForProjectReload(setters, siblingFolders)
+            reportStep('正在初始化项目状态...')
 
-        const preloadPairs = await Promise.all(
-            siblingFolders.map(async item => [normalizePath(item.path), await readRootModuleSnapshot(item.path)] as const)
-        )
-        const nextCache = Object.fromEntries(preloadPairs)
-        setters.setRootSnapshotCache(nextCache)
-        const activeSnapshot = nextCache[normalizePath(nextModRoot)]
-        if (activeSnapshot) {
-            applyRootModuleSnapshot(nextModRoot, activeSnapshot)
+            await preloadMeta([rootPath, nextModRoot, workspaceRoot], true)
+            reportStep('正在加载基础元数据...')
+            await loadBuffSeidMeta([rootPath, nextModRoot, workspaceRoot], true)
+            reportStep('正在加载 Buff Seid 元数据...')
+            await loadItemSeidMeta([rootPath, nextModRoot, workspaceRoot], true)
+            reportStep('正在加载 Item Seid 元数据...')
+            await loadSkillSeidMeta([rootPath, nextModRoot, workspaceRoot], true)
+            reportStep('正在加载神通 Seid 元数据...')
+            await loadStaticSkillSeidMeta([rootPath, nextModRoot, workspaceRoot], true)
+            reportStep('正在加载功法 Seid 元数据...')
+            await loadBuffEnumMeta([rootPath, nextModRoot, workspaceRoot], true)
+            reportStep('正在加载 Buff 枚举...')
+            await loadAffixEnumMeta([rootPath, nextModRoot, workspaceRoot], true)
+            reportStep('正在加载词缀枚举...')
+            await loadItemEnumMeta([rootPath, nextModRoot, workspaceRoot], true)
+            reportStep('正在加载物品枚举...')
+            await loadSkillEnumMeta([rootPath, nextModRoot, workspaceRoot], true)
+            reportStep('正在加载技能枚举...')
+            await loadSpecialDrawerOptions([rootPath, nextModRoot, workspaceRoot], nextModRoot, true)
+            reportStep('正在加载编辑器选项...')
+
+            const nextCache: Record<string, RootModuleSnapshot> = {}
+            const foldersToLoad = siblingFolders.length > 0 ? siblingFolders : [{ path: nextModRoot, name: pickLeafName(nextModRoot) }]
+            for (let index = 0; index < foldersToLoad.length; index += 1) {
+                const item = foldersToLoad[index]
+                nextCache[normalizePath(item.path)] = await readRootModuleSnapshot(item.path)
+                reportStep(`正在预加载目录数据 (${index + 1}/${foldersToLoad.length})...`)
+            }
+            setters.setRootSnapshotCache(nextCache)
+            const activeSnapshot = nextCache[normalizePath(nextModRoot)]
+            if (activeSnapshot) {
+                applyRootModuleSnapshot(nextModRoot, activeSnapshot)
+            }
+            setters.setStatus(
+                modRoot ? STATUS_MESSAGES.openProjectLoaded(rootPath) : STATUS_MESSAGES.openProjectLoadedFallback(nextModRoot)
+            )
+            onProjectLoadingChange?.({ open: true, progress: 100, message: '项目加载完成。' })
+        } finally {
+            onProjectLoadingChange?.({ open: false, progress: 100, message: '项目加载完成。' })
         }
-        setters.setStatus(modRoot ? STATUS_MESSAGES.openProjectLoaded(rootPath) : STATUS_MESSAGES.openProjectLoadedFallback(nextModRoot))
     }
 
     async function handleSelectModRoot(nextModRoot: string) {

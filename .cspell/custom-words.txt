@@ -6,7 +6,9 @@ buffid
 bufftype
 Chun
 commitlint
+contenteditable
 descr
+destop
 intarray
 isteyft
 Jian
@@ -15,6 +17,7 @@ jiesuo
 lian
 looptime
 ming
+nexteditor
 nums
 panduan
 Prefixs
@@ -26,13 +29,10 @@ tauri
 tianfu
 topbar
 totaltime
+typenum
+unlisten
 unmaximize
 Xbuf
 Xbuff
 Ybuf
 Ybuff
-typenum
-contenteditable
-destop
-unlisten
-

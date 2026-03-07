@@ -1062,6 +1062,65 @@ body,
     grid-template-rows: auto 1fr;
 }
 
+.json-import-modal {
+    width: min(500px, calc(100vw - 24px));
+}
+
+.json-import-textarea {
+    width: 100%;
+    height: 220px;
+    resize: none;
+    overflow: auto;
+}
+
+.project-loading-mask {
+    z-index: 120;
+    background: rgba(20, 22, 26, 0.42);
+}
+
+.project-loading-modal {
+    width: min(460px, calc(100vw - 24px));
+    display: grid;
+    gap: 10px;
+}
+
+.project-loading-modal .create-modal-head {
+    justify-content: center;
+    margin-bottom: 0;
+}
+
+.project-loading-modal .create-modal-head h3 {
+    margin: 0;
+    line-height: 1.2;
+    text-align: center;
+}
+
+.project-loading-text {
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.project-loading-bar {
+    width: 100%;
+    height: 10px;
+    border-radius: 999px;
+    background: var(--scroll-track);
+    border: 1px solid var(--border);
+    overflow: hidden;
+}
+
+.project-loading-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.2s ease;
+}
+
+.project-loading-percent {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: right;
+}
+
 .seid-picker-list {
     min-height: 0;
     overflow: auto;

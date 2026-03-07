@@ -106,3 +106,79 @@
 3. 联动关闭：关闭主窗口时，设置窗口同时关闭。
 4. 删除可靠性：删除 Buff/Item/Skill 条目后保存，重启或重载不应复活。
 5. Seid 清理：删除 seid 关联后保存，对应 seid 文件内容不应保留旧 owner 行。
+
+## 6. Project Open Loading Progress (blocking)
+
+### Goal
+
+-   Show a modal with progress while opening a project.
+-   Block main window interaction until all project data is fully loaded.
+
+### Implementation
+
+-   Added loading state in `App.tsx`:
+    -   `projectLoading.open`
+    -   `projectLoading.progress`
+    -   `projectLoading.message`
+-   Added blocking overlay modal in `App.tsx`:
+    -   Title: project loading
+    -   Progress bar + percentage
+    -   No close action during loading
+-   Added progress callback in `useProjectLifecycle.ts`:
+    -   `onProjectLoadingChange?: ({ open, progress, message }) => void`
+-   Updated `reloadProject` load flow:
+    -   step-by-step progress updates for meta/enum loading
+    -   folder snapshot preload changed to sequential progress reporting
+    -   modal closes only after all steps complete (in `finally`)
+
+### Key Files
+
+-   `src/features/project-shell/useProjectLifecycle.ts`
+-   `src/App.tsx`
+-   `src/styles.css`
+
+## 7. Loading Modal UI Tuning
+
+### Changes
+
+-   Centered loading title in modal.
+-   Reduced extra vertical spacing around the title.
+
+### Key Files
+
+-   `src/styles.css`
+
+## 8. Tauri Window Destroy Permission
+
+### Problem
+
+-   Runtime error: `window.destroy not allowed` with required permission `core:window:allow-destroy`.
+
+### Fix
+
+-   Added `core:window:allow-destroy` to Tauri capability permissions.
+
+### Key Files
+
+-   `src-tauri/capabilities/default.json`
+
+### Note
+
+-   After capability changes, fully restart dev process:
+    -   stop `pnpm tauri dev`
+    -   run `pnpm tauri dev` again
+
+## 9. JSON Import Modal Size Adjustment
+
+### Changes
+
+-   JSON import modal width adjusted to around `500px`.
+-   JSON textarea changed to fixed height with scroll:
+    -   `height: 220px`
+    -   `resize: none`
+    -   `overflow: auto`
+
+### Key Files
+
+-   `src/components/workspace/InfoPanel.tsx`
+-   `src/styles.css`

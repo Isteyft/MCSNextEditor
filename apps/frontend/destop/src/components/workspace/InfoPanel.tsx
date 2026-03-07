@@ -1,4 +1,4 @@
-﻿import { ClipboardPaste, Copy, Plus, Search, Trash2 } from 'lucide-react'
+import { ClipboardPaste, Copy, Plus, Search, Trash2, Upload } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { ModuleKey } from '../../modules'
@@ -24,6 +24,7 @@ type InfoPanelProps = {
     onBatchPrefixIds: (prefix: string) => void
     onCopyTalent: () => void
     onPasteTalent: () => void
+    onImportTalent: (jsonText: string) => void
     onGenerateGroup?: () => void
     canGenerateGroup?: boolean
     generateGroupLabel?: string
@@ -45,6 +46,7 @@ export function InfoPanel({
     onBatchPrefixIds,
     onCopyTalent,
     onPasteTalent,
+    onImportTalent,
     onGenerateGroup,
     canGenerateGroup = false,
     generateGroupLabel = '生成技能组',
@@ -53,6 +55,10 @@ export function InfoPanel({
     generateBookLabel = '生成技能书',
 }: InfoPanelProps) {
     const [menu, setMenu] = useState({ open: false, x: 0, y: 0 })
+    const [searchDraft, setSearchDraft] = useState(searchText)
+    const [importModalOpen, setImportModalOpen] = useState(false)
+    const [importJsonText, setImportJsonText] = useState('')
+
     const menuPosition = useMemo(() => {
         const itemCount = 2 + (onGenerateGroup ? 1 : 0) + (onGenerateBook ? 1 : 0)
         const menuWidth = 140
@@ -64,7 +70,6 @@ export function InfoPanel({
             top: Math.min(Math.max(menu.y, 8), maxY),
         }
     }, [menu.x, menu.y, onGenerateBook, onGenerateGroup])
-    const [searchDraft, setSearchDraft] = useState(searchText)
 
     useEffect(() => {
         setSearchDraft(searchText)
@@ -122,6 +127,17 @@ export function InfoPanel({
                             </button>
                             <button className="icon-btn" onClick={onPasteTalent} title="粘贴" type="button">
                                 <ClipboardPaste size={14} />
+                            </button>
+                            <button
+                                className="icon-btn"
+                                onClick={() => {
+                                    setImportJsonText('')
+                                    setImportModalOpen(true)
+                                }}
+                                title="导入 JSON"
+                                type="button"
+                            >
+                                <Upload size={14} />
                             </button>
                             <div className="search-input-wrap">
                                 <input
@@ -237,6 +253,38 @@ export function InfoPanel({
                                     ) : null}
                                 </div>
                             </>
+                        ) : null}
+                        {importModalOpen ? (
+                            <div className="modal-mask">
+                                <div className="create-modal json-import-modal">
+                                    <div className="create-modal-head">
+                                        <h3>导入 JSON</h3>
+                                        <button className="modal-close" onClick={() => setImportModalOpen(false)} type="button">
+                                            ×
+                                        </button>
+                                    </div>
+                                    <textarea
+                                        className="config-desc-input json-import-textarea"
+                                        onChange={event => setImportJsonText(event.target.value)}
+                                        placeholder="请粘贴 JSON 数据"
+                                        value={importJsonText}
+                                    />
+                                    <div className="settings-window-actions">
+                                        <button
+                                            className="save-btn"
+                                            onClick={() => {
+                                                const text = importJsonText.trim()
+                                                if (!text) return
+                                                onImportTalent(text)
+                                                setImportModalOpen(false)
+                                            }}
+                                            type="button"
+                                        >
+                                            确认导入
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         ) : null}
                     </>
                 ) : (
