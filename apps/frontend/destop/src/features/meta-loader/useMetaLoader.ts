@@ -10,7 +10,8 @@ type MetaLoaderParams = {
     setTalentTypeOptions: Setter
     setSeidMetaMap: Setter
     setBuffSeidMetaMap: Setter
-    setItemSeidMetaMap: Setter
+    setItemEquipSeidMetaMap: Setter
+    setItemUseSeidMetaMap: Setter
     setSkillSeidMetaMap: Setter
     setStaticSkillSeidMetaMap: Setter
     setBuffTypeOptions: Setter
@@ -43,7 +44,8 @@ export function useMetaLoader(params: MetaLoaderParams) {
         setTalentTypeOptions,
         setSeidMetaMap,
         setBuffSeidMetaMap,
-        setItemSeidMetaMap,
+        setItemEquipSeidMetaMap,
+        setItemUseSeidMetaMap,
         setSkillSeidMetaMap,
         setStaticSkillSeidMetaMap,
         setBuffTypeOptions,
@@ -93,10 +95,10 @@ export function useMetaLoader(params: MetaLoaderParams) {
         }
 
         if (!silent) {
-            const talentPart = talentLoaded ? `分类已加载(${result.talentLoadedPath})` : '分类未加载'
-            const seidPart = seidLoaded ? `Seid已加载(${result.seidLoadedPath})` : 'Seid未加载'
-            const customPart = result.customLoadedPaths.length > 0 ? `，自定义配置${result.customLoadedPaths.length}个` : ''
-            setStatus(`元数据预加载：${talentPart}，${seidPart}${customPart}`)
+            const talentPart = talentLoaded ? `talent loaded (${result.talentLoadedPath})` : 'talent not loaded'
+            const seidPart = seidLoaded ? `seid loaded (${result.seidLoadedPath})` : 'seid not loaded'
+            const customPart = result.customLoadedPaths.length > 0 ? `, custom=${result.customLoadedPaths.length}` : ''
+            setStatus(`Meta preload: ${talentPart}; ${seidPart}${customPart}`)
         }
         return { talentLoaded, seidLoaded }
     }
@@ -113,7 +115,9 @@ export function useMetaLoader(params: MetaLoaderParams) {
             if (Object.keys(result.metaMap).length > 0) {
                 setBuffSeidMetaMap(result.metaMap)
                 if (!silent) {
-                    setStatus(`已加载 Buff Seid 元数据: ${result.loadedPath} (${Object.keys(result.metaMap).length} 条)`)
+                    setStatus(
+                        `鐎瑰憡褰冩慨鐐存姜?Buff Seid 闁稿繐鍟弳鐔煎箲? ${result.loadedPath} (${Object.keys(result.metaMap).length} 闁?`
+                    )
                 }
                 return true
             }
@@ -126,26 +130,51 @@ export function useMetaLoader(params: MetaLoaderParams) {
 
     async function loadItemSeidMeta(roots: string[], silent = false) {
         const candidates = withMetaRoots(roots)
-        const fileNames = ['ItemUseSeidMeta.json', 'ItemsSeidMeta.json', 'ItemSeidMeta.json']
+        const equipFileNames = ['ItemEquipSeidMeta.json']
+        const useFileNames = ['ItemUseSeidMeta.json', 'ItemsSeidMeta.json', 'ItemSeidMeta.json']
+        let equipLoaded = false
+        let useLoaded = false
         for (const root of candidates) {
-            for (const fileName of fileNames) {
-                const result = await readSeidMetaByFileName({
-                    rootPath: root,
-                    fileName,
-                    readFilePayload,
-                    readBundledMetaPayload,
-                })
-                if (Object.keys(result.metaMap).length > 0) {
-                    setItemSeidMetaMap(result.metaMap)
-                    if (!silent) {
-                        setStatus(`已加载 Item Seid 元数据: ${result.loadedPath} (${Object.keys(result.metaMap).length} 条)`)
+            if (!equipLoaded) {
+                for (const fileName of equipFileNames) {
+                    const result = await readSeidMetaByFileName({
+                        rootPath: root,
+                        fileName,
+                        readFilePayload,
+                        readBundledMetaPayload,
+                    })
+                    if (Object.keys(result.metaMap).length > 0) {
+                        setItemEquipSeidMetaMap(result.metaMap)
+                        equipLoaded = true
+                        break
                     }
-                    return true
                 }
             }
+            if (!useLoaded) {
+                for (const fileName of useFileNames) {
+                    const result = await readSeidMetaByFileName({
+                        rootPath: root,
+                        fileName,
+                        readFilePayload,
+                        readBundledMetaPayload,
+                    })
+                    if (Object.keys(result.metaMap).length > 0) {
+                        setItemUseSeidMetaMap(result.metaMap)
+                        useLoaded = true
+                        break
+                    }
+                }
+            }
+            if (equipLoaded && useLoaded) break
         }
-        if (!silent) setItemSeidMetaMap({})
-        return false
+        if (!silent) {
+            if (!equipLoaded) setItemEquipSeidMetaMap({})
+            if (!useLoaded) setItemUseSeidMetaMap({})
+            if (equipLoaded || useLoaded) {
+                setStatus(`Item Seid metadata loaded: equip=${equipLoaded ? 'ok' : 'missing'}, use=${useLoaded ? 'ok' : 'missing'}`)
+            }
+        }
+        return equipLoaded || useLoaded
     }
 
     async function loadSkillSeidMeta(roots: string[], silent = false) {
@@ -160,7 +189,9 @@ export function useMetaLoader(params: MetaLoaderParams) {
             if (Object.keys(result.metaMap).length > 0) {
                 setSkillSeidMetaMap(result.metaMap)
                 if (!silent) {
-                    setStatus(`已加载 Skill Seid 元数据: ${result.loadedPath} (${Object.keys(result.metaMap).length} 条)`)
+                    setStatus(
+                        `鐎瑰憡褰冩慨鐐存姜?Skill Seid 闁稿繐鍟弳鐔煎箲? ${result.loadedPath} (${Object.keys(result.metaMap).length} 闁?`
+                    )
                 }
                 return true
             }
@@ -183,7 +214,9 @@ export function useMetaLoader(params: MetaLoaderParams) {
             if (Object.keys(result.metaMap).length > 0) {
                 setStaticSkillSeidMetaMap(result.metaMap)
                 if (!silent) {
-                    setStatus(`已加载 StaticSkill Seid 元数据: ${result.loadedPath} (${Object.keys(result.metaMap).length} 条)`)
+                    setStatus(
+                        `鐎瑰憡褰冩慨鐐存姜?StaticSkill Seid 闁稿繐鍟弳鐔煎箲? ${result.loadedPath} (${Object.keys(result.metaMap).length} 闁?`
+                    )
                 }
                 return true
             }
@@ -227,7 +260,7 @@ export function useMetaLoader(params: MetaLoaderParams) {
         }
 
         if (!silent && loaded.length > 0) {
-            setStatus(`已加载 Buff 枚举元数据 ${loaded.length}/4 个`)
+            setStatus(`Buff enum metadata loaded: ${loaded.length}/4`)
         }
         return loaded.length > 0
     }
@@ -422,7 +455,7 @@ export function useMetaLoader(params: MetaLoaderParams) {
 
         setDrawerOptionsMap(nextMap)
         if (!silent) {
-            setStatus(`已加载 SpecialDrawer 数据源 ${Object.keys(nextMap).length} 个`)
+            setStatus(`SpecialDrawer metadata loaded: ${Object.keys(nextMap).length}`)
         }
     }
 

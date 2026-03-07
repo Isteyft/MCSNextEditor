@@ -94,6 +94,7 @@ body,
     background: var(--scroll-track);
     backdrop-filter: blur(6px);
     padding: 0 0 0 10px;
+    cursor: default;
 }
 
 .topbar-left {
@@ -103,14 +104,9 @@ body,
     height: 100%;
 }
 
-.drag-region {
+.topbar-spacer {
     flex: 1;
     height: 100%;
-    cursor: grab;
-}
-
-.drag-region:active {
-    cursor: grabbing;
 }
 
 .menu-group {
@@ -546,6 +542,16 @@ body,
 
 .settings-level-input {
     width: 140px;
+}
+
+.settings-size-inputs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.settings-size-select {
+    width: 180px;
 }
 
 .settings-switch {

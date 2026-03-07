@@ -18,7 +18,8 @@ type UseSeidDerivedStateParams = {
     selectedStaticSkillKey: string
     seidMetaMap: Record<number, SeidMetaItem>
     buffSeidMetaMap: Record<number, SeidMetaItem>
-    itemSeidMetaMap: Record<number, SeidMetaItem>
+    itemEquipSeidMetaMap: Record<number, SeidMetaItem>
+    itemUseSeidMetaMap: Record<number, SeidMetaItem>
     skillSeidMetaMap: Record<number, SeidMetaItem>
     staticSkillSeidMetaMap: Record<number, SeidMetaItem>
 }
@@ -37,7 +38,8 @@ export function useSeidDerivedState({
     selectedStaticSkillKey,
     seidMetaMap,
     buffSeidMetaMap,
-    itemSeidMetaMap,
+    itemEquipSeidMetaMap,
+    itemUseSeidMetaMap,
     skillSeidMetaMap,
     staticSkillSeidMetaMap,
 }: UseSeidDerivedStateParams) {
@@ -55,11 +57,24 @@ export function useSeidDerivedState({
 
     const activeSeidMetaMap = useMemo(() => {
         if (activeModule === 'buff') return buffSeidMetaMap
-        if (activeModule === 'item') return itemSeidMetaMap
+        if (activeModule === 'item') {
+            const itemType = Number(selectedItem?.type ?? -1)
+            const isEquipItem = itemType === 0 || itemType === 1 || itemType === 2
+            return isEquipItem ? itemEquipSeidMetaMap : itemUseSeidMetaMap
+        }
         if (activeModule === 'skill') return skillSeidMetaMap
         if (activeModule === 'staticskill') return staticSkillSeidMetaMap
         return seidMetaMap
-    }, [activeModule, buffSeidMetaMap, itemSeidMetaMap, skillSeidMetaMap, staticSkillSeidMetaMap, seidMetaMap])
+    }, [
+        activeModule,
+        buffSeidMetaMap,
+        selectedItem,
+        itemEquipSeidMetaMap,
+        itemUseSeidMetaMap,
+        skillSeidMetaMap,
+        staticSkillSeidMetaMap,
+        seidMetaMap,
+    ])
 
     const seidPickerItems = useMemo(() => Object.values(activeSeidMetaMap).sort((a, b) => a.id - b.id), [activeSeidMetaMap])
 

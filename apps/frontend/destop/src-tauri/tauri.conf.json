@@ -24,8 +24,8 @@
         "title": "Next\u7f16\u8f91\u5668",
         "width": 1440,
         "height": 900,
-        "minWidth": 1100,
-        "minHeight": 700,
+        "minWidth": 800,
+        "minHeight": 600,
         "resizable": true,
         "decorations": false
       }

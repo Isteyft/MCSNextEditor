@@ -1,7 +1,9 @@
-﻿import { useState } from 'react'
+import { emit } from '@tauri-apps/api/event'
+import { useState } from 'react'
 
 import { SettingsForm } from './components/settings/SettingsForm'
 import { STATUS_MESSAGES } from './features/app-core/status-messages'
+import { SETTINGS_APPLIED_EVENT } from './features/settings/settings-events'
 import { useAppSettings } from './features/settings/useAppSettings'
 
 export function SettingsWindowApp() {
@@ -20,7 +22,10 @@ export function SettingsWindowApp() {
                         <button
                             className="save-btn"
                             onClick={async () => {
-                                const { filePath } = await persistSettings()
+                                const { next, filePath } = await persistSettings()
+                                await emit(SETTINGS_APPLIED_EVENT, {
+                                    settings: next,
+                                })
                                 setStatus(
                                     filePath ? `${STATUS_MESSAGES.settingsSaved} 配置文件: ${filePath}` : STATUS_MESSAGES.settingsSaved
                                 )
@@ -32,7 +37,10 @@ export function SettingsWindowApp() {
                         <button
                             className="save-btn"
                             onClick={async () => {
-                                const { filePath } = await resetSettings()
+                                const { next, filePath } = await resetSettings()
+                                await emit(SETTINGS_APPLIED_EVENT, {
+                                    settings: next,
+                                })
                                 setStatus(filePath ? `设置已重置。配置文件: ${filePath}` : '设置已重置。')
                             }}
                             type="button"

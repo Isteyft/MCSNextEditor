@@ -30,6 +30,10 @@ export async function saveFilePayload(filePath: string, content: string) {
     return invoke('save_file_payload', { filePath, content })
 }
 
+export async function deleteFilePayload(filePath: string) {
+    return invoke('delete_file_payload', { filePath })
+}
+
 export async function ensureModStructure(modRootPath: string) {
     return invoke('ensure_mod_structure', { modRootPath })
 }

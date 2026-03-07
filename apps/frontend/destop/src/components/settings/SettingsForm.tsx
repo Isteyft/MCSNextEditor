@@ -9,6 +9,10 @@ type SettingsFormProps = {
         batchIdChangeKeepOriginal: boolean
         autoSaveEnabled: boolean
         autoSaveIntervalSeconds: number
+        autoSyncSkillDescrWithAtlas: boolean
+        replaceSkillDescrWithSpecialFormat: boolean
+        mainWindowWidth: number
+        mainWindowHeight: number
     }
     onChange: (patch: Partial<SettingsFormProps['values']>) => void
 }
@@ -23,8 +27,11 @@ function mergeUnique(current: string[], incoming: string[]): string[] {
     return Array.from(new Set([...current, ...incoming].filter(Boolean)))
 }
 
+const MAIN_WINDOW_RESOLUTION_OPTIONS = ['800x600', '1280x968', '1440x1080', '1920x1080'] as const
+
 export function SettingsForm({ values, onChange }: SettingsFormProps) {
     const triggerLevelsText = values.uniqueIdSyncTriggerLevels.join(',')
+    const selectedResolution = `${values.mainWindowWidth}x${values.mainWindowHeight}`
 
     async function handlePickJsonFolders() {
         const selected = await open({
@@ -153,6 +160,55 @@ export function SettingsForm({ values, onChange }: SettingsFormProps) {
                             />
                             <span className="settings-switch-slider" />
                         </label>
+                    </div>
+                    <div className="settings-pref-row">
+                        <span>自动同步图鉴描述到技能描述</span>
+                        <label className="settings-switch">
+                            <input
+                                checked={values.autoSyncSkillDescrWithAtlas}
+                                onChange={event => onChange({ autoSyncSkillDescrWithAtlas: event.target.checked })}
+                                type="checkbox"
+                            />
+                            <span className="settings-switch-slider" />
+                        </label>
+                    </div>
+                    <div className="settings-pref-row">
+                        <span>同步时替换为特殊格式</span>
+                        <label className="settings-switch">
+                            <input
+                                checked={values.replaceSkillDescrWithSpecialFormat}
+                                onChange={event => onChange({ replaceSkillDescrWithSpecialFormat: event.target.checked })}
+                                type="checkbox"
+                            />
+                            <span className="settings-switch-slider" />
+                        </label>
+                    </div>
+                    <div className="settings-pref-row">
+                        <span>主窗口默认分辨率</span>
+                        <div className="settings-size-inputs">
+                            <select
+                                className="settings-level-input settings-size-select"
+                                onChange={event => {
+                                    const [widthText, heightText] = event.target.value.split('x')
+                                    const width = Number(widthText)
+                                    const height = Number(heightText)
+                                    if (!Number.isFinite(width) || !Number.isFinite(height)) return
+                                    onChange({ mainWindowWidth: width, mainWindowHeight: height })
+                                }}
+                                value={selectedResolution}
+                            >
+                                {!MAIN_WINDOW_RESOLUTION_OPTIONS.includes(
+                                    selectedResolution as (typeof MAIN_WINDOW_RESOLUTION_OPTIONS)[number]
+                                ) ? (
+                                    <option value={selectedResolution}>{selectedResolution}</option>
+                                ) : null}
+                                {MAIN_WINDOW_RESOLUTION_OPTIONS.map(option => (
+                                    <option key={option} value={option}>
+                                        {option}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>

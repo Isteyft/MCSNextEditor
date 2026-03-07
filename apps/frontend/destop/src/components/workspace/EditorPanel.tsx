@@ -71,6 +71,10 @@ type EditorPanelProps = {
         batchIdChangeKeepOriginal: boolean
         autoSaveEnabled: boolean
         autoSaveIntervalSeconds: number
+        autoSyncSkillDescrWithAtlas: boolean
+        replaceSkillDescrWithSpecialFormat: boolean
+        mainWindowWidth: number
+        mainWindowHeight: number
     }
     onChangeSettingsForm: (patch: Partial<EditorPanelProps['settingsForm']>) => void
 }

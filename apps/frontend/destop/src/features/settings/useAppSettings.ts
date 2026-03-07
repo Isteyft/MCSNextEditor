@@ -12,13 +12,15 @@ import {
 export function useAppSettings() {
     const [settingsDraft, setSettingsDraft] = useState<AppSettings>(() => readAppSettings())
     const [settingsFilePath, setSettingsFilePath] = useState<string | null>(null)
+    const [settingsHydrated, setSettingsHydrated] = useState(false)
 
     useEffect(() => {
         let active = true
         ;(async () => {
             const fileSettings = await readAppSettingsFromFile()
-            if (!active || !fileSettings) return
-            setSettingsDraft(fileSettings)
+            if (!active) return
+            if (fileSettings) setSettingsDraft(fileSettings)
+            setSettingsHydrated(true)
         })()
         return () => {
             active = false
@@ -34,7 +36,11 @@ export function useAppSettings() {
             JSON.stringify(stored.uniqueIdSyncTriggerLevels) !== JSON.stringify(settingsDraft.uniqueIdSyncTriggerLevels) ||
             stored.batchIdChangeKeepOriginal !== settingsDraft.batchIdChangeKeepOriginal ||
             stored.autoSaveEnabled !== settingsDraft.autoSaveEnabled ||
-            stored.autoSaveIntervalSeconds !== settingsDraft.autoSaveIntervalSeconds
+            stored.autoSaveIntervalSeconds !== settingsDraft.autoSaveIntervalSeconds ||
+            stored.autoSyncSkillDescrWithAtlas !== settingsDraft.autoSyncSkillDescrWithAtlas ||
+            stored.replaceSkillDescrWithSpecialFormat !== settingsDraft.replaceSkillDescrWithSpecialFormat ||
+            stored.mainWindowWidth !== settingsDraft.mainWindowWidth ||
+            stored.mainWindowHeight !== settingsDraft.mainWindowHeight
         )
     }, [settingsDraft])
 
@@ -65,6 +71,7 @@ export function useAppSettings() {
     return {
         settingsDraft,
         settingsFilePath,
+        settingsHydrated,
         hasChanges,
         patchSettings,
         persistSettings,

@@ -1,6 +1,7 @@
 import { createEmptyItem } from '../../../components/item/item-domain'
 import { createEmptyStaticSkill } from '../../../components/staticskill/staticskill-domain'
 import type { ItemEntry, StaticSkillEntry } from '../../../types'
+import { formatAtlasDescriptionToSkillDescription } from '../skill/description-sync'
 
 type Setter = (value: any) => void
 
@@ -27,6 +28,8 @@ type Params = {
     uniqueIdSyncEnabled: boolean
     uniqueIdSyncTriggerLevels: number[]
     batchIdChangeKeepOriginal: boolean
+    autoSyncSkillDescrWithAtlas: boolean
+    replaceSkillDescrWithSpecialFormat: boolean
 }
 
 export function useStaticSkillHandlers(params: Params) {
@@ -53,6 +56,8 @@ export function useStaticSkillHandlers(params: Params) {
         uniqueIdSyncEnabled,
         uniqueIdSyncTriggerLevels,
         batchIdChangeKeepOriginal,
+        autoSyncSkillDescrWithAtlas,
+        replaceSkillDescrWithSpecialFormat,
     } = params
 
     function handleSelectStaticSkill(key: string, index: number, options: { shift: boolean; ctrl: boolean }) {
@@ -240,7 +245,12 @@ export function useStaticSkillHandlers(params: Params) {
     function handleChangeStaticSkillForm(patch: Partial<StaticSkillEntry>) {
         if (!selectedStaticSkillKey || !staticSkillMap[selectedStaticSkillKey]) return
         const current = staticSkillMap[selectedStaticSkillKey]
-        const next = { ...current, ...patch }
+        const nextPatch = { ...patch }
+        if (autoSyncSkillDescrWithAtlas && Object.prototype.hasOwnProperty.call(nextPatch, 'TuJiandescr')) {
+            const atlasText = String(nextPatch.TuJiandescr ?? '')
+            nextPatch.descr = replaceSkillDescrWithSpecialFormat ? formatAtlasDescriptionToSkillDescription(atlasText) : atlasText
+        }
+        const next = { ...current, ...nextPatch }
         const nextId = Number(next.id || 0)
         if (!Number.isFinite(nextId) || nextId <= 0) return
         const nextKey = String(nextId)

@@ -39,3 +39,9 @@ export async function openOrFocusSettingsWindow() {
         })
     })
 }
+
+export async function closeSettingsWindowIfOpen() {
+    const existing = await WebviewWindow.getByLabel(SETTINGS_WINDOW_LABEL)
+    if (!existing) return
+    await existing.close()
+}

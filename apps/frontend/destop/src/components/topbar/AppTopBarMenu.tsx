@@ -33,7 +33,7 @@ export function AppTopBarMenu({
 
     return (
         <TopBar onClose={onClose} onMinimize={onMinimize} onStartDragging={onStartDragging} onToggleMaximize={onToggleMaximize}>
-            <div className="menu-row" ref={menuGroupRef}>
+            <div className="menu-row" data-no-drag ref={menuGroupRef}>
                 <div className="menu-group">
                     <button className="menu-trigger" onClick={() => setMenuOpen(prev => (prev === 'file' ? null : 'file'))} type="button">
                         文件

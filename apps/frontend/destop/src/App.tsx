@@ -1,4 +1,6 @@
-﻿import { executableDir, resourceDir } from '@tauri-apps/api/path'
+import { PhysicalSize } from '@tauri-apps/api/dpi'
+import { listen } from '@tauri-apps/api/event'
+import { appDataDir, executableDir, resourceDir } from '@tauri-apps/api/path'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
@@ -28,6 +30,7 @@ import { useModulePaths } from './features/app-core/useModulePaths'
 import { useContextMenuBlocker } from './features/global-interactions/useContextMenuBlocker'
 import { useGlobalShortcuts } from './features/global-interactions/useGlobalShortcuts'
 import { useWindowActions } from './features/global-interactions/useWindowActions'
+import { initAppLogger, logError, logInfo, logWarn } from './features/logging/app-logger'
 import { useMetaLoader } from './features/meta-loader/useMetaLoader'
 import { useModuleLoaders } from './features/module-loaders/useModuleLoaders'
 import { useAffixHandlers } from './features/modules/affix/useAffixHandlers'
@@ -39,17 +42,21 @@ import { useTalentHandlers } from './features/modules/talent/useTalentHandlers'
 import { useInfoPanelPresenter } from './features/modules/useInfoPanelPresenter'
 import { useModuleSelectionSync } from './features/modules/useModuleSelectionSync'
 import { useModuleTableRows } from './features/modules/useModuleTableRows'
+import { buildDraftCachePath, loadDraftCache, saveDraftCache } from './features/project-cache/draft-cache'
 import { useProjectSave } from './features/project-save/useProjectSave'
 import { collectSiblingModFolders as collectSiblingModFoldersByAnchor } from './features/project-shell/project-shell-utils'
 import { useProjectLifecycle } from './features/project-shell/useProjectLifecycle'
 import { useProjectShellState } from './features/project-shell/useProjectShellState'
 import { useSeidDerivedState } from './features/seid/useSeidDerivedState'
 import { useSeidHandlers } from './features/seid/useSeidHandlers'
-import { openOrFocusSettingsWindow } from './features/settings/settings-window'
+import { saveAppSettings } from './features/settings/app-settings-store'
+import { SETTINGS_APPLIED_EVENT, type SettingsAppliedPayload } from './features/settings/settings-events'
+import { closeSettingsWindowIfOpen, openOrFocusSettingsWindow } from './features/settings/settings-window'
 import { useAppSettings } from './features/settings/useAppSettings'
 import { useSeidActiveSync } from './hooks/useSeidActiveSync'
 import { ModuleKey, MODULES, ViewMode } from './modules'
 import {
+    deleteFilePayload,
     deleteModFolder,
     getWorkspaceRoot,
     loadProjectEntries,
@@ -139,7 +146,8 @@ export function App() {
     const [itemTypeOptions, setItemTypeOptions] = useState<TalentTypeOption[]>([])
     const [itemQualityOptions, setItemQualityOptions] = useState<TalentTypeOption[]>([])
     const [itemPhaseOptions, setItemPhaseOptions] = useState<TalentTypeOption[]>([])
-    const [itemSeidMetaMap, setItemSeidMetaMap] = useState<Record<number, SeidMetaItem>>({})
+    const [itemEquipSeidMetaMap, setItemEquipSeidMetaMap] = useState<Record<number, SeidMetaItem>>({})
+    const [itemUseSeidMetaMap, setItemUseSeidMetaMap] = useState<Record<number, SeidMetaItem>>({})
     const [affixTypeOptions, setAffixTypeOptions] = useState<TalentTypeOption[]>([])
     const [affixProjectTypeOptions, setAffixProjectTypeOptions] = useState<TalentTypeOption[]>([])
     const [skillAttackTypeOptions, setSkillAttackTypeOptions] = useState<TalentTypeOption[]>([])
@@ -178,10 +186,27 @@ export function App() {
     const [metaExtraRoots, setMetaExtraRoots] = useState<string[]>([])
     const [status, setStatus] = useState(STATUS_MESSAGES.openProjectHint)
     const autoSaveRunningRef = useRef(false)
-    const { settingsDraft, patchSettings } = useAppSettings()
+    const cacheSaveRunningRef = useRef(false)
+    const cacheRestoredRootRef = useRef('')
+    const lastCacheUnsavedRef = useRef<boolean | null>(null)
+    const { settingsDraft, settingsHydrated, patchSettings } = useAppSettings()
+    const startupResolutionAppliedRef = useRef(false)
 
     function withMetaRoots(roots: string[]) {
         return Array.from(new Set([...roots.filter(Boolean), ...metaExtraRoots.filter(Boolean)]))
+    }
+
+    async function applyMainWindowResolution(widthValue: number, heightValue: number) {
+        const width = Math.max(800, Number(widthValue || 0))
+        const height = Math.max(600, Number(heightValue || 0))
+        if (!Number.isFinite(width) || !Number.isFinite(height)) return
+        try {
+            const maximized = await appWindow.isMaximized()
+            if (maximized) await appWindow.unmaximize()
+            await appWindow.setSize(new PhysicalSize(width, height))
+        } catch {
+            // ignore window resize failures
+        }
     }
 
     const {
@@ -269,7 +294,8 @@ export function App() {
         selectedStaticSkillKey,
         seidMetaMap,
         buffSeidMetaMap,
-        itemSeidMetaMap,
+        itemEquipSeidMetaMap,
+        itemUseSeidMetaMap,
         skillSeidMetaMap,
         staticSkillSeidMetaMap,
     })
@@ -323,6 +349,44 @@ export function App() {
             setSelectionAnchor: setStaticSkillSelectionAnchor,
         },
     })
+
+    useEffect(() => {
+        void initAppLogger()
+        void logInfo('desktop app started')
+    }, [])
+
+    useEffect(() => {
+        let unlisten: (() => void) | null = null
+        void (async () => {
+            unlisten = await appWindow.onCloseRequested(() => {
+                void closeSettingsWindowIfOpen()
+            })
+        })()
+        return () => {
+            if (unlisten) unlisten()
+        }
+    }, [])
+
+    useEffect(() => {
+        if (!settingsHydrated) return
+        if (startupResolutionAppliedRef.current) return
+        startupResolutionAppliedRef.current = true
+        void applyMainWindowResolution(settingsDraft.mainWindowWidth, settingsDraft.mainWindowHeight)
+    }, [settingsHydrated, settingsDraft.mainWindowWidth, settingsDraft.mainWindowHeight])
+
+    useEffect(() => {
+        let unlisten: (() => void) | null = null
+        void (async () => {
+            unlisten = await listen<SettingsAppliedPayload>(SETTINGS_APPLIED_EVENT, event => {
+                const synced = saveAppSettings(event.payload.settings)
+                patchSettings(synced)
+                void applyMainWindowResolution(synced.mainWindowWidth, synced.mainWindowHeight)
+            })
+        })()
+        return () => {
+            if (unlisten) unlisten()
+        }
+    }, [patchSettings])
 
     useEffect(() => {
         let active = true
@@ -406,7 +470,8 @@ export function App() {
         setTalentTypeOptions,
         setSeidMetaMap,
         setBuffSeidMetaMap,
-        setItemSeidMetaMap,
+        setItemEquipSeidMetaMap,
+        setItemUseSeidMetaMap,
         setSkillSeidMetaMap,
         setStaticSkillSeidMetaMap,
         setBuffTypeOptions,
@@ -519,7 +584,8 @@ export function App() {
             setItemTypeOptions,
             setItemQualityOptions,
             setItemPhaseOptions,
-            setItemSeidMetaMap,
+            setItemEquipSeidMetaMap,
+            setItemUseSeidMetaMap,
             setSkillAttackTypeOptions,
             setSkillConsultTypeOptions,
             setSkillPhaseOptions,
@@ -791,6 +857,8 @@ export function App() {
         uniqueIdSyncEnabled: settingsDraft.uniqueIdSyncEnabled,
         uniqueIdSyncTriggerLevels: settingsDraft.uniqueIdSyncTriggerLevels,
         batchIdChangeKeepOriginal: settingsDraft.batchIdChangeKeepOriginal,
+        autoSyncSkillDescrWithAtlas: settingsDraft.autoSyncSkillDescrWithAtlas,
+        replaceSkillDescrWithSpecialFormat: settingsDraft.replaceSkillDescrWithSpecialFormat,
     })
 
     const {
@@ -826,6 +894,8 @@ export function App() {
         uniqueIdSyncEnabled: settingsDraft.uniqueIdSyncEnabled,
         uniqueIdSyncTriggerLevels: settingsDraft.uniqueIdSyncTriggerLevels,
         batchIdChangeKeepOriginal: settingsDraft.batchIdChangeKeepOriginal,
+        autoSyncSkillDescrWithAtlas: settingsDraft.autoSyncSkillDescrWithAtlas,
+        replaceSkillDescrWithSpecialFormat: settingsDraft.replaceSkillDescrWithSpecialFormat,
     })
 
     useContextMenuBlocker()
@@ -881,7 +951,8 @@ export function App() {
         activeSeidId,
         seidMetaMap,
         buffSeidMetaMap,
-        itemSeidMetaMap,
+        itemEquipSeidMetaMap,
+        itemUseSeidMetaMap,
         skillSeidMetaMap,
         staticSkillSeidMetaMap,
         workspaceRoot,
@@ -1029,8 +1100,9 @@ export function App() {
         buffDirPath,
         itemDirPath,
         skillDirPath,
-        readFilePayload,
+        loadProjectEntries,
         saveFilePayload,
+        deleteFilePayload,
         setConfigDirty,
         setAffixDirty,
         setTalentDirty,
@@ -1050,6 +1122,45 @@ export function App() {
     const hasUnsavedChanges = configDirty || affixDirty || talentDirty || buffDirty || itemDirty || skillDirty || staticSkillDirty
 
     useEffect(() => {
+        if (!projectPath || !modRootPath) return
+        if (cacheRestoredRootRef.current === modRootPath) return
+        cacheRestoredRootRef.current = modRootPath
+        let active = true
+        ;(async () => {
+            try {
+                const baseDir = await appDataDir()
+                const cachePath = buildDraftCachePath(baseDir, modRootPath)
+                const cached = await loadDraftCache({ readFilePayload, saveFilePayload }, cachePath)
+                if (!active || !cached || !cached.unsaved) return
+                if (cached.projectPath !== projectPath || cached.modRootPath !== modRootPath || !cached.data) return
+                setRawConfigObject(cached.data.rawConfigObject)
+                setConfigForm(cached.data.configForm)
+                setPreservedSettings(cached.data.preservedSettings)
+                setAffixMap(cached.data.affixMap as Record<string, AffixEntry>)
+                setTalentMap(cached.data.talentMap as Record<string, CreateAvatarEntry>)
+                setBuffMap(cached.data.buffMap as Record<string, BuffEntry>)
+                setItemMap(cached.data.itemMap as Record<string, ItemEntry>)
+                setSkillMap(cached.data.skillMap as Record<string, SkillEntry>)
+                setStaticSkillMap(cached.data.staticSkillMap as Record<string, StaticSkillEntry>)
+                setConfigDirty(true)
+                setAffixDirty(true)
+                setTalentDirty(true)
+                setBuffDirty(true)
+                setItemDirty(true)
+                setSkillDirty(true)
+                setStaticSkillDirty(true)
+                setStatus('已恢复未保存缓存数据，请尽快保存项目。')
+                void logWarn('restored unsaved draft cache for current project')
+            } catch {
+                // ignore cache restore failures
+            }
+        })()
+        return () => {
+            active = false
+        }
+    }, [projectPath, modRootPath, readFilePayload, saveFilePayload])
+
+    useEffect(() => {
         if (!settingsDraft.autoSaveEnabled) return
         if (!projectPath || !modRootPath) return
         const intervalMs = Math.max(5, Number(settingsDraft.autoSaveIntervalSeconds || 0)) * 1000
@@ -1060,6 +1171,7 @@ export function App() {
             void handleSaveProject()
                 .catch(error => {
                     setStatus(statusError('自动保存', error))
+                    void logError(`auto save failed: ${String(error)}`)
                 })
                 .finally(() => {
                     autoSaveRunningRef.current = false
@@ -1075,6 +1187,74 @@ export function App() {
         modRootPath,
         hasUnsavedChanges,
         handleSaveProject,
+    ])
+
+    useEffect(() => {
+        if (!projectPath || !modRootPath) return
+        const intervalMs = 15 * 1000
+        const tick = async () => {
+            if (cacheSaveRunningRef.current) return
+            if (!hasUnsavedChanges && lastCacheUnsavedRef.current === false) return
+            cacheSaveRunningRef.current = true
+            try {
+                const baseDir = await appDataDir()
+                const cachePath = buildDraftCachePath(baseDir, modRootPath)
+                const payload = hasUnsavedChanges
+                    ? {
+                          version: 1 as const,
+                          writtenAt: new Date().toISOString(),
+                          unsaved: true,
+                          projectPath,
+                          modRootPath,
+                          data: {
+                              rawConfigObject,
+                              configForm,
+                              preservedSettings,
+                              affixMap,
+                              talentMap,
+                              buffMap,
+                              itemMap,
+                              skillMap,
+                              staticSkillMap,
+                          },
+                      }
+                    : {
+                          version: 1 as const,
+                          writtenAt: new Date().toISOString(),
+                          unsaved: false,
+                          projectPath,
+                          modRootPath,
+                      }
+                await saveDraftCache({ readFilePayload, saveFilePayload }, cachePath, payload)
+                lastCacheUnsavedRef.current = hasUnsavedChanges
+            } catch {
+                // ignore cache write failures
+            } finally {
+                cacheSaveRunningRef.current = false
+            }
+        }
+        void tick()
+        const timer = window.setInterval(() => {
+            void tick()
+        }, intervalMs)
+        return () => {
+            window.clearInterval(timer)
+        }
+    }, [
+        projectPath,
+        modRootPath,
+        hasUnsavedChanges,
+        rawConfigObject,
+        configForm,
+        preservedSettings,
+        affixMap,
+        talentMap,
+        buffMap,
+        itemMap,
+        skillMap,
+        staticSkillMap,
+        readFilePayload,
+        saveFilePayload,
     ])
 
     return (

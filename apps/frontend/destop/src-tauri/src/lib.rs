@@ -1,6 +1,9 @@
 use serde::Serialize;
 use std::fs;
+use std::fs::OpenOptions;
+use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::time::{Duration, SystemTime};
 use tauri::Manager;
 use tauri::path::BaseDirectory;
 
@@ -292,6 +295,18 @@ fn save_file_payload(file_path: String, content: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn delete_file_payload(file_path: String) -> Result<(), String> {
+    let path = PathBuf::from(file_path.trim());
+    if !path.exists() {
+        return Ok(());
+    }
+    if path.is_dir() {
+        return Err("target is a directory, expected file.".to_string());
+    }
+    fs::remove_file(path).map_err(|err| err.to_string())
+}
+
+#[tauri::command]
 fn ensure_mod_structure(mod_root_path: String) -> Result<(), String> {
     let mod_root = PathBuf::from(mod_root_path.trim());
     let directories = [
@@ -381,6 +396,63 @@ fn delete_mod_folder(mod_root_path: String) -> Result<(), String> {
     fs::remove_dir_all(path).map_err(|err| err.to_string())
 }
 
+fn app_logs_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    let dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|err| err.to_string())?
+        .join("logs");
+    fs::create_dir_all(&dir).map_err(|err| err.to_string())?;
+    Ok(dir)
+}
+
+#[tauri::command]
+fn write_app_log(app: tauri::AppHandle, file_date: String, line: String) -> Result<String, String> {
+    let date = file_date.trim();
+    if date.is_empty() {
+        return Err("file_date is required.".to_string());
+    }
+    let logs_dir = app_logs_dir(&app)?;
+    let file_path = logs_dir.join(format!("{}.log", date));
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&file_path)
+        .map_err(|err| err.to_string())?;
+    writeln!(file, "{}", line).map_err(|err| err.to_string())?;
+    Ok(file_path.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+fn cleanup_app_logs(app: tauri::AppHandle, retention_days: u64) -> Result<usize, String> {
+    let keep_days = retention_days.max(1);
+    let logs_dir = app_logs_dir(&app)?;
+    let now = SystemTime::now();
+    let cutoff = now
+        .checked_sub(Duration::from_secs(keep_days * 24 * 60 * 60))
+        .ok_or_else(|| "failed to compute cutoff time".to_string())?;
+
+    let mut deleted = 0usize;
+    for entry in fs::read_dir(&logs_dir).map_err(|err| err.to_string())? {
+        let entry = entry.map_err(|err| err.to_string())?;
+        let path = entry.path();
+        if !path.is_file() {
+            continue;
+        }
+        let metadata = entry.metadata().map_err(|err| err.to_string())?;
+        let modified = match metadata.modified() {
+            Ok(value) => value,
+            Err(_) => continue,
+        };
+        if modified < cutoff {
+            if fs::remove_file(&path).is_ok() {
+                deleted += 1;
+            }
+        }
+    }
+    Ok(deleted)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -393,9 +465,12 @@ pub fn run() {
             read_file_payload,
             read_bundled_meta_payload,
             save_file_payload,
+            delete_file_payload,
             ensure_mod_structure,
             rename_mod_folder,
-            delete_mod_folder
+            delete_mod_folder,
+            write_app_log,
+            cleanup_app_logs
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

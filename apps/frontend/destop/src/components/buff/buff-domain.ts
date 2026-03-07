@@ -169,10 +169,23 @@ export async function saveBuffFiles(params: {
     buffMap: Record<string, BuffEntry>
     modRootPath: string
     joinWinPath: (base: string, ...parts: string[]) => string
+    loadProjectEntries: (rootPath: string) => Promise<FsEntry[]>
+    deleteFilePayload: (filePath: string) => Promise<unknown>
     saveFilePayload: (filePath: string, content: string) => Promise<unknown>
 }) {
-    const { buffMap, modRootPath, joinWinPath, saveFilePayload } = params
+    const { buffMap, modRootPath, joinWinPath, loadProjectEntries, deleteFilePayload, saveFilePayload } = params
     const dirPath = joinWinPath(modRootPath, 'Data', 'BuffJsonData')
+    const expectedNames = new Set(Object.values(buffMap).map(row => `${row.buffid}.json`))
+    try {
+        const entries = await loadProjectEntries(dirPath)
+        for (const entry of entries) {
+            if (entry.is_dir || !/\.json$/i.test(entry.name)) continue
+            if (expectedNames.has(entry.name)) continue
+            await deleteFilePayload(entry.path)
+        }
+    } catch {
+        // ignore cleanup failures
+    }
     for (const row of Object.values(buffMap)) {
         const filePath = joinWinPath(dirPath, `${row.buffid}.json`)
         const payload = {
@@ -202,10 +215,11 @@ export async function saveBuffSeidFiles(params: {
     buffMap: Record<string, BuffEntry>
     modRootPath: string
     joinWinPath: (base: string, ...parts: string[]) => string
-    readFilePayload: (filePath: string) => Promise<{ content: string }>
+    loadProjectEntries: (rootPath: string) => Promise<FsEntry[]>
+    deleteFilePayload: (filePath: string) => Promise<unknown>
     saveFilePayload: (filePath: string, content: string) => Promise<unknown>
 }) {
-    const { buffMap, modRootPath, joinWinPath, readFilePayload, saveFilePayload } = params
+    const { buffMap, modRootPath, joinWinPath, loadProjectEntries, deleteFilePayload, saveFilePayload } = params
     const seidDirPath = joinWinPath(modRootPath, 'Data', 'BuffSeidJsonData')
     const seidFilePayload: Record<string, Record<string, Record<string, unknown>>> = {}
 
@@ -224,39 +238,24 @@ export async function saveBuffSeidFiles(params: {
         }
     }
 
+    const expectedNames = new Set(Object.keys(seidFilePayload).map(seidKey => `${seidKey}.json`))
+    try {
+        const entries = await loadProjectEntries(seidDirPath)
+        for (const entry of entries) {
+            if (entry.is_dir || !/\.json$/i.test(entry.name)) continue
+            if (expectedNames.has(entry.name)) continue
+            await deleteFilePayload(entry.path)
+        }
+    } catch {
+        // ignore cleanup failures
+    }
+
     for (const [seidKey, fileRows] of Object.entries(seidFilePayload)) {
         const filePath = joinWinPath(seidDirPath, `${seidKey}.json`)
-        const existing = await readExistingSeidFileRows(filePath, readFilePayload)
-        const mergedRows: Record<string, Record<string, unknown>> = {}
-        for (const [ownerKey, rowPayload] of Object.entries(fileRows)) {
-            mergedRows[ownerKey] = {
-                ...(existing[ownerKey] ?? {}),
-                ...rowPayload,
-            }
-        }
-        await saveFilePayload(filePath, `${JSON.stringify(mergedRows, null, 2)}\n`)
+        await saveFilePayload(filePath, `${JSON.stringify(fileRows, null, 2)}\n`)
     }
 
     return Object.keys(seidFilePayload).length
-}
-
-async function readExistingSeidFileRows(
-    filePath: string,
-    readFilePayload: (filePath: string) => Promise<{ content: string }>
-): Promise<Record<string, Record<string, unknown>>> {
-    try {
-        const payload = await readFilePayload(filePath)
-        const parsed = JSON.parse(payload.content) as unknown
-        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
-        const rows: Record<string, Record<string, unknown>> = {}
-        for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
-            if (!value || typeof value !== 'object' || Array.isArray(value)) continue
-            rows[key] = value as Record<string, unknown>
-        }
-        return rows
-    } catch {
-        return {}
-    }
 }
 
 function normalizeSeidPayload(

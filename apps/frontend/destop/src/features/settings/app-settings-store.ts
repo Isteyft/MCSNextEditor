@@ -4,6 +4,8 @@ import { readFilePayload, saveFilePayload } from '../../services/project-api'
 
 const SETTINGS_STORAGE_KEY = 'baize.destop.settings.v1'
 const SETTINGS_FILE_NAME = 'app-settings.json'
+const MIN_MAIN_WINDOW_WIDTH = 800
+const MIN_MAIN_WINDOW_HEIGHT = 600
 
 export type AppSettings = {
     jsonImportFolderPaths: string[]
@@ -13,6 +15,10 @@ export type AppSettings = {
     batchIdChangeKeepOriginal: boolean
     autoSaveEnabled: boolean
     autoSaveIntervalSeconds: number
+    autoSyncSkillDescrWithAtlas: boolean
+    replaceSkillDescrWithSpecialFormat: boolean
+    mainWindowWidth: number
+    mainWindowHeight: number
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -22,7 +28,11 @@ const DEFAULT_SETTINGS: AppSettings = {
     uniqueIdSyncTriggerLevels: [1],
     batchIdChangeKeepOriginal: false,
     autoSaveEnabled: true,
-    autoSaveIntervalSeconds: 60,
+    autoSaveIntervalSeconds: 300,
+    autoSyncSkillDescrWithAtlas: false,
+    replaceSkillDescrWithSpecialFormat: false,
+    mainWindowWidth: 1440,
+    mainWindowHeight: 900,
 }
 
 function toPathArray(value: unknown): string[] {
@@ -48,6 +58,10 @@ function toPositiveInt(value: unknown, fallback: number) {
     return Math.floor(parsed)
 }
 
+function toMinInt(value: unknown, fallback: number, min: number) {
+    return Math.max(min, toPositiveInt(value, fallback))
+}
+
 function normalizeSettings(parsed: Record<string, unknown>): AppSettings {
     const folderPaths = toPathArray(parsed.jsonImportFolderPaths ?? parsed.globalImportRootPath)
     const filePaths = toPathArray(parsed.jsonImportFilePaths ?? parsed.jsonImportFilePath)
@@ -59,7 +73,14 @@ function normalizeSettings(parsed: Record<string, unknown>): AppSettings {
         uniqueIdSyncTriggerLevels: Array.from(new Set(triggerLevels.length > 0 ? triggerLevels : [1])),
         batchIdChangeKeepOriginal: Boolean(parsed.batchIdChangeKeepOriginal ?? false),
         autoSaveEnabled: parsed.autoSaveEnabled === undefined ? true : Boolean(parsed.autoSaveEnabled),
-        autoSaveIntervalSeconds: toPositiveInt(parsed.autoSaveIntervalSeconds, 60),
+        autoSaveIntervalSeconds: toPositiveInt(parsed.autoSaveIntervalSeconds, 300),
+        autoSyncSkillDescrWithAtlas: Boolean(parsed.autoSyncSkillDescrWithAtlas ?? false),
+        replaceSkillDescrWithSpecialFormat:
+            parsed.replaceSkillDescrWithSpecialFormat === undefined
+                ? Boolean(parsed.autoSyncSkillDescrWithAtlas ?? false)
+                : Boolean(parsed.replaceSkillDescrWithSpecialFormat),
+        mainWindowWidth: toMinInt(parsed.mainWindowWidth, 1440, MIN_MAIN_WINDOW_WIDTH),
+        mainWindowHeight: toMinInt(parsed.mainWindowHeight, 900, MIN_MAIN_WINDOW_HEIGHT),
     }
 }
 
@@ -125,7 +146,11 @@ export function saveAppSettings(patch: Partial<AppSettings>) {
         ),
         batchIdChangeKeepOriginal: patch.batchIdChangeKeepOriginal ?? current.batchIdChangeKeepOriginal,
         autoSaveEnabled: patch.autoSaveEnabled ?? current.autoSaveEnabled,
-        autoSaveIntervalSeconds: toPositiveInt(patch.autoSaveIntervalSeconds ?? current.autoSaveIntervalSeconds, 60),
+        autoSaveIntervalSeconds: toPositiveInt(patch.autoSaveIntervalSeconds ?? current.autoSaveIntervalSeconds, 300),
+        autoSyncSkillDescrWithAtlas: patch.autoSyncSkillDescrWithAtlas ?? current.autoSyncSkillDescrWithAtlas,
+        replaceSkillDescrWithSpecialFormat: patch.replaceSkillDescrWithSpecialFormat ?? current.replaceSkillDescrWithSpecialFormat,
+        mainWindowWidth: toMinInt(patch.mainWindowWidth ?? current.mainWindowWidth, 1440, MIN_MAIN_WINDOW_WIDTH),
+        mainWindowHeight: toMinInt(patch.mainWindowHeight ?? current.mainWindowHeight, 900, MIN_MAIN_WINDOW_HEIGHT),
     }
     window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(next))
     return next

@@ -20,7 +20,8 @@ type Params = {
     activeSeidId: number | null
     seidMetaMap: Record<number, any>
     buffSeidMetaMap: Record<number, any>
-    itemSeidMetaMap: Record<number, any>
+    itemEquipSeidMetaMap: Record<number, any>
+    itemUseSeidMetaMap: Record<number, any>
     skillSeidMetaMap: Record<number, any>
     staticSkillSeidMetaMap: Record<number, any>
     workspaceRoot: string
@@ -68,7 +69,8 @@ export function useSeidHandlers(params: Params) {
         activeSeidId,
         seidMetaMap,
         buffSeidMetaMap,
-        itemSeidMetaMap,
+        itemEquipSeidMetaMap,
+        itemUseSeidMetaMap,
         skillSeidMetaMap,
         staticSkillSeidMetaMap,
         workspaceRoot,
@@ -160,7 +162,10 @@ export function useSeidHandlers(params: Params) {
             return loadBuffSeidMeta([workspaceRoot, projectPath, modRootPath], true)
         }
         if (activeModule === 'item') {
-            if (Object.keys(itemSeidMetaMap).length > 0) return true
+            const itemType = Number(selectedItem?.type ?? -1)
+            const isEquipItem = itemType === 0 || itemType === 1 || itemType === 2
+            const targetMap = isEquipItem ? itemEquipSeidMetaMap : itemUseSeidMetaMap
+            if (Object.keys(targetMap).length > 0) return true
             return loadItemSeidMeta([workspaceRoot, projectPath, modRootPath], true)
         }
         if (activeModule === 'skill') {

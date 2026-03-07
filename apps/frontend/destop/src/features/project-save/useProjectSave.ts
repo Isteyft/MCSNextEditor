@@ -29,8 +29,9 @@ type Params = {
     buffDirPath: string
     itemDirPath: string
     skillDirPath: string
-    readFilePayload: (path: string) => Promise<any>
+    loadProjectEntries: (rootPath: string) => Promise<any[]>
     saveFilePayload: (path: string, content: string) => Promise<any>
+    deleteFilePayload: (path: string) => Promise<any>
     setConfigDirty: Setter
     setAffixDirty: Setter
     setTalentDirty: Setter
@@ -68,8 +69,9 @@ export function useProjectSave(params: Params) {
         buffDirPath,
         itemDirPath,
         skillDirPath,
-        readFilePayload,
+        loadProjectEntries,
         saveFilePayload,
+        deleteFilePayload,
         setConfigDirty,
         setAffixDirty,
         setTalentDirty,
@@ -113,7 +115,8 @@ export function useProjectSave(params: Params) {
                 talentMap,
                 modRootPath,
                 joinWinPath,
-                readFilePayload,
+                loadProjectEntries,
+                deleteFilePayload,
                 saveFilePayload,
             })
             const affixFileCount = await saveAffixFile({
@@ -126,39 +129,48 @@ export function useProjectSave(params: Params) {
                 buffMap,
                 modRootPath,
                 joinWinPath,
+                loadProjectEntries,
+                deleteFilePayload,
                 saveFilePayload,
             })
             const buffSeidFileCount = await saveBuffSeidFiles({
                 buffMap,
                 modRootPath,
                 joinWinPath,
-                readFilePayload,
+                loadProjectEntries,
+                deleteFilePayload,
                 saveFilePayload,
             })
             const itemFileCount = await saveItemFiles({
                 itemMap,
                 modRootPath,
                 joinWinPath,
+                loadProjectEntries,
+                deleteFilePayload,
                 saveFilePayload,
             })
             const itemSeidFileCount = await saveItemSeidFiles({
                 itemMap,
                 modRootPath,
                 joinWinPath,
-                readFilePayload,
+                loadProjectEntries,
+                deleteFilePayload,
                 saveFilePayload,
             })
             const skillFileCount = await saveSkillFiles({
                 skillMap,
                 modRootPath,
                 joinWinPath,
+                loadProjectEntries,
+                deleteFilePayload,
                 saveFilePayload,
             })
             const skillSeidFileCount = await saveSkillSeidFiles({
                 skillMap,
                 modRootPath,
                 joinWinPath,
-                readFilePayload,
+                loadProjectEntries,
+                deleteFilePayload,
                 saveFilePayload,
             })
             const staticSkillFileCount = await saveStaticSkillFile({
@@ -170,7 +182,8 @@ export function useProjectSave(params: Params) {
                 staticSkillMap,
                 modRootPath,
                 joinWinPath,
-                readFilePayload,
+                loadProjectEntries,
+                deleteFilePayload,
                 saveFilePayload,
             })
 

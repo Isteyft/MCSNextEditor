@@ -1,6 +1,7 @@
 import { createEmptyItem } from '../../../components/item/item-domain'
 import { createEmptySkill } from '../../../components/skill/skill-domain'
 import type { ItemEntry, SkillEntry } from '../../../types'
+import { formatAtlasDescriptionToSkillDescription } from './description-sync'
 
 type Setter = (value: any) => void
 
@@ -27,6 +28,8 @@ type Params = {
     uniqueIdSyncEnabled: boolean
     uniqueIdSyncTriggerLevels: number[]
     batchIdChangeKeepOriginal: boolean
+    autoSyncSkillDescrWithAtlas: boolean
+    replaceSkillDescrWithSpecialFormat: boolean
 }
 
 export function useSkillHandlers(params: Params) {
@@ -53,6 +56,8 @@ export function useSkillHandlers(params: Params) {
         uniqueIdSyncEnabled,
         uniqueIdSyncTriggerLevels,
         batchIdChangeKeepOriginal,
+        autoSyncSkillDescrWithAtlas,
+        replaceSkillDescrWithSpecialFormat,
     } = params
 
     function handleSelectSkill(key: string, index: number, options: { shift: boolean; ctrl: boolean }) {
@@ -239,7 +244,12 @@ export function useSkillHandlers(params: Params) {
     function handleChangeSkillForm(patch: Partial<SkillEntry>) {
         if (!selectedSkillKey || !skillMap[selectedSkillKey]) return
         const current = skillMap[selectedSkillKey]
-        const next = { ...current, ...patch }
+        const nextPatch = { ...patch }
+        if (autoSyncSkillDescrWithAtlas && Object.prototype.hasOwnProperty.call(nextPatch, 'TuJiandescr')) {
+            const atlasText = String(nextPatch.TuJiandescr ?? '')
+            nextPatch.descr = replaceSkillDescrWithSpecialFormat ? formatAtlasDescriptionToSkillDescription(atlasText) : atlasText
+        }
+        const next = { ...current, ...nextPatch }
         const nextId = Number(next.id || 0)
         if (!Number.isFinite(nextId) || nextId <= 0) return
         const nextKey = String(nextId)
