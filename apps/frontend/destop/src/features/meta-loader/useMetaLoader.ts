@@ -1,9 +1,32 @@
-import { loadBuffFiles } from '../../components/buff/buff-domain'
 import { preloadEditorMeta, readEnumOptionsByFileName, readSeidMetaByFileName } from '../../components/tianfu/talent-meta'
 import type { TalentTypeOption } from '../../types'
-import { joinWinPath } from '../../utils/path'
+import { loadCrossModDrawerOptions } from './drawer-option-loader'
 
 type Setter = (value: any) => void
+
+const SEID_DRAWER_META_FILES = [
+    'CreateAvatarSeidMeta.json',
+    'BuffSeidMeta.json',
+    'ItemEquipSeidMeta.json',
+    'ItemUseSeidMeta.json',
+    'SkillSeidMeta.json',
+    'StaticSkillSeidMeta.json',
+] as const
+
+const ENUM_DRAWER_MAPPINGS: Array<{ drawer: string; file: string; preferDesc?: boolean }> = [
+    { drawer: 'AttackTypeDrawer', file: 'AttackType.json', preferDesc: true },
+    { drawer: 'AttackTypeArrayDrawer', file: 'AttackType.json', preferDesc: true },
+    { drawer: 'ElementTypeDrawer', file: 'ElementType.json', preferDesc: true },
+    { drawer: 'ElementTypeArrayDrawer', file: 'ElementType.json', preferDesc: true },
+    { drawer: 'TargetTypeDrawer', file: 'TargetType.json', preferDesc: true },
+    { drawer: 'TargetTypeArrayDrawer', file: 'TargetType.json', preferDesc: true },
+    { drawer: 'ComparisonOperatorTypeDrawer', file: 'ComparisonOperatorType.json', preferDesc: true },
+    { drawer: 'ArithmeticOperatorTypeDrawer', file: 'ArithmeticOperatorType.json', preferDesc: true },
+    { drawer: 'BuffTriggerTypeDrawer', file: 'BuffTriggerType.json', preferDesc: true },
+    { drawer: 'BuffTypeDrawer', file: 'BuffType.json', preferDesc: false },
+    { drawer: 'BuffRemoveTriggerTypeDrawer', file: 'BuffRemoveTriggerType.json', preferDesc: true },
+    { drawer: 'LevelTypeDrawer', file: 'LevelType.json', preferDesc: true },
+]
 
 type MetaLoaderParams = {
     withMetaRoots: (roots: string[]) => string[]
@@ -368,55 +391,37 @@ export function useMetaLoader(params: MetaLoaderParams) {
         return loadedAny
     }
 
-    async function readIdNameOptionsFromDir(dirPath: string) {
-        const options: TalentTypeOption[] = []
-        let entries: Array<{ path: string; name: string; is_dir: boolean }> = []
-        try {
-            entries = await loadProjectEntries(dirPath)
-        } catch {
-            return options
-        }
-        for (const entry of entries) {
-            if (entry.is_dir || !/\.json$/i.test(entry.name)) continue
-            try {
-                const payload = await readFilePayload(entry.path)
-                const parsed = JSON.parse(payload.content) as Record<string, unknown>
-                const id = Number(
-                    parsed.id ??
-                        parsed.ID ??
-                        parsed.Id ??
-                        parsed.buffid ??
-                        parsed.skillid ??
-                        parsed.Skill_ID ??
-                        entry.name.replace(/\.json$/i, '')
-                )
-                if (!Number.isFinite(id)) continue
-                const name = String(parsed.name ?? parsed.Name ?? parsed.Title ?? parsed.title ?? '')
-                options.push({ id, name })
-            } catch {
-                // skip invalid row
+    async function loadSeidDrawerOptions(roots: string[]) {
+        const candidates = withMetaRoots(roots)
+        const merged = new Map<number, TalentTypeOption>()
+
+        for (const root of candidates) {
+            for (const fileName of SEID_DRAWER_META_FILES) {
+                const result = await readSeidMetaByFileName({
+                    rootPath: root,
+                    fileName,
+                    readFilePayload,
+                    readBundledMetaPayload,
+                })
+                for (const [idText, meta] of Object.entries(result.metaMap)) {
+                    const id = Number(idText)
+                    if (!Number.isFinite(id)) continue
+                    const name = String(meta?.name ?? '')
+                    const current = merged.get(id)
+                    if (!current || (!current.name && name)) {
+                        merged.set(id, { id, name })
+                    }
+                }
             }
         }
-        return options.sort((a, b) => a.id - b.id)
+
+        return [...merged.values()].sort((left, right) => left.id - right.id)
     }
 
     async function loadSpecialDrawerOptions(roots: string[], modRoot: string, silent = false) {
         const nextMap: Record<string, TalentTypeOption[]> = {}
-        const enumMappings: Array<{ drawer: string; file: string; preferDesc?: boolean }> = [
-            { drawer: 'AttackTypeDrawer', file: 'AttackType.json', preferDesc: true },
-            { drawer: 'AttackTypeArrayDrawer', file: 'AttackType.json', preferDesc: true },
-            { drawer: 'ElementTypeDrawer', file: 'ElementType.json', preferDesc: true },
-            { drawer: 'ElementTypeArrayDrawer', file: 'ElementType.json', preferDesc: true },
-            { drawer: 'TargetTypeDrawer', file: 'TargetType.json', preferDesc: true },
-            { drawer: 'TargetTypeArrayDrawer', file: 'TargetType.json', preferDesc: true },
-            { drawer: 'ComparisonOperatorTypeDrawer', file: 'ComparisonOperatorType.json', preferDesc: true },
-            { drawer: 'ArithmeticOperatorTypeDrawer', file: 'ArithmeticOperatorType.json', preferDesc: true },
-            { drawer: 'BuffTriggerTypeDrawer', file: 'BuffTriggerType.json', preferDesc: true },
-            { drawer: 'BuffTypeDrawer', file: 'BuffType.json', preferDesc: false },
-            { drawer: 'BuffRemoveTriggerTypeDrawer', file: 'BuffRemoveTriggerType.json', preferDesc: true },
-        ]
         const candidates = withMetaRoots(roots)
-        for (const mapping of enumMappings) {
+        for (const mapping of ENUM_DRAWER_MAPPINGS) {
             for (const root of candidates) {
                 const result = await readEnumOptionsByFileName({
                     rootPath: root,
@@ -433,25 +438,18 @@ export function useMetaLoader(params: MetaLoaderParams) {
         }
 
         if (modRoot) {
-            const buffRows = await loadBuffFiles({
+            const crossModOptions = await loadCrossModDrawerOptions({
                 modRootPath: modRoot,
-                joinWinPath,
                 loadProjectEntries,
                 readFilePayload,
             })
-            const buffOptions = Object.values(buffRows)
-                .map(row => ({ id: row.buffid, name: row.name || '' }))
-                .sort((a, b) => a.id - b.id)
-            nextMap.BuffDrawer = buffOptions
-            nextMap.BuffArrayDrawer = buffOptions
-            setBuffDrawerFallbackOptions(buffOptions)
-
-            const skillPkFromSkillPk = await readIdNameOptionsFromDir(joinWinPath(modRoot, 'Data', 'SkillPkJsonData'))
-            const skillPkFromSkill = await readIdNameOptionsFromDir(joinWinPath(modRoot, 'Data', 'SkillJsonData'))
-            const skillOptions = (skillPkFromSkillPk.length > 0 ? skillPkFromSkillPk : skillPkFromSkill).sort((a, b) => a.id - b.id)
-            nextMap.SkillPkDrawer = skillOptions
-            nextMap.SkillPkArrayDrawer = skillOptions
+            Object.assign(nextMap, crossModOptions)
+            setBuffDrawerFallbackOptions(crossModOptions.BuffDrawer ?? [])
         }
+
+        const seidOptions = await loadSeidDrawerOptions(roots)
+        nextMap.SeidDrawer = seidOptions
+        nextMap.SeidArrayDrawer = seidOptions
 
         setDrawerOptionsMap(nextMap)
         if (!silent) {

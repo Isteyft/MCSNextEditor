@@ -16,6 +16,7 @@ type BuffFormProps = {
     buffTriggerOptions: EnumOption[]
     buffRemoveTriggerOptions: EnumOption[]
     buffOverlayTypeOptions: EnumOption[]
+    affixOptions: EnumOption[]
 }
 
 function toSafeNumber(input: string) {
@@ -33,6 +34,7 @@ export function BuffForm({
     buffTriggerOptions,
     buffRemoveTriggerOptions,
     buffOverlayTypeOptions,
+    affixOptions,
 }: BuffFormProps) {
     const [imgError, setImgError] = useState(false)
 
@@ -195,6 +197,21 @@ export function BuffForm({
                                 }}
                                 value={affix}
                             />
+                            <select
+                                onChange={event => {
+                                    const next = [...values.Affix]
+                                    next[index] = toSafeNumber(event.target.value)
+                                    onChange({ Affix: next })
+                                }}
+                                value={affix}
+                            >
+                                <option value={affix}>{affix > 0 ? `当前: ${affix}` : '选择词缀'}</option>
+                                {affixOptions.map(option => (
+                                    <option key={option.id} value={option.id}>
+                                        {option.id}.{option.name}
+                                    </option>
+                                ))}
+                            </select>
                             <button
                                 className="icon-btn"
                                 onClick={() => {

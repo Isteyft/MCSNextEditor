@@ -11,6 +11,8 @@ function normalizePath(path: string) {
     return path.replace(/\//g, '\\').toLowerCase()
 }
 
+const SIDEBAR_MODULES = MODULES.filter(module => module.key !== 'settings')
+
 type ModuleSidebarProps = {
     activeModule: ModuleKey | ''
     activeRootPath: string
@@ -76,7 +78,7 @@ export function ModuleSidebar({
 
                             {isExpanded ? (
                                 <div className="tree-children">
-                                    {MODULES.map(module => (
+                                    {SIDEBAR_MODULES.map(module => (
                                         <button
                                             className={`tree-item ${isActiveRoot && module.key === activeModule ? 'active' : ''}`}
                                             key={module.key}

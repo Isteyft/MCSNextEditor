@@ -16,6 +16,7 @@ type StaticSkillFormProps = {
     onChange: (patch: Partial<StaticSkillEntry>) => void
     onOpenSeidEditor: () => void
     seidDisplayRows: { id: number; name: string }[]
+    affixOptions: Option[]
 }
 
 function toSafeNumber(input: string) {
@@ -37,6 +38,7 @@ export function StaticSkillForm({
     onChange,
     onOpenSeidEditor,
     seidDisplayRows,
+    affixOptions,
 }: StaticSkillFormProps) {
     const [imgError, setImgError] = useState(false)
 
@@ -199,6 +201,21 @@ export function StaticSkillForm({
                                 }}
                                 value={affix}
                             />
+                            <select
+                                onChange={event => {
+                                    const next = [...values.Affix]
+                                    next[index] = toSafeNumber(event.target.value)
+                                    onChange({ Affix: next })
+                                }}
+                                value={affix}
+                            >
+                                <option value={affix}>{affix > 0 ? `当前: ${affix}` : '选择词缀'}</option>
+                                {affixOptions.map(option => (
+                                    <option key={option.id} value={option.id}>
+                                        {option.id}.{option.name}
+                                    </option>
+                                ))}
+                            </select>
                             <button
                                 className="icon-btn"
                                 onClick={() => {

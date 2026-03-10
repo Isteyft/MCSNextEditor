@@ -1,4 +1,4 @@
-import { Check, ChevronDown, ChevronUp, Minus, PenLine, Plus, Search, X } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, Minus, PenLine, Plus, RefreshCw, Search, X } from 'lucide-react'
 import { useState } from 'react'
 
 import { SeidMetaItem } from './SeidPickerModal'
@@ -30,6 +30,7 @@ type SeidEditorModalProps = {
     onMoveUp: () => void
     onMoveDown: () => void
     onChangeProperty: (seidId: number, key: string, value: string | number | number[]) => void
+    onRefreshDrawerOptions?: () => Promise<void>
 }
 
 function toArrayText(value: string | number | number[] | undefined) {
@@ -92,6 +93,7 @@ export function SeidEditorModal({
     onMoveUp,
     onMoveDown,
     onChangeProperty,
+    onRefreshDrawerOptions,
 }: SeidEditorModalProps) {
     const [drawerState, setDrawerState] = useState<DrawerState | null>(null)
     const [drawerSelected, setDrawerSelected] = useState<number[]>([])
@@ -99,6 +101,7 @@ export function SeidEditorModal({
     const [seidSearchText, setSeidSearchText] = useState('')
     const [drawerSearchDraft, setDrawerSearchDraft] = useState('')
     const [drawerSearchText, setDrawerSearchText] = useState('')
+    const [drawerRefreshing, setDrawerRefreshing] = useState(false)
 
     const hasActive = activeSeidId !== null
     const meta = hasActive ? metaMap[activeSeidId] : undefined
@@ -144,6 +147,16 @@ export function SeidEditorModal({
         const value = drawerState.multiple ? drawerSelected : Number(drawerSelected[0] ?? 0)
         onChangeProperty(drawerState.seidId, drawerState.propertyId, value)
         closeDrawer()
+    }
+
+    async function handleRefreshCurrentDrawer() {
+        if (!onRefreshDrawerOptions || drawerRefreshing) return
+        setDrawerRefreshing(true)
+        try {
+            await onRefreshDrawerOptions()
+        } finally {
+            setDrawerRefreshing(false)
+        }
     }
 
     return (
@@ -263,7 +276,7 @@ export function SeidEditorModal({
                                                     {specialDrawer ? (
                                                         <button
                                                             className="icon-btn"
-                                                            onClick={() =>
+                                                            onClick={() => {
                                                                 openDrawer(
                                                                     activeSeidId,
                                                                     property.ID,
@@ -271,7 +284,10 @@ export function SeidEditorModal({
                                                                     `${property.ID} - ${property.Desc || specialDrawer}`,
                                                                     value
                                                                 )
-                                                            }
+                                                                void onRefreshDrawerOptions?.().catch(() => {
+                                                                    // Refresh is best-effort. Keep the drawer interactive with the current cached options.
+                                                                })
+                                                            }}
                                                             title={`打开 ${specialDrawer}`}
                                                             type="button"
                                                         >
@@ -296,9 +312,20 @@ export function SeidEditorModal({
                     <div className="create-modal drawer-modal" onClick={event => event.stopPropagation()}>
                         <div className="create-modal-head">
                             <strong>{drawerState.title}</strong>
-                            <button className="modal-close" onClick={closeDrawer} type="button">
-                                <X size={14} />
-                            </button>
+                            <div className="menu-row">
+                                <button
+                                    className="icon-btn"
+                                    disabled={drawerRefreshing}
+                                    onClick={() => void handleRefreshCurrentDrawer()}
+                                    title="刷新"
+                                    type="button"
+                                >
+                                    <RefreshCw size={14} />
+                                </button>
+                                <button className="modal-close" onClick={closeDrawer} type="button">
+                                    <X size={14} />
+                                </button>
+                            </div>
                         </div>
                         <div className="search-input-wrap">
                             <input

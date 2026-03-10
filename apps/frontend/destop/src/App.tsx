@@ -32,6 +32,7 @@ import { useContextMenuBlocker } from './features/global-interactions/useContext
 import { useGlobalShortcuts } from './features/global-interactions/useGlobalShortcuts'
 import { useWindowActions } from './features/global-interactions/useWindowActions'
 import { initAppLogger, logError, logInfo, logWarn } from './features/logging/app-logger'
+import { buildInMemoryDrawerOptions, buildSnapshotDrawerOptions, mergeDrawerOptionMaps } from './features/meta-loader/drawer-option-loader'
 import { useMetaLoader } from './features/meta-loader/useMetaLoader'
 import { useModuleLoaders } from './features/module-loaders/useModuleLoaders'
 import { useAffixHandlers } from './features/modules/affix/useAffixHandlers'
@@ -158,7 +159,7 @@ export function App() {
     const [skillSeidMetaMap, setSkillSeidMetaMap] = useState<Record<number, SeidMetaItem>>({})
     const [staticSkillSeidMetaMap, setStaticSkillSeidMetaMap] = useState<Record<number, SeidMetaItem>>({})
     const [drawerOptionsMap, setDrawerOptionsMap] = useState<Record<string, TalentTypeOption[]>>({})
-    const [buffDrawerFallbackOptions, setBuffDrawerFallbackOptions] = useState<TalentTypeOption[]>([])
+    const [, setBuffDrawerFallbackOptions] = useState<TalentTypeOption[]>([])
     const [seidEditorOpen, setSeidEditorOpen] = useState(false)
     const [seidPickerOpen, setSeidPickerOpen] = useState(false)
     const [activeSeidId, setActiveSeidId] = useState<number | null>(null)
@@ -269,6 +270,7 @@ export function App() {
         tableSearchText,
     })
     const selectedAffix = useMemo(() => (selectedAffixKey ? (affixMap[selectedAffixKey] ?? null) : null), [affixMap, selectedAffixKey])
+    const affixDrawerOptions = useMemo(() => drawerOptionsMap.AffixDrawer ?? [], [drawerOptionsMap])
     const activeModuleLabel = useMemo(() => MODULES.find(item => item.key === activeModule)?.label ?? '-', [activeModule])
     const {
         selectedTalent,
@@ -415,7 +417,7 @@ export function App() {
     }, [])
 
     useEffect(() => {
-        if (!workspaceRoot || metaExtraRoots.length === 0) return
+        if (!workspaceRoot || metaExtraRoots.length === 0 || !modRootPath) return
         ;(async () => {
             await preloadMeta([workspaceRoot], true)
             await loadBuffSeidMeta([workspaceRoot], true)
@@ -446,7 +448,6 @@ export function App() {
                 await loadAffixEnumMeta([root], true)
                 await loadItemEnumMeta([root], true)
                 await loadSkillEnumMeta([root], true)
-                await loadSpecialDrawerOptions([root], '', true)
             } catch {
                 // ignore startup preload failures
             }
@@ -717,6 +718,39 @@ export function App() {
             setStatus(statusError('打开设置窗口', error))
         }
     }
+
+    async function handleRefreshSeidDrawerOptions() {
+        if (!modRootPath) return
+        await loadSpecialDrawerOptions([modRootPath, projectPath, workspaceRoot], modRootPath, true)
+        setDrawerOptionsMap(prev =>
+            mergeDrawerOptionMaps(
+                mergeDrawerOptionMaps(prev, buildSnapshotDrawerOptions(Object.values(rootSnapshotCache))),
+                buildInMemoryDrawerOptions({
+                    affixMap,
+                    buffMap,
+                    itemMap,
+                    skillMap,
+                    staticSkillMap,
+                })
+            )
+        )
+    }
+
+    useEffect(() => {
+        if (!modRootPath) return
+        setDrawerOptionsMap(prev =>
+            mergeDrawerOptionMaps(
+                mergeDrawerOptionMaps(prev, buildSnapshotDrawerOptions(Object.values(rootSnapshotCache))),
+                buildInMemoryDrawerOptions({
+                    affixMap,
+                    buffMap,
+                    itemMap,
+                    skillMap,
+                    staticSkillMap,
+                })
+            )
+        )
+    }, [modRootPath, rootSnapshotCache, affixMap, buffMap, itemMap, skillMap, staticSkillMap])
 
     const {
         handleSelectAffix,
@@ -1440,27 +1474,14 @@ export function App() {
             />
             <SeidEditorModal
                 activeSeidId={activeSeidId}
-                drawerOptionsMap={{
-                    ...drawerOptionsMap,
-                    BuffDrawer:
-                        Object.values(buffMap).length > 0
-                            ? Object.values(buffMap)
-                                  .map(row => ({ id: row.buffid, name: row.name || '' }))
-                                  .sort((a, b) => a.id - b.id)
-                            : buffDrawerFallbackOptions,
-                    BuffArrayDrawer:
-                        Object.values(buffMap).length > 0
-                            ? Object.values(buffMap)
-                                  .map(row => ({ id: row.buffid, name: row.name || '' }))
-                                  .sort((a, b) => a.id - b.id)
-                            : buffDrawerFallbackOptions,
-                }}
+                drawerOptionsMap={drawerOptionsMap}
                 metaMap={activeSeidMetaMap}
                 onChangeProperty={handleChangeSeidProperty}
                 onClose={() => setSeidEditorOpen(false)}
                 onDeleteSelected={handleDeleteSelectedSeid}
                 onMoveDown={() => handleMoveSelectedSeid('down')}
                 onMoveUp={() => handleMoveSelectedSeid('up')}
+                onRefreshDrawerOptions={handleRefreshSeidDrawerOptions}
                 onRequestAdd={handleOpenSeidPicker}
                 onSelectSeid={setActiveSeidId}
                 open={seidEditorOpen}
@@ -1561,6 +1582,7 @@ export function App() {
                         itemPhaseOptions={itemPhaseOptions}
                         affixTypeOptions={affixTypeOptions}
                         affixProjectTypeOptions={affixProjectTypeOptions}
+                        affixDrawerOptions={affixDrawerOptions}
                         onOpenSeidEditor={handleOpenSeidEditor}
                         seidDisplayRows={selectedSeidDisplayRows}
                         talentForm={selectedTalent}

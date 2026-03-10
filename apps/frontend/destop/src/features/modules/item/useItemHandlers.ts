@@ -214,7 +214,11 @@ export function useItemHandlers(params: Params) {
     function handleChangeItemForm(patch: Partial<ItemEntry>) {
         if (!selectedItemKey || !itemMap[selectedItemKey]) return
         const current = itemMap[selectedItemKey]
-        const next = { ...current, ...patch }
+        const nextPatch = { ...patch }
+        if (Object.prototype.hasOwnProperty.call(nextPatch, 'desc') && !Object.prototype.hasOwnProperty.call(nextPatch, 'desc2')) {
+            nextPatch.desc2 = String(nextPatch.desc ?? '')
+        }
+        const next = { ...current, ...nextPatch }
         const nextId = Number(next.id || 0)
         if (!Number.isFinite(nextId) || nextId <= 0) return
         const nextKey = String(nextId)

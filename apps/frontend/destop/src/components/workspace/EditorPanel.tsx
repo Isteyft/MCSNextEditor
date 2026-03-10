@@ -61,6 +61,7 @@ type EditorPanelProps = {
     itemPhaseOptions: { id: number; name: string }[]
     affixTypeOptions: { id: number; name: string }[]
     affixProjectTypeOptions: { id: number; name: string }[]
+    affixDrawerOptions: { id: number; name: string }[]
     onOpenSeidEditor: () => void
     seidDisplayRows: { id: number; name: string }[]
     settingsForm: {
@@ -117,6 +118,7 @@ export function EditorPanel({
     itemPhaseOptions,
     affixTypeOptions,
     affixProjectTypeOptions,
+    affixDrawerOptions,
     onOpenSeidEditor,
     seidDisplayRows,
     settingsForm,
@@ -161,6 +163,7 @@ export function EditorPanel({
                             buffTriggerOptions={buffTriggerOptions}
                             buffRemoveTriggerOptions={buffRemoveTriggerOptions}
                             buffOverlayTypeOptions={buffOverlayTypeOptions}
+                            affixOptions={affixDrawerOptions}
                         />
                     ) : activeModule === 'item' ? (
                         <ItemForm
@@ -175,6 +178,7 @@ export function EditorPanel({
                             itemTypeOptions={itemTypeOptions}
                             itemQualityOptions={itemQualityOptions}
                             itemPhaseOptions={itemPhaseOptions}
+                            affixOptions={affixDrawerOptions}
                         />
                     ) : activeModule === 'skill' ? (
                         <SkillForm
@@ -187,6 +191,7 @@ export function EditorPanel({
                             skillConsultTypeOptions={skillConsultTypeOptions}
                             skillPhaseOptions={skillPhaseOptions}
                             skillQualityOptions={skillQualityOptions}
+                            affixOptions={affixDrawerOptions}
                         />
                     ) : activeModule === 'staticskill' ? (
                         <StaticSkillForm
@@ -199,6 +204,7 @@ export function EditorPanel({
                             skillConsultTypeOptions={skillConsultTypeOptions}
                             skillPhaseOptions={skillPhaseOptions}
                             skillQualityOptions={skillQualityOptions}
+                            affixOptions={affixDrawerOptions}
                         />
                     ) : (
                         <div className="todo-box">TODO: {activeModuleLabel}</div>

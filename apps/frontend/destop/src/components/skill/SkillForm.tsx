@@ -16,6 +16,7 @@ type SkillFormProps = {
     skillConsultTypeOptions: Option[]
     skillPhaseOptions: Option[]
     skillQualityOptions: Option[]
+    affixOptions: Option[]
 }
 
 function toSafeNumber(input: string) {
@@ -44,6 +45,7 @@ export function SkillForm({
     skillConsultTypeOptions,
     skillPhaseOptions,
     skillQualityOptions,
+    affixOptions,
 }: SkillFormProps) {
     const [imgError, setImgError] = useState(false)
 
@@ -252,6 +254,21 @@ export function SkillForm({
                                 }}
                                 value={affix}
                             />
+                            <select
+                                onChange={event => {
+                                    const next = [...values.Affix2]
+                                    next[index] = toSafeNumber(event.target.value)
+                                    onChange({ Affix2: next })
+                                }}
+                                value={affix}
+                            >
+                                <option value={affix}>{affix > 0 ? `当前: ${affix}` : '选择词缀'}</option>
+                                {affixOptions.map(option => (
+                                    <option key={option.id} value={option.id}>
+                                        {option.id}.{option.name}
+                                    </option>
+                                ))}
+                            </select>
                             <button
                                 className="icon-btn"
                                 onClick={() => {
