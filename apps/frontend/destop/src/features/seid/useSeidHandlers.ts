@@ -7,16 +7,19 @@ type Params = {
     selectedItem: any
     selectedSkill: any
     selectedStaticSkill: any
+    selectedWuDaoSkill: any
     selectedTalentKey: string
     selectedBuffKey: string
     selectedItemKey: string
     selectedSkillKey: string
     selectedStaticSkillKey: string
+    selectedWuDaoSkillKey: string
     talentMap: Record<string, any>
     buffMap: Record<string, any>
     itemMap: Record<string, any>
     skillMap: Record<string, any>
     staticSkillMap: Record<string, any>
+    wudaoSkillMap: Record<string, any>
     activeSeidId: number | null
     seidMetaMap: Record<number, any>
     buffSeidMetaMap: Record<number, any>
@@ -37,11 +40,13 @@ type Params = {
     setItemMap: Setter
     setSkillMap: Setter
     setStaticSkillMap: Setter
+    setWuDaoSkillMap: Setter
     setTalentDirty: Setter
     setBuffDirty: Setter
     setItemDirty: Setter
     setSkillDirty: Setter
     setStaticSkillDirty: Setter
+    setWuDaoSkillDirty: Setter
     setActiveSeidId: Setter
     setSeidEditorOpen: Setter
     setSeidPickerOpen: Setter
@@ -56,16 +61,19 @@ export function useSeidHandlers(params: Params) {
         selectedItem,
         selectedSkill,
         selectedStaticSkill,
+        selectedWuDaoSkill,
         selectedTalentKey,
         selectedBuffKey,
         selectedItemKey,
         selectedSkillKey,
         selectedStaticSkillKey,
+        selectedWuDaoSkillKey,
         talentMap,
         buffMap,
         itemMap,
         skillMap,
         staticSkillMap,
+        wudaoSkillMap,
         activeSeidId,
         seidMetaMap,
         buffSeidMetaMap,
@@ -86,11 +94,13 @@ export function useSeidHandlers(params: Params) {
         setItemMap,
         setSkillMap,
         setStaticSkillMap,
+        setWuDaoSkillMap,
         setTalentDirty,
         setBuffDirty,
         setItemDirty,
         setSkillDirty,
         setStaticSkillDirty,
+        setWuDaoSkillDirty,
         setActiveSeidId,
         setSeidEditorOpen,
         setSeidPickerOpen,
@@ -136,6 +146,17 @@ export function useSeidHandlers(params: Params) {
             return
         }
 
+        if (activeModule === 'wudaoskill') {
+            if (!selectedWuDaoSkillKey || !wudaoSkillMap[selectedWuDaoSkillKey]) return
+            setWuDaoSkillMap((prev: Record<string, any>) => {
+                const current = prev[selectedWuDaoSkillKey]
+                if (!current) return prev
+                return { ...prev, [selectedWuDaoSkillKey]: { ...current, ...updater(current) } }
+            })
+            setWuDaoSkillDirty(true)
+            return
+        }
+
         if (activeModule === 'staticskill') {
             if (!selectedStaticSkillKey || !staticSkillMap[selectedStaticSkillKey]) return
             setStaticSkillMap((prev: Record<string, any>) => {
@@ -172,7 +193,7 @@ export function useSeidHandlers(params: Params) {
             if (Object.keys(skillSeidMetaMap).length > 0) return true
             return loadSkillSeidMeta([workspaceRoot, projectPath, modRootPath], true)
         }
-        if (activeModule === 'staticskill') {
+        if (activeModule === 'wudaoskill' || activeModule === 'staticskill') {
             if (Object.keys(staticSkillSeidMetaMap).length > 0) return true
             return loadStaticSkillSeidMeta([workspaceRoot, projectPath, modRootPath], true)
         }
@@ -189,9 +210,11 @@ export function useSeidHandlers(params: Params) {
                   ? selectedItem
                   : activeModule === 'skill'
                     ? selectedSkill
-                    : activeModule === 'staticskill'
-                      ? selectedStaticSkill
-                      : selectedTalent
+                    : activeModule === 'wudaoskill'
+                      ? selectedWuDaoSkill
+                      : activeModule === 'staticskill'
+                        ? selectedStaticSkill
+                        : selectedTalent
         if (!selected) return
         const ok = await ensureSeidMetaLoaded()
         if (!ok) {
@@ -202,9 +225,11 @@ export function useSeidHandlers(params: Params) {
                       ? '未加载到 Item Seid 元数据，请确认 editorMeta/ItemUseSeidMeta.json 路径和 JSON 格式。'
                       : activeModule === 'skill'
                         ? '未加载到 Skill Seid 元数据，请确认 editorMeta/SkillSeidMeta.json 路径和 JSON 格式。'
-                        : activeModule === 'staticskill'
-                          ? '未加载到 StaticSkill Seid 元数据，请确认 editorMeta/StaticSkillSeidMeta.json 路径和 JSON 格式。'
-                          : '未加载到 Seid 元数据，请确认 editorMeta/CreateAvatarSeidMeta.json 路径和 JSON 格式。'
+                        : activeModule === 'wudaoskill'
+                          ? '未加载到悟道技能 Seid 元数据，请确认 editorMeta/StaticSkillSeidMeta.json 路径和 JSON 格式。'
+                          : activeModule === 'staticskill'
+                            ? '未加载到 StaticSkill Seid 元数据，请确认 editorMeta/StaticSkillSeidMeta.json 路径和 JSON 格式。'
+                            : '未加载到 Seid 元数据，请确认 editorMeta/CreateAvatarSeidMeta.json 路径和 JSON 格式。'
             )
         }
         const first = selected.seid[0] ?? null
@@ -247,9 +272,11 @@ export function useSeidHandlers(params: Params) {
                   ? (selectedItem?.seid ?? [])
                   : activeModule === 'skill'
                     ? (selectedSkill?.seid ?? [])
-                    : activeModule === 'staticskill'
-                      ? (selectedStaticSkill?.seid ?? [])
-                      : (selectedTalent?.seid ?? [])
+                    : activeModule === 'wudaoskill'
+                      ? (selectedWuDaoSkill?.seid ?? [])
+                      : activeModule === 'staticskill'
+                        ? (selectedStaticSkill?.seid ?? [])
+                        : (selectedTalent?.seid ?? [])
         const nextId = currentList.find((id: number) => id !== activeSeidId) ?? null
         setActiveSeidId(nextId)
     }

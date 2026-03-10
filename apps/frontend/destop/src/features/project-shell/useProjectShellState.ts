@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import type { AffixEntry, BuffEntry, CreateAvatarEntry, ItemEntry, SkillEntry, StaticSkillEntry } from '../../types'
+import type {
+    AffixEntry,
+    BuffEntry,
+    CreateAvatarEntry,
+    ItemEntry,
+    SkillEntry,
+    StaticSkillEntry,
+    WuDaoEntry,
+    WuDaoSkillEntry,
+} from '../../types'
 import type { RootModuleSnapshot } from './useProjectLifecycle'
 
 type RootFolderItem = {
@@ -13,12 +22,16 @@ type UseProjectShellStateParams = {
     modRootFolders: RootFolderItem[]
     normalizePath: (value: string) => string
     pickLeafName: (value: string) => string
+    wudaoMap: Record<string, WuDaoEntry>
+    wudaoSkillMap: Record<string, WuDaoSkillEntry>
     affixMap: Record<string, AffixEntry>
     talentMap: Record<string, CreateAvatarEntry>
     buffMap: Record<string, BuffEntry>
     itemMap: Record<string, ItemEntry>
     skillMap: Record<string, SkillEntry>
     staticSkillMap: Record<string, StaticSkillEntry>
+    wudaoDirty: boolean
+    wudaoSkillDirty: boolean
     affixDirty: boolean
     talentDirty: boolean
     buffDirty: boolean
@@ -32,12 +45,16 @@ export function useProjectShellState({
     modRootFolders,
     normalizePath,
     pickLeafName,
+    wudaoMap,
+    wudaoSkillMap,
     affixMap,
     talentMap,
     buffMap,
     itemMap,
     skillMap,
     staticSkillMap,
+    wudaoDirty,
+    wudaoSkillDirty,
     affixDirty,
     talentDirty,
     buffDirty,
@@ -82,12 +99,16 @@ export function useProjectShellState({
         setRootSnapshotCache(prev => ({
             ...prev,
             [cacheKey]: {
+                wudaoMap,
+                wudaoSkillMap,
                 affixMap,
                 talentMap,
                 buffMap,
                 itemMap,
                 skillMap,
                 staticSkillMap,
+                wudaoDirty,
+                wudaoSkillDirty,
                 affixDirty,
                 talentDirty,
                 buffDirty,
@@ -99,12 +120,16 @@ export function useProjectShellState({
     }, [
         modRootPath,
         normalizePath,
+        wudaoMap,
+        wudaoSkillMap,
         affixMap,
         talentMap,
         buffMap,
         itemMap,
         skillMap,
         staticSkillMap,
+        wudaoDirty,
+        wudaoSkillDirty,
         affixDirty,
         talentDirty,
         buffDirty,

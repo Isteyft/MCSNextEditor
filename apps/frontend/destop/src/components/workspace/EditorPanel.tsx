@@ -1,5 +1,5 @@
 ﻿import { ViewMode } from '../../modules'
-import type { AffixEntry, BuffEntry, ItemEntry, SkillEntry, StaticSkillEntry } from '../../types'
+import type { AffixEntry, BuffEntry, ItemEntry, SkillEntry, StaticSkillEntry, WuDaoSkillEntry } from '../../types'
 import { AffixForm } from '../affix/AffixForm'
 import { BuffForm } from '../buff/BuffForm'
 import { ItemForm } from '../item/ItemForm'
@@ -7,6 +7,8 @@ import { SettingsForm } from '../settings/SettingsForm'
 import { SkillForm } from '../skill/SkillForm'
 import { StaticSkillForm } from '../staticskill/StaticSkillForm'
 import { TalentForm } from '../tianfu/TalentForm'
+import { WuDaoForm } from '../wudao/WuDaoForm'
+import { WuDaoSkillForm } from '../wudaoskill/WuDaoSkillForm'
 import { ProjectConfigForm } from './ProjectConfigForm'
 
 type EditorPanelProps = {
@@ -20,6 +22,10 @@ type EditorPanelProps = {
         description: string
     }
     onChangeConfigForm: (patch: Partial<EditorPanelProps['configForm']>) => void
+    wudaoForm: import('../../types').WuDaoEntry | null
+    onChangeWuDaoForm: (patch: Partial<import('../../types').WuDaoEntry>) => void
+    wudaoSkillForm: WuDaoSkillEntry | null
+    onChangeWuDaoSkillForm: (patch: Partial<WuDaoSkillEntry>) => void
     affixForm: AffixEntry | null
     onChangeAffixForm: (patch: Partial<AffixEntry>) => void
     talentForm: {
@@ -53,6 +59,7 @@ type EditorPanelProps = {
     skillConsultTypeOptions: { id: number; name: string }[]
     skillPhaseOptions: { id: number; name: string }[]
     skillQualityOptions: { id: number; name: string }[]
+    wudaoTypeOptions: { id: number; name: string }[]
     itemGuideTypeOptions: { id: number; name: string }[]
     itemShopTypeOptions: { id: number; name: string }[]
     itemUseTypeOptions: { id: number; name: string }[]
@@ -86,6 +93,10 @@ export function EditorPanel({
     activeModuleLabel,
     configForm,
     onChangeConfigForm,
+    wudaoForm,
+    onChangeWuDaoForm,
+    wudaoSkillForm,
+    onChangeWuDaoSkillForm,
     affixForm,
     onChangeAffixForm,
     talentForm,
@@ -110,6 +121,7 @@ export function EditorPanel({
     skillConsultTypeOptions,
     skillPhaseOptions,
     skillQualityOptions,
+    wudaoTypeOptions,
     itemGuideTypeOptions,
     itemShopTypeOptions,
     itemUseTypeOptions,
@@ -137,7 +149,18 @@ export function EditorPanel({
                 ) : null}
 
                 {activeModule !== 'settings' && viewMode === 'table' ? (
-                    activeModule === 'affix' ? (
+                    activeModule === 'wudao' ? (
+                        <WuDaoForm values={wudaoForm} onChange={onChangeWuDaoForm} />
+                    ) : activeModule === 'wudaoskill' ? (
+                        <WuDaoSkillForm
+                            values={wudaoSkillForm}
+                            onChange={onChangeWuDaoSkillForm}
+                            skillIconDir={skillIconDir}
+                            wudaoTypeOptions={wudaoTypeOptions}
+                            onOpenSeidEditor={onOpenSeidEditor}
+                            seidDisplayRows={seidDisplayRows}
+                        />
+                    ) : activeModule === 'affix' ? (
                         <AffixForm
                             values={affixForm}
                             onChange={onChangeAffixForm}

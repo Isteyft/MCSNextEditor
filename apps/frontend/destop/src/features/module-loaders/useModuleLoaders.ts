@@ -1,5 +1,6 @@
 import { mergeStaticSkillSeidFiles } from '../../components/staticskill/staticskill-domain'
 import { mergeTalentSeidFiles } from '../../components/tianfu/talent-domain'
+import { mergeWuDaoSkillSeidFiles } from '../../components/wudaoskill/wudaoskill-domain'
 import type { ModuleKey } from '../../modules'
 import { joinWinPath } from '../../utils/path'
 import { parseJsonObject, parseJsonUnknown, readJsonUnknownWithFallback } from '../json-import/json-import-core'
@@ -10,6 +11,8 @@ import {
     adaptSkillImportWithMerge,
     adaptStaticSkillImport,
     adaptTalentImport,
+    adaptWuDaoImport,
+    adaptWuDaoSkillImport,
 } from '../json-import/module-adapters'
 
 type Setter = (value: any) => void
@@ -20,6 +23,12 @@ type Params = {
     projectPath: string
     workspaceRoot: string
     configCachePath: string
+    wudaoPath: string
+    wudaoCachePath: string
+    wudaoDirty: boolean
+    wudaoSkillPath: string
+    wudaoSkillCachePath: string
+    wudaoSkillDirty: boolean
     createAvatarPath: string
     talentCachePath: string
     talentDirty: boolean
@@ -46,6 +55,18 @@ type Params = {
     setConfigForm: Setter
     setConfigCachePath: Setter
     setConfigDirty: Setter
+    setWuDaoMap: Setter
+    setWuDaoCachePath: Setter
+    setWuDaoDirty: Setter
+    setSelectedWuDaoKey: Setter
+    setSelectedWuDaoKeys: Setter
+    setWuDaoSelectionAnchor: Setter
+    setWuDaoSkillMap: Setter
+    setWuDaoSkillCachePath: Setter
+    setWuDaoSkillDirty: Setter
+    setSelectedWuDaoSkillKey: Setter
+    setSelectedWuDaoSkillKeys: Setter
+    setWuDaoSkillSelectionAnchor: Setter
     setTalentMap: Setter
     setTalentPath: Setter
     setTalentCachePath: Setter
@@ -107,6 +128,12 @@ export function useModuleLoaders(params: Params) {
         projectPath,
         workspaceRoot,
         configCachePath,
+        wudaoPath,
+        wudaoCachePath,
+        wudaoDirty,
+        wudaoSkillPath,
+        wudaoSkillCachePath,
+        wudaoSkillDirty,
         createAvatarPath,
         talentCachePath,
         talentDirty,
@@ -133,6 +160,18 @@ export function useModuleLoaders(params: Params) {
         setConfigForm,
         setConfigCachePath,
         setConfigDirty,
+        setWuDaoMap,
+        setWuDaoCachePath,
+        setWuDaoDirty,
+        setSelectedWuDaoKey,
+        setSelectedWuDaoKeys,
+        setWuDaoSelectionAnchor,
+        setWuDaoSkillMap,
+        setWuDaoSkillCachePath,
+        setWuDaoSkillDirty,
+        setSelectedWuDaoSkillKey,
+        setSelectedWuDaoSkillKeys,
+        setWuDaoSkillSelectionAnchor,
         setTalentMap,
         setTalentPath,
         setTalentCachePath,
@@ -216,6 +255,37 @@ export function useModuleLoaders(params: Params) {
         }
     }
 
+    async function loadWuDaoTable() {
+        setViewMode('table')
+        setActivePath(wudaoPath)
+        if (!modRootPath || !wudaoPath) return
+        if (wudaoCachePath === wudaoPath) {
+            setStatus(wudaoDirty ? '已加载悟道数据（缓存，未保存）。' : '已加载悟道数据（缓存）。')
+            return
+        }
+        try {
+            const payload = await readJsonUnknownWithFallback({
+                filePath: wudaoPath,
+                defaultContent: '{}\n',
+                readFilePayload,
+                saveFilePayload,
+            })
+            const parsedResult = parseJsonUnknown(payload.content, wudaoPath)
+            const parsed = parsedResult.ok ? parsedResult.data : {}
+            const normalized = adaptWuDaoImport(parsed).data
+            const firstKey = Object.keys(normalized).sort((a, b) => Number(a) - Number(b))[0] ?? ''
+            setWuDaoMap(normalized)
+            setWuDaoCachePath(wudaoPath)
+            setWuDaoDirty(false)
+            setSelectedWuDaoKey(firstKey)
+            setSelectedWuDaoKeys(firstKey ? [firstKey] : [])
+            setWuDaoSelectionAnchor(firstKey)
+            setStatus('已加载悟道数据（WuDaoAllTypeJson）。')
+        } catch (error) {
+            setStatus(`读取悟道数据失败: ${String(error)}`)
+        }
+    }
+
     async function loadTalentTable() {
         setViewMode('table')
         setActivePath(createAvatarPath)
@@ -253,6 +323,45 @@ export function useModuleLoaders(params: Params) {
             setStatus('已加载天赋数据（CreateAvatarJsonData）。')
         } catch (error) {
             setStatus(`读取天赋数据失败: ${String(error)}`)
+        }
+    }
+
+    async function loadWuDaoSkillTable() {
+        setViewMode('table')
+        setActivePath(wudaoSkillPath)
+        if (!modRootPath || !wudaoSkillPath) return
+        if (wudaoSkillCachePath === wudaoSkillPath) {
+            setStatus(wudaoSkillDirty ? '已加载悟道技能数据（缓存，未保存）。' : '已加载悟道技能数据（缓存）。')
+            return
+        }
+        await loadStaticSkillSeidMeta([modRootPath, projectPath, workspaceRoot], true)
+        try {
+            const payload = await readJsonUnknownWithFallback({
+                filePath: wudaoSkillPath,
+                defaultContent: '{}\n',
+                readFilePayload,
+                saveFilePayload,
+            })
+            const parsedResult = parseJsonUnknown(payload.content, wudaoSkillPath)
+            const parsed = parsedResult.ok ? parsedResult.data : {}
+            const normalized = adaptWuDaoSkillImport(parsed).data
+            const finalData = await mergeWuDaoSkillSeidFiles({
+                source: normalized,
+                modRootPath,
+                joinWinPath,
+                loadProjectEntries,
+                readFilePayload,
+            })
+            const firstKey = Object.keys(finalData).sort((a, b) => Number(a) - Number(b))[0] ?? ''
+            setWuDaoSkillMap(finalData)
+            setWuDaoSkillCachePath(wudaoSkillPath)
+            setWuDaoSkillDirty(false)
+            setSelectedWuDaoSkillKey(firstKey)
+            setSelectedWuDaoSkillKeys(firstKey ? [firstKey] : [])
+            setWuDaoSkillSelectionAnchor(firstKey)
+            setStatus('已加载悟道技能数据（WuDaoJson）。')
+        } catch (error) {
+            setStatus(`读取悟道技能数据失败: ${String(error)}`)
         }
     }
 
@@ -430,6 +539,8 @@ export function useModuleLoaders(params: Params) {
         setActiveModule(key)
         setTableSearchText('')
         if (key === 'project-config') return loadConfigForm()
+        if (key === 'wudao') return loadWuDaoTable()
+        if (key === 'wudaoskill') return loadWuDaoSkillTable()
         if (key === 'talent') return loadTalentTable()
         if (key === 'affix') return loadAffixTable()
         if (key === 'buff') return loadBuffTable()
@@ -443,6 +554,8 @@ export function useModuleLoaders(params: Params) {
     return {
         handleSelectModule,
         loadConfigForm,
+        loadWuDaoTable,
+        loadWuDaoSkillTable,
         loadTalentTable,
         loadAffixTable,
         loadBuffTable,

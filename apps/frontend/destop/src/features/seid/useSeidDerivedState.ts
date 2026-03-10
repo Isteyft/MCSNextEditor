@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 
 import type { SeidMetaItem } from '../../components/tianfu/SeidPickerModal'
 import type { ModuleKey } from '../../modules'
-import type { BuffEntry, CreateAvatarEntry, ItemEntry, SkillEntry, StaticSkillEntry } from '../../types'
+import type { BuffEntry, CreateAvatarEntry, ItemEntry, SkillEntry, StaticSkillEntry, WuDaoSkillEntry } from '../../types'
 
 type UseSeidDerivedStateParams = {
     activeModule: ModuleKey | ''
@@ -11,11 +11,13 @@ type UseSeidDerivedStateParams = {
     itemMap: Record<string, ItemEntry>
     skillMap: Record<string, SkillEntry>
     staticSkillMap: Record<string, StaticSkillEntry>
+    wudaoSkillMap: Record<string, WuDaoSkillEntry>
     selectedTalentKey: string
     selectedBuffKey: string
     selectedItemKey: string
     selectedSkillKey: string
     selectedStaticSkillKey: string
+    selectedWuDaoSkillKey: string
     seidMetaMap: Record<number, SeidMetaItem>
     buffSeidMetaMap: Record<number, SeidMetaItem>
     itemEquipSeidMetaMap: Record<number, SeidMetaItem>
@@ -31,11 +33,13 @@ export function useSeidDerivedState({
     itemMap,
     skillMap,
     staticSkillMap,
+    wudaoSkillMap,
     selectedTalentKey,
     selectedBuffKey,
     selectedItemKey,
     selectedSkillKey,
     selectedStaticSkillKey,
+    selectedWuDaoSkillKey,
     seidMetaMap,
     buffSeidMetaMap,
     itemEquipSeidMetaMap,
@@ -54,6 +58,10 @@ export function useSeidDerivedState({
         () => (selectedStaticSkillKey ? (staticSkillMap[selectedStaticSkillKey] ?? null) : null),
         [staticSkillMap, selectedStaticSkillKey]
     )
+    const selectedWuDaoSkill = useMemo(
+        () => (selectedWuDaoSkillKey ? (wudaoSkillMap[selectedWuDaoSkillKey] ?? null) : null),
+        [wudaoSkillMap, selectedWuDaoSkillKey]
+    )
 
     const activeSeidMetaMap = useMemo(() => {
         if (activeModule === 'buff') return buffSeidMetaMap
@@ -63,6 +71,7 @@ export function useSeidDerivedState({
             return isEquipItem ? itemEquipSeidMetaMap : itemUseSeidMetaMap
         }
         if (activeModule === 'skill') return skillSeidMetaMap
+        if (activeModule === 'wudaoskill') return staticSkillSeidMetaMap
         if (activeModule === 'staticskill') return staticSkillSeidMetaMap
         return seidMetaMap
     }, [
@@ -86,10 +95,12 @@ export function useSeidDerivedState({
                   ? selectedItem
                   : activeModule === 'skill'
                     ? selectedSkill
-                    : activeModule === 'staticskill'
-                      ? selectedStaticSkill
-                      : selectedTalent,
-        [activeModule, selectedBuff, selectedItem, selectedSkill, selectedStaticSkill, selectedTalent]
+                    : activeModule === 'wudaoskill'
+                      ? selectedWuDaoSkill
+                      : activeModule === 'staticskill'
+                        ? selectedStaticSkill
+                        : selectedTalent,
+        [activeModule, selectedBuff, selectedItem, selectedSkill, selectedStaticSkill, selectedTalent, selectedWuDaoSkill]
     )
 
     const selectedSeidIds = useMemo(() => selectedSeidOwner?.seid ?? [], [selectedSeidOwner])
@@ -110,6 +121,7 @@ export function useSeidDerivedState({
         selectedItem,
         selectedSkill,
         selectedStaticSkill,
+        selectedWuDaoSkill,
         activeSeidMetaMap,
         seidPickerItems,
         selectedSeidDisplayRows,

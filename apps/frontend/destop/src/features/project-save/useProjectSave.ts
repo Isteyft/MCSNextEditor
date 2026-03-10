@@ -4,6 +4,8 @@ import { saveItemFiles, saveItemSeidFiles } from '../../components/item/item-dom
 import { saveSkillFiles, saveSkillSeidFiles } from '../../components/skill/skill-domain'
 import { saveStaticSkillFile, saveStaticSkillSeidFiles } from '../../components/staticskill/staticskill-domain'
 import { saveTalentSeidFiles } from '../../components/tianfu/talent-domain'
+import { saveWuDaoFile } from '../../components/wudao/wudao-domain'
+import { saveWuDaoSkillFile, saveWuDaoSkillSeidFiles } from '../../components/wudaoskill/wudaoskill-domain'
 import { ensureModStructure } from '../../services/project-api'
 import { joinWinPath } from '../../utils/path'
 
@@ -16,6 +18,10 @@ type Params = {
     rawConfigObject: Record<string, unknown>
     configForm: { name: string; author: string; version: string; description: string }
     preservedSettings: unknown
+    wudaoMap: Record<string, any>
+    wudaoPath: string
+    wudaoSkillMap: Record<string, any>
+    wudaoSkillPath: string
     talentPath: string
     createAvatarPath: string
     talentMap: Record<string, any>
@@ -33,6 +39,8 @@ type Params = {
     saveFilePayload: (path: string, content: string) => Promise<any>
     deleteFilePayload: (path: string) => Promise<any>
     setConfigDirty: Setter
+    setWuDaoDirty: Setter
+    setWuDaoSkillDirty: Setter
     setAffixDirty: Setter
     setTalentDirty: Setter
     setBuffDirty: Setter
@@ -40,6 +48,7 @@ type Params = {
     setSkillDirty: Setter
     setStaticSkillDirty: Setter
     setAffixCachePath: Setter
+    setWuDaoSkillCachePath: Setter
     setTalentCachePath: Setter
     setBuffCachePath: Setter
     setItemCachePath: Setter
@@ -56,6 +65,10 @@ export function useProjectSave(params: Params) {
         rawConfigObject,
         configForm,
         preservedSettings,
+        wudaoMap,
+        wudaoPath,
+        wudaoSkillMap,
+        wudaoSkillPath,
         talentPath,
         createAvatarPath,
         talentMap,
@@ -73,6 +86,8 @@ export function useProjectSave(params: Params) {
         saveFilePayload,
         deleteFilePayload,
         setConfigDirty,
+        setWuDaoDirty,
+        setWuDaoSkillDirty,
         setAffixDirty,
         setTalentDirty,
         setBuffDirty,
@@ -80,6 +95,7 @@ export function useProjectSave(params: Params) {
         setSkillDirty,
         setStaticSkillDirty,
         setAffixCachePath,
+        setWuDaoSkillCachePath,
         setTalentCachePath,
         setBuffCachePath,
         setItemCachePath,
@@ -93,6 +109,7 @@ export function useProjectSave(params: Params) {
             setStatus('请先打开项目后再保存。')
             return
         }
+
         try {
             await ensureModStructure(modRootPath)
             const configPayload = {
@@ -111,7 +128,7 @@ export function useProjectSave(params: Params) {
             )
             await saveFilePayload(talentTarget, `${JSON.stringify(normalizedTalentPayload, null, 2)}\n`)
 
-            const seidFileCount = await saveTalentSeidFiles({
+            const talentSeidFileCount = await saveTalentSeidFiles({
                 talentMap,
                 modRootPath,
                 joinWinPath,
@@ -124,7 +141,24 @@ export function useProjectSave(params: Params) {
                 affixPath,
                 saveFilePayload,
             })
-
+            await saveWuDaoFile({
+                wudaoMap,
+                wudaoPath,
+                saveFilePayload,
+            })
+            const wudaoSkillFileCount = await saveWuDaoSkillFile({
+                wudaoSkillMap,
+                wudaoSkillPath,
+                saveFilePayload,
+            })
+            const wudaoSkillSeidFileCount = await saveWuDaoSkillSeidFiles({
+                wudaoSkillMap,
+                modRootPath,
+                joinWinPath,
+                loadProjectEntries,
+                deleteFilePayload,
+                saveFilePayload,
+            })
             const buffFileCount = await saveBuffFiles({
                 buffMap,
                 modRootPath,
@@ -188,6 +222,8 @@ export function useProjectSave(params: Params) {
             })
 
             setConfigDirty(false)
+            setWuDaoDirty(false)
+            setWuDaoSkillDirty(false)
             setAffixDirty(false)
             setTalentDirty(false)
             setBuffDirty(false)
@@ -195,13 +231,14 @@ export function useProjectSave(params: Params) {
             setSkillDirty(false)
             setStaticSkillDirty(false)
             setAffixCachePath(affixPath)
+            setWuDaoSkillCachePath(wudaoSkillPath)
             setTalentCachePath(talentTarget)
             setBuffCachePath(buffDirPath)
             setItemCachePath(itemDirPath)
             setSkillCachePath(skillDirPath)
             setStaticSkillCachePath(staticSkillPath)
             setStatus(
-                `项目已保存：${moduleConfigPath}；词缀 ${affixFileCount} 条；天赋Seid ${seidFileCount} 个；Buff ${buffFileCount} 个，BuffSeid ${buffSeidFileCount} 个；Item ${itemFileCount} 个，ItemSeid ${itemSeidFileCount} 个；Skill ${skillFileCount} 个，SkillSeid ${skillSeidFileCount} 个；StaticSkill ${staticSkillFileCount} 条，StaticSkillSeid ${staticSkillSeidFileCount} 个`
+                `项目已保存：${moduleConfigPath}；悟道 ${Object.keys(wudaoMap).length} 条；悟道技能 ${wudaoSkillFileCount} 条，WuDaoSeid ${wudaoSkillSeidFileCount} 个；词缀 ${affixFileCount} 条；天赋Seid ${talentSeidFileCount} 个；Buff ${buffFileCount} 个，BuffSeid ${buffSeidFileCount} 个；Item ${itemFileCount} 个，ItemSeid ${itemSeidFileCount} 个；Skill ${skillFileCount} 个，SkillSeid ${skillSeidFileCount} 个；StaticSkill ${staticSkillFileCount} 条，StaticSkillSeid ${staticSkillSeidFileCount} 个`
             )
         } catch (error) {
             setStatus(`保存项目失败: ${String(error)}`)

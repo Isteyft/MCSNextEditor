@@ -4,21 +4,36 @@ import type { FormEvent } from 'react'
 import { normalizeAffixMap } from '../../components/affix/affix-domain'
 import { mergeStaticSkillSeidFiles, normalizeStaticSkillMap } from '../../components/staticskill/staticskill-domain'
 import { mergeTalentSeidFiles, normalizeTalentMap } from '../../components/tianfu/talent-domain'
+import { normalizeWuDaoMap } from '../../components/wudao/wudao-domain'
+import { mergeWuDaoSkillSeidFiles, normalizeWuDaoSkillMap } from '../../components/wudaoskill/wudaoskill-domain'
 import type { ModuleKey, ViewMode } from '../../modules'
 import { createModFolder, createProject, loadProjectEntries, readFilePayload, saveFilePayload } from '../../services/project-api'
-import type { AffixEntry, BuffEntry, CreateAvatarEntry, ItemEntry, SkillEntry, StaticSkillEntry } from '../../types'
+import type {
+    AffixEntry,
+    BuffEntry,
+    CreateAvatarEntry,
+    ItemEntry,
+    SkillEntry,
+    StaticSkillEntry,
+    WuDaoEntry,
+    WuDaoSkillEntry,
+} from '../../types'
 import { findModRoot, inferModRootPath, isModRootPath, joinWinPath, pickLeafName } from '../../utils/path'
 import { STATUS_MESSAGES, statusError } from '../app-core/status-messages'
 import { parseJsonUnknown, readJsonUnknownWithFallback } from '../json-import/json-import-core'
 import { adaptBuffImportWithMerge, adaptItemImportWithMerge, adaptSkillImportWithMerge } from '../json-import/module-adapters'
 
 export type RootModuleSnapshot = {
+    wudaoMap: Record<string, WuDaoEntry>
+    wudaoSkillMap: Record<string, WuDaoSkillEntry>
     affixMap: Record<string, AffixEntry>
     talentMap: Record<string, CreateAvatarEntry>
     buffMap: Record<string, BuffEntry>
     itemMap: Record<string, ItemEntry>
     skillMap: Record<string, SkillEntry>
     staticSkillMap: Record<string, StaticSkillEntry>
+    wudaoDirty: boolean
+    wudaoSkillDirty: boolean
     affixDirty: boolean
     talentDirty: boolean
     buffDirty: boolean
@@ -61,12 +76,16 @@ type LifecycleParams = {
 
 function createEmptySnapshot(): RootModuleSnapshot {
     return {
+        wudaoMap: {},
+        wudaoSkillMap: {},
         affixMap: {},
         talentMap: {},
         buffMap: {},
         itemMap: {},
         skillMap: {},
         staticSkillMap: {},
+        wudaoDirty: false,
+        wudaoSkillDirty: false,
         affixDirty: false,
         talentDirty: false,
         buffDirty: false,
@@ -84,6 +103,20 @@ function resetForRootSwitch(setters: LifecycleSetters) {
     setters.setTableSearchText('')
     setters.setConfigCachePath('')
     setters.setConfigDirty(false)
+    setters.setWuDaoMap({})
+    setters.setWuDaoCachePath('')
+    setters.setWuDaoDirty(false)
+    setters.setWuDaoSkillMap({})
+    setters.setWuDaoSkillCachePath('')
+    setters.setWuDaoSkillDirty(false)
+    setters.setSelectedWuDaoSkillKey('')
+    setters.setSelectedWuDaoSkillKeys([])
+    setters.setWuDaoSkillSelectionAnchor('')
+    setters.setWuDaoSkillClipboard([])
+    setters.setSelectedWuDaoKey('')
+    setters.setSelectedWuDaoKeys([])
+    setters.setWuDaoSelectionAnchor('')
+    setters.setWuDaoClipboard([])
     setters.setAffixMap({})
     setters.setAffixCachePath('')
     setters.setAffixDirty(false)
@@ -127,6 +160,7 @@ function resetForRootSwitch(setters: LifecycleSetters) {
     setters.setSeidPickerOpen(false)
     setters.setActiveSeidId(null)
     setters.setAddBuffOpen(false)
+    setters.setAddWuDaoSkillOpen(false)
     setters.setAddAffixOpen(false)
     setters.setAddItemOpen(false)
     setters.setAddSkillOpen(false)
@@ -200,9 +234,44 @@ export function useProjectLifecycle(params: LifecycleParams) {
         const snapshot = createEmptySnapshot()
         if (!targetModRoot) return snapshot
 
+        const targetWuDaoPath = joinWinPath(targetModRoot, 'Data', 'WuDaoAllTypeJson.json')
+        const targetWuDaoSkillPath = joinWinPath(targetModRoot, 'Data', 'WuDaoJson.json')
         const targetAffixPath = joinWinPath(targetModRoot, 'Data', 'TuJianChunWenBen.json')
         const targetTalentPath = joinWinPath(targetModRoot, 'Data', 'CreateAvatarJsonData.json')
         const targetStaticSkillPath = joinWinPath(targetModRoot, 'Data', 'StaticSkillJsonData.json')
+
+        try {
+            const payload = await readJsonUnknownWithFallback({
+                filePath: targetWuDaoPath,
+                defaultContent: '{}\n',
+                readFilePayload,
+                saveFilePayload,
+            })
+            const parsedResult = parseJsonUnknown(payload.content, targetWuDaoPath)
+            snapshot.wudaoMap = normalizeWuDaoMap(parsedResult.ok ? parsedResult.data : {})
+        } catch {
+            // ignore and continue
+        }
+
+        try {
+            const payload = await readJsonUnknownWithFallback({
+                filePath: targetWuDaoSkillPath,
+                defaultContent: '{}\n',
+                readFilePayload,
+                saveFilePayload,
+            })
+            const parsedResult = parseJsonUnknown(payload.content, targetWuDaoSkillPath)
+            const normalized = normalizeWuDaoSkillMap(parsedResult.ok ? parsedResult.data : {})
+            snapshot.wudaoSkillMap = await mergeWuDaoSkillSeidFiles({
+                source: normalized,
+                modRootPath: targetModRoot,
+                joinWinPath,
+                loadProjectEntries,
+                readFilePayload,
+            })
+        } catch {
+            // ignore and continue
+        }
 
         try {
             const payload = await readJsonUnknownWithFallback({
@@ -297,12 +366,30 @@ export function useProjectLifecycle(params: LifecycleParams) {
     }
 
     function applyRootModuleSnapshot(targetModRoot: string, snapshot: RootModuleSnapshot) {
+        const targetWuDaoPath = joinWinPath(targetModRoot, 'Data', 'WuDaoAllTypeJson.json')
+        const targetWuDaoSkillPath = joinWinPath(targetModRoot, 'Data', 'WuDaoJson.json')
         const targetAffixPath = joinWinPath(targetModRoot, 'Data', 'TuJianChunWenBen.json')
         const targetTalentPath = joinWinPath(targetModRoot, 'Data', 'CreateAvatarJsonData.json')
         const targetBuffDirPath = joinWinPath(targetModRoot, 'Data', 'BuffJsonData')
         const targetItemDirPath = joinWinPath(targetModRoot, 'Data', 'ItemJsonData')
         const targetSkillDirPath = joinWinPath(targetModRoot, 'Data', 'skillJsonData')
         const targetStaticSkillPath = joinWinPath(targetModRoot, 'Data', 'StaticSkillJsonData.json')
+
+        setters.setWuDaoMap(snapshot.wudaoMap)
+        setters.setWuDaoCachePath(targetWuDaoPath)
+        setters.setWuDaoDirty(snapshot.wudaoDirty)
+        const firstWuDao = Object.keys(snapshot.wudaoMap).sort((a, b) => Number(a) - Number(b))[0] ?? ''
+        setters.setSelectedWuDaoKey(firstWuDao)
+        setters.setSelectedWuDaoKeys(firstWuDao ? [firstWuDao] : [])
+        setters.setWuDaoSelectionAnchor(firstWuDao)
+
+        setters.setWuDaoSkillMap(snapshot.wudaoSkillMap)
+        setters.setWuDaoSkillCachePath(targetWuDaoSkillPath)
+        setters.setWuDaoSkillDirty(snapshot.wudaoSkillDirty)
+        const firstWuDaoSkill = Object.keys(snapshot.wudaoSkillMap).sort((a, b) => Number(a) - Number(b))[0] ?? ''
+        setters.setSelectedWuDaoSkillKey(firstWuDaoSkill)
+        setters.setSelectedWuDaoSkillKeys(firstWuDaoSkill ? [firstWuDaoSkill] : [])
+        setters.setWuDaoSkillSelectionAnchor(firstWuDaoSkill)
 
         setters.setAffixMap(snapshot.affixMap)
         setters.setAffixCachePath(targetAffixPath)

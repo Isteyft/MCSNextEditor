@@ -1,6 +1,6 @@
-# Desktop 设置与删除可靠性修复说明
+# Desktop 设置、加载与模块接入说明
 
-更新日期：2026-03-07
+更新时间：2026-03-10  
 范围：`apps/frontend/destop`
 
 ## 1. 主窗口分辨率设置
@@ -8,24 +8,24 @@
 ### 目标
 
 -   提供固定分辨率下拉选项。
--   保存后可立即应用到主窗口。
--   下次启动仍按保存值打开。
+-   保存后立即应用到主窗口。
+-   下次启动继续使用已保存的分辨率。
 
-### 当前下拉选项
+### 当前分辨率选项
 
 -   `800x600`
 -   `1280x968`
 -   `1440x1080`
 -   `1920x1080`
 
-### 关键实现
+### 实现
 
--   设置模型新增字段：`mainWindowWidth`、`mainWindowHeight`。
--   设置窗口保存后通过事件广播最新设置给主窗口。
--   主窗口监听事件后：
-    -   同步本窗口存储；
-    -   立即应用窗口尺寸。
--   启动时也会按设置值应用一次分辨率。
+-   设置模型新增：
+    -   `mainWindowWidth`
+    -   `mainWindowHeight`
+-   设置窗口保存后通过事件把最新设置广播给主窗口。
+-   主窗口收到事件后立即更新尺寸。
+-   启动时也会自动应用一次保存的分辨率。
 
 ### 关键文件
 
@@ -40,40 +40,42 @@
 
 ### 目标
 
--   关闭主窗口后，设置窗口也自动关闭，避免孤儿窗口。
+-   主窗口关闭后，设置窗口也同时关闭，避免孤立子窗口。
 
 ### 实现
 
--   主窗口注册关闭事件（`onCloseRequested`）。
--   在关闭回调中主动关闭 `settings-window`（若存在）。
+-   主窗口注册 `onCloseRequested`。
+-   在关闭回调里主动关闭 `settings-window`。
 
 ### 关键文件
 
 -   `src/features/settings/settings-window.ts`
 -   `src/App.tsx`
 
-## 3. 删除后“看似删除但又回来”的修复
+## 3. 删除后“看起来删了但又回来”的修复
 
 ### 问题根因
 
--   旧逻辑保存时只写当前内存数据，不清理磁盘上的旧文件/旧 seid 文件内容。
--   重新加载时会再次扫到旧文件，导致“删除后复活”。
+-   旧逻辑保存时只写当前内存数据，不清理磁盘上的旧文件和旧 Seid 文件。
+-   重新加载时又把这些旧文件读回来，表现成“删除后复活”。
 
 ### 修复策略
 
--   新增后端文件删除命令：`delete_file_payload`。
--   保存阶段增加“清理多余文件”逻辑：
-    -   Buff/Item/Skill 主文件目录中，不在当前数据集内的 json 文件会删除。
-    -   各模块 Seid 目录中，不再需要的 seid json 文件会删除。
--   Seid 文件写入从“合并旧数据”改为“按当前状态全量覆盖”，防止旧行残留。
+-   新增后端删除文件命令：`delete_file_payload`
+-   保存时增加“清理多余文件”逻辑：
+    -   `BuffJsonData`
+    -   `ItemJsonData`
+    -   `skillJsonData`
+    -   各模块 Seid 目录
+-   Seid 文件改为按当前状态全量覆盖写入，不再沿用旧残留内容。
 
 ### 影响模块
 
+-   Talent Seid
 -   Buff
 -   Item
 -   Skill
--   Talent Seid
--   StaticSkill Seid
+-   StaticSkill
 
 ### 关键文件
 
@@ -86,99 +88,201 @@
 -   `src/components/tianfu/talent-domain.ts`
 -   `src/components/staticskill/staticskill-domain.ts`
 
-## 4. 权限与生效要求
+## 4. Tauri 权限与生效要求
 
-### Tauri 窗口尺寸权限
+### 已补充权限
 
--   已在能力文件补充：`core:window:allow-set-size`。
--   若未重启 tauri 进程，该权限不会生效。
+-   `core:window:allow-set-size`
+-   `core:window:allow-destroy`
 
-### 需要重启的场景
+### 注意
 
--   修改了 `src-tauri/capabilities/default.json` 或 `src-tauri/src/lib.rs` 后，需要重启：
+-   修改 `src-tauri/capabilities/default.json` 后，必须完整重启一次：
     -   停止 `pnpm tauri dev`
     -   重新执行 `pnpm tauri dev`
 
-## 5. 建议验证清单
+## 5. 项目打开时的加载进度弹窗
 
-1. 分辨率：在设置窗口切换到 `800x600` 后保存，主窗口立即变化。
-2. 分辨率持久化：关闭并重启应用后，主窗口仍为保存值。
-3. 联动关闭：关闭主窗口时，设置窗口同时关闭。
-4. 删除可靠性：删除 Buff/Item/Skill 条目后保存，重启或重载不应复活。
-5. Seid 清理：删除 seid 关联后保存，对应 seid 文件内容不应保留旧 owner 行。
+### 目标
 
-## 6. Project Open Loading Progress (blocking)
+-   打开项目时显示阻塞式加载弹窗。
+-   全部数据加载完成前，主界面不可操作。
 
-### Goal
+### 实现
 
--   Show a modal with progress while opening a project.
--   Block main window interaction until all project data is fully loaded.
+-   `App.tsx` 增加 `projectLoading` 状态：
+    -   `open`
+    -   `progress`
+    -   `message`
+-   `useProjectLifecycle.ts` 增加 `onProjectLoadingChange`
+-   `reloadProject` 中按步骤上报进度：
+    -   项目初始化
+    -   元数据
+    -   各类 Seid Meta
+    -   枚举
+    -   Drawer 选项
+    -   同级 mod 快照预加载
 
-### Implementation
-
--   Added loading state in `App.tsx`:
-    -   `projectLoading.open`
-    -   `projectLoading.progress`
-    -   `projectLoading.message`
--   Added blocking overlay modal in `App.tsx`:
-    -   Title: project loading
-    -   Progress bar + percentage
-    -   No close action during loading
--   Added progress callback in `useProjectLifecycle.ts`:
-    -   `onProjectLoadingChange?: ({ open, progress, message }) => void`
--   Updated `reloadProject` load flow:
-    -   step-by-step progress updates for meta/enum loading
-    -   folder snapshot preload changed to sequential progress reporting
-    -   modal closes only after all steps complete (in `finally`)
-
-### Key Files
+### 关键文件
 
 -   `src/features/project-shell/useProjectLifecycle.ts`
 -   `src/App.tsx`
 -   `src/styles.css`
 
-## 7. Loading Modal UI Tuning
+## 6. 加载弹窗样式调整
 
-### Changes
+### 调整内容
 
--   Centered loading title in modal.
--   Reduced extra vertical spacing around the title.
+-   标题居中。
+-   缩小标题上下留白。
+-   保持百分比和进度条在可视中心区域。
 
-### Key Files
+### 关键文件
 
 -   `src/styles.css`
 
-## 8. Tauri Window Destroy Permission
+## 7. JSON 导入弹窗尺寸调整
 
-### Problem
+### 调整内容
 
--   Runtime error: `window.destroy not allowed` with required permission `core:window:allow-destroy`.
-
-### Fix
-
--   Added `core:window:allow-destroy` to Tauri capability permissions.
-
-### Key Files
-
--   `src-tauri/capabilities/default.json`
-
-### Note
-
--   After capability changes, fully restart dev process:
-    -   stop `pnpm tauri dev`
-    -   run `pnpm tauri dev` again
-
-## 9. JSON Import Modal Size Adjustment
-
-### Changes
-
--   JSON import modal width adjusted to around `500px`.
--   JSON textarea changed to fixed height with scroll:
+-   弹窗宽度改为约 `500px`
+-   文本区固定高度并启用滚动：
     -   `height: 220px`
     -   `resize: none`
     -   `overflow: auto`
 
-### Key Files
+### 关键文件
 
 -   `src/components/workspace/InfoPanel.tsx`
 -   `src/styles.css`
+
+## 8. 草稿缓存与自动保存
+
+### 当前行为
+
+-   草稿缓存会定时写入应用数据目录。
+-   自动保存默认间隔为 `300` 秒。
+-   恢复缓存时，会恢复当前 mod 的未保存编辑状态。
+
+### 关键文件
+
+-   `src/features/project-cache/draft-cache.ts`
+-   `src/features/project-save/useProjectSave.ts`
+-   `src/App.tsx`
+
+## 9. Seid Drawer 数据刷新
+
+### 当前行为
+
+-   Drawer 候选数据支持跨同级 mod 聚合。
+-   刷新时会合并：
+    -   磁盘里的同级 mod 数据
+    -   当前活动 mod 的内存数据
+    -   `rootSnapshotCache` 中其他 mod 的缓存快照
+
+### 目标效果
+
+-   刚打开项目时能读到同级 mod 数据。
+-   未保存但已进入缓存的数据，刷新后不会丢失。
+
+### 关键文件
+
+-   `src/features/meta-loader/drawer-option-loader.ts`
+-   `src/features/meta-loader/useMetaLoader.ts`
+-   `src/components/tianfu/SeidEditorModal.tsx`
+-   `src/App.tsx`
+
+## 10. 悟道与悟道技能模块接入
+
+### 10.1 悟道类型
+
+#### 数据文件
+
+-   `Data/WuDaoAllTypeJson.json`
+
+#### 当前支持
+
+-   列表展示
+-   搜索
+-   新增
+-   删除
+-   复制/粘贴
+-   批量改 ID
+-   表单编辑
+-   保存
+-   草稿缓存恢复
+-   mod 切换时跟随快照切换
+
+#### 关键文件
+
+-   `src/types/wudao.ts`
+-   `src/components/wudao/wudao-domain.ts`
+-   `src/components/wudao/WuDaoForm.tsx`
+-   `src/features/modules/wudao/useWuDaoHandlers.ts`
+
+### 10.2 悟道技能
+
+#### 数据文件
+
+-   主文件：`Data/WuDaoJson.json`
+-   Seid 目录：`Data/WuDaoSeidJsonData`
+
+#### 主要字段
+
+-   `id`
+-   `icon`
+-   `name`
+-   `Cast`
+-   `Type`
+-   `Lv`
+-   `seid`
+-   `seidData`
+-   `desc`
+-   `xiaoguo`
+-   `CanForget`
+
+#### 当前支持
+
+-   列表展示
+-   搜索
+-   新增
+-   删除
+-   复制/粘贴
+-   批量改 ID
+-   表单编辑
+-   JSON 导入
+-   保存主文件
+-   保存 Seid 目录
+-   草稿缓存恢复
+-   mod 切换时跟随快照切换
+-   Seid 编辑器联动
+
+#### Seid 处理规则
+
+-   编辑时，`wudaoskill` 复用 `StaticSkillSeidMeta`
+-   保存时：
+    -   `WuDaoJson.json` 保存技能主体
+    -   `WuDaoSeidJsonData/{seidId}.json` 保存 Seid 额外属性
+-   Seid 文件中使用 `skillid` 作为归属字段
+
+#### 关键文件
+
+-   `src/types/wudaoskill.ts`
+-   `src/components/wudaoskill/wudaoskill-domain.ts`
+-   `src/components/wudaoskill/WuDaoSkillForm.tsx`
+-   `src/features/modules/wudaoskill/useWuDaoSkillHandlers.ts`
+-   `src/features/module-loaders/useModuleLoaders.ts`
+-   `src/features/project-save/useProjectSave.ts`
+-   `src/features/project-shell/useProjectLifecycle.ts`
+-   `src/features/seid/useSeidDerivedState.ts`
+-   `src/features/seid/useSeidHandlers.ts`
+-   `src/App.tsx`
+
+## 11. 建议验证清单
+
+1. 设置主窗口分辨率并保存，确认主窗口立即变化。
+2. 重启应用，确认窗口尺寸保持上次保存值。
+3. 删除 Buff/Item/Skill/StaticSkill 后保存并重开，确认不会复活。
+4. 打开项目时确认加载弹窗阻塞交互，直到进度完成。
+5. 在同级 mod 中新增数据，确认 Drawer 刷新后仍能看到。
+6. 新增一条悟道技能，编辑 Seid，保存后重开项目，确认 `WuDaoJson.json` 与 `WuDaoSeidJsonData` 都正确恢复。

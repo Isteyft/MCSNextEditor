@@ -1,4 +1,4 @@
-import { PhysicalSize } from '@tauri-apps/api/dpi'
+﻿import { PhysicalSize } from '@tauri-apps/api/dpi'
 import { listen } from '@tauri-apps/api/event'
 import { appDataDir, executableDir, resourceDir } from '@tauri-apps/api/path'
 import { getCurrentWindow } from '@tauri-apps/api/window'
@@ -44,6 +44,8 @@ import { useTalentHandlers } from './features/modules/talent/useTalentHandlers'
 import { useInfoPanelPresenter } from './features/modules/useInfoPanelPresenter'
 import { useModuleSelectionSync } from './features/modules/useModuleSelectionSync'
 import { useModuleTableRows } from './features/modules/useModuleTableRows'
+import { useWuDaoHandlers } from './features/modules/wudao/useWuDaoHandlers'
+import { useWuDaoSkillHandlers } from './features/modules/wudaoskill/useWuDaoSkillHandlers'
 import { buildDraftCachePath, loadDraftCache, saveDraftCache } from './features/project-cache/draft-cache'
 import { useProjectSave } from './features/project-save/useProjectSave'
 import { collectSiblingModFolders as collectSiblingModFoldersByAnchor } from './features/project-shell/project-shell-utils'
@@ -67,7 +69,17 @@ import {
     renameModFolder,
     saveFilePayload,
 } from './services/project-api'
-import type { AffixEntry, BuffEntry, CreateAvatarEntry, ItemEntry, SkillEntry, StaticSkillEntry, TalentTypeOption } from './types'
+import type {
+    AffixEntry,
+    BuffEntry,
+    CreateAvatarEntry,
+    ItemEntry,
+    SkillEntry,
+    StaticSkillEntry,
+    TalentTypeOption,
+    WuDaoEntry,
+    WuDaoSkillEntry,
+} from './types'
 import { inferModRootPath, pickLeafName } from './utils/path'
 
 const appWindow = getCurrentWindow()
@@ -90,6 +102,21 @@ export function App() {
     const [preservedSettings, setPreservedSettings] = useState<unknown>([])
     const [configDirty, setConfigDirty] = useState(false)
     const [configCachePath, setConfigCachePath] = useState('')
+
+    const [wudaoMap, setWuDaoMap] = useState<Record<string, WuDaoEntry>>({})
+    const [wudaoCachePath, setWuDaoCachePath] = useState('')
+    const [wudaoDirty, setWuDaoDirty] = useState(false)
+    const [selectedWuDaoKey, setSelectedWuDaoKey] = useState('')
+    const [selectedWuDaoKeys, setSelectedWuDaoKeys] = useState<string[]>([])
+    const [wudaoSelectionAnchor, setWuDaoSelectionAnchor] = useState('')
+    const [wudaoClipboard, setWuDaoClipboard] = useState<WuDaoEntry[]>([])
+    const [wudaoSkillMap, setWuDaoSkillMap] = useState<Record<string, WuDaoSkillEntry>>({})
+    const [wudaoSkillCachePath, setWuDaoSkillCachePath] = useState('')
+    const [wudaoSkillDirty, setWuDaoSkillDirty] = useState(false)
+    const [selectedWuDaoSkillKey, setSelectedWuDaoSkillKey] = useState('')
+    const [selectedWuDaoSkillKeys, setSelectedWuDaoSkillKeys] = useState<string[]>([])
+    const [wudaoSkillSelectionAnchor, setWuDaoSkillSelectionAnchor] = useState('')
+    const [wudaoSkillClipboard, setWuDaoSkillClipboard] = useState<WuDaoSkillEntry[]>([])
 
     const [affixMap, setAffixMap] = useState<Record<string, AffixEntry>>({})
     const [affixCachePath, setAffixCachePath] = useState('')
@@ -164,6 +191,8 @@ export function App() {
     const [seidPickerOpen, setSeidPickerOpen] = useState(false)
     const [activeSeidId, setActiveSeidId] = useState<number | null>(null)
     const [addTalentOpen, setAddTalentOpen] = useState(false)
+    const [addWuDaoOpen, setAddWuDaoOpen] = useState(false)
+    const [addWuDaoSkillOpen, setAddWuDaoSkillOpen] = useState(false)
     const [addAffixOpen, setAddAffixOpen] = useState(false)
     const [addBuffOpen, setAddBuffOpen] = useState(false)
     const [addItemOpen, setAddItemOpen] = useState(false)
@@ -214,6 +243,8 @@ export function App() {
 
     const {
         moduleConfigPath,
+        wudaoPath,
+        wudaoSkillPath,
         affixPath,
         createAvatarPath,
         buffDirPath,
@@ -234,12 +265,16 @@ export function App() {
             modRootFolders,
             normalizePath,
             pickLeafName,
+            wudaoMap,
+            wudaoSkillMap,
             affixMap,
             talentMap,
             buffMap,
             itemMap,
             skillMap,
             staticSkillMap,
+            wudaoDirty,
+            wudaoSkillDirty,
             affixDirty,
             talentDirty,
             buffDirty,
@@ -248,12 +283,16 @@ export function App() {
             staticSkillDirty,
         })
     const {
+        wudaoRows,
+        wudaoSkillRows,
         affixRows,
         avatarRows,
         buffRows,
         itemRows,
         skillRows,
         staticSkillRows,
+        filteredWuDaoRows,
+        filteredWuDaoSkillRows,
         filteredAvatarRows,
         filteredAffixRows,
         filteredBuffRows,
@@ -261,6 +300,8 @@ export function App() {
         filteredSkillRows,
         filteredStaticSkillRows,
     } = useModuleTableRows({
+        wudaoMap,
+        wudaoSkillMap,
         affixMap,
         talentMap,
         buffMap,
@@ -269,6 +310,11 @@ export function App() {
         staticSkillMap,
         tableSearchText,
     })
+    const selectedWuDao = useMemo(() => (selectedWuDaoKey ? (wudaoMap[selectedWuDaoKey] ?? null) : null), [wudaoMap, selectedWuDaoKey])
+    const selectedWuDaoSkill = useMemo(
+        () => (selectedWuDaoSkillKey ? (wudaoSkillMap[selectedWuDaoSkillKey] ?? null) : null),
+        [wudaoSkillMap, selectedWuDaoSkillKey]
+    )
     const selectedAffix = useMemo(() => (selectedAffixKey ? (affixMap[selectedAffixKey] ?? null) : null), [affixMap, selectedAffixKey])
     const affixDrawerOptions = useMemo(() => drawerOptionsMap.AffixDrawer ?? [], [drawerOptionsMap])
     const activeModuleLabel = useMemo(() => MODULES.find(item => item.key === activeModule)?.label ?? '-', [activeModule])
@@ -291,11 +337,13 @@ export function App() {
         itemMap,
         skillMap,
         staticSkillMap,
+        wudaoSkillMap,
         selectedTalentKey,
         selectedBuffKey,
         selectedItemKey,
         selectedSkillKey,
         selectedStaticSkillKey,
+        selectedWuDaoSkillKey,
         seidMetaMap,
         buffSeidMetaMap,
         itemEquipSeidMetaMap,
@@ -310,12 +358,19 @@ export function App() {
 
     useSeidActiveSync({ activeSeidId, seidEditorOpen, selectedTalent: selectedSeidOwner, setActiveSeidId })
     useModuleSelectionSync({
-        affix: {
-            rows: affixRows,
-            selectedKey: selectedAffixKey,
-            setSelectedKey: setSelectedAffixKey,
-            setSelectedKeys: setSelectedAffixKeys,
-            setSelectionAnchor: setAffixSelectionAnchor,
+        wudao: {
+            rows: wudaoRows,
+            selectedKey: selectedWuDaoKey,
+            setSelectedKey: setSelectedWuDaoKey,
+            setSelectedKeys: setSelectedWuDaoKeys,
+            setSelectionAnchor: setWuDaoSelectionAnchor,
+        },
+        wudaoskill: {
+            rows: wudaoSkillRows,
+            selectedKey: selectedWuDaoSkillKey,
+            setSelectedKey: setSelectedWuDaoSkillKey,
+            setSelectedKeys: setSelectedWuDaoSkillKeys,
+            setSelectionAnchor: setWuDaoSkillSelectionAnchor,
         },
         talent: {
             rows: avatarRows,
@@ -351,6 +406,13 @@ export function App() {
             setSelectedKey: setSelectedStaticSkillKey,
             setSelectedKeys: setSelectedStaticSkillKeys,
             setSelectionAnchor: setStaticSkillSelectionAnchor,
+        },
+        affix: {
+            rows: affixRows,
+            selectedKey: selectedAffixKey,
+            setSelectedKey: setSelectedAffixKey,
+            setSelectedKeys: setSelectedAffixKeys,
+            setSelectionAnchor: setAffixSelectionAnchor,
         },
     })
 
@@ -537,6 +599,20 @@ export function App() {
             setPreservedSettings,
             setConfigDirty,
             setConfigCachePath,
+            setWuDaoMap,
+            setWuDaoCachePath,
+            setWuDaoDirty,
+            setWuDaoSkillMap,
+            setWuDaoSkillCachePath,
+            setWuDaoSkillDirty,
+            setSelectedWuDaoKey,
+            setSelectedWuDaoKeys,
+            setWuDaoSelectionAnchor,
+            setWuDaoClipboard,
+            setSelectedWuDaoSkillKey,
+            setSelectedWuDaoSkillKeys,
+            setWuDaoSkillSelectionAnchor,
+            setWuDaoSkillClipboard,
             setAffixMap,
             setAffixCachePath,
             setAffixDirty,
@@ -608,6 +684,8 @@ export function App() {
             setActiveSeidId,
             setExpandedRootPaths,
             setAddBuffOpen,
+            setAddWuDaoOpen,
+            setAddWuDaoSkillOpen,
             setAddAffixOpen,
             setAddItemOpen,
             setAddSkillOpen,
@@ -627,6 +705,12 @@ export function App() {
         projectPath,
         workspaceRoot,
         configCachePath,
+        wudaoPath,
+        wudaoCachePath,
+        wudaoDirty,
+        wudaoSkillPath,
+        wudaoSkillCachePath,
+        wudaoSkillDirty,
         createAvatarPath,
         talentCachePath,
         talentDirty,
@@ -653,6 +737,18 @@ export function App() {
         setConfigForm,
         setConfigCachePath,
         setConfigDirty,
+        setWuDaoMap,
+        setWuDaoCachePath,
+        setWuDaoDirty,
+        setSelectedWuDaoKey,
+        setSelectedWuDaoKeys,
+        setWuDaoSelectionAnchor,
+        setWuDaoSkillMap,
+        setWuDaoSkillCachePath,
+        setWuDaoSkillDirty,
+        setSelectedWuDaoSkillKey,
+        setSelectedWuDaoSkillKeys,
+        setWuDaoSkillSelectionAnchor,
         setTalentMap,
         setTalentPath,
         setTalentCachePath,
@@ -715,7 +811,7 @@ export function App() {
         try {
             await openOrFocusSettingsWindow()
         } catch (error) {
-            setStatus(statusError('打开设置窗口', error))
+            setStatus(statusError('鎵撳紑璁剧疆绐楀彛', error))
         }
     }
 
@@ -751,6 +847,65 @@ export function App() {
             )
         )
     }, [modRootPath, rootSnapshotCache, affixMap, buffMap, itemMap, skillMap, staticSkillMap])
+
+    const {
+        handleSelectWuDao,
+        handleDeleteWuDaos,
+        handleBatchPrefixWuDaoIds,
+        handleAddWuDao,
+        handleCopyWuDao,
+        handlePasteWuDao,
+        handleChangeWuDaoForm,
+    } = useWuDaoHandlers({
+        filteredWuDaoRows,
+        wudaoRows,
+        wudaoMap,
+        selectedWuDaoKey,
+        selectedWuDaoKeys,
+        wudaoSelectionAnchor,
+        wudaoClipboard,
+        cloneWuDaoEntry: entry => ({ ...entry }),
+        setSelectedWuDaoKey,
+        setSelectedWuDaoKeys,
+        setWuDaoSelectionAnchor,
+        setWuDaoMap,
+        setWuDaoDirty,
+        setStatus,
+        setAddWuDaoOpen,
+        setWuDaoClipboard,
+    })
+
+    const {
+        handleSelectWuDaoSkill,
+        handleDeleteWuDaoSkills,
+        handleBatchPrefixWuDaoSkillIds,
+        handleAddWuDaoSkill,
+        handleCopyWuDaoSkill,
+        handlePasteWuDaoSkill,
+        handleChangeWuDaoSkillForm,
+    } = useWuDaoSkillHandlers({
+        filteredWuDaoSkillRows,
+        wudaoSkillRows,
+        wudaoSkillMap,
+        selectedWuDaoSkillKey,
+        selectedWuDaoSkillKeys,
+        wudaoSkillSelectionAnchor,
+        wudaoSkillClipboard,
+        cloneWuDaoSkillEntry: entry => ({
+            ...entry,
+            Type: [...entry.Type],
+            seid: [...entry.seid],
+            seidData: JSON.parse(JSON.stringify(entry.seidData ?? {})) as Record<string, Record<string, string | number | number[]>>,
+        }),
+        setSelectedWuDaoSkillKey,
+        setSelectedWuDaoSkillKeys,
+        setWuDaoSkillSelectionAnchor,
+        setWuDaoSkillMap,
+        setWuDaoSkillDirty,
+        setStatus,
+        setAddWuDaoSkillOpen,
+        setWuDaoSkillClipboard,
+    })
 
     const {
         handleSelectAffix,
@@ -939,18 +1094,24 @@ export function App() {
     useGlobalShortcuts({
         activeModule,
         isEditableElement,
+        onDeleteWuDao: handleDeleteWuDaos,
+        onDeleteWuDaoSkill: handleDeleteWuDaoSkills,
         onDeleteAffix: handleDeleteAffixes,
         onDeleteTalent: handleDeleteTalents,
         onDeleteBuff: handleDeleteBuffs,
         onDeleteItem: handleDeleteItems,
         onDeleteSkill: handleDeleteSkills,
         onDeleteStaticSkill: handleDeleteStaticSkills,
+        onCopyWuDao: handleCopyWuDao,
+        onCopyWuDaoSkill: handleCopyWuDaoSkill,
         onCopyAffix: handleCopyAffix,
         onCopyTalent: handleCopyTalent,
         onCopyBuff: handleCopyBuff,
         onCopyItem: handleCopyItem,
         onCopySkill: handleCopySkill,
         onCopyStaticSkill: handleCopyStaticSkill,
+        onPasteWuDao: handlePasteWuDao,
+        onPasteWuDaoSkill: handlePasteWuDaoSkill,
         onPasteAffix: handlePasteAffix,
         onPasteTalent: handlePasteTalent,
         onPasteBuff: handlePasteBuff,
@@ -975,16 +1136,19 @@ export function App() {
         selectedItem,
         selectedSkill,
         selectedStaticSkill,
+        selectedWuDaoSkill,
         selectedTalentKey,
         selectedBuffKey,
         selectedItemKey,
         selectedSkillKey,
         selectedStaticSkillKey,
+        selectedWuDaoSkillKey,
         talentMap,
         buffMap,
         itemMap,
         skillMap,
         staticSkillMap,
+        wudaoSkillMap,
         activeSeidId,
         seidMetaMap,
         buffSeidMetaMap,
@@ -1005,11 +1169,13 @@ export function App() {
         setItemMap,
         setSkillMap,
         setStaticSkillMap,
+        setWuDaoSkillMap,
         setTalentDirty,
         setBuffDirty,
         setItemDirty,
         setSkillDirty,
         setStaticSkillDirty,
+        setWuDaoSkillDirty,
         setActiveSeidId,
         setSeidEditorOpen,
         setSeidPickerOpen,
@@ -1020,7 +1186,7 @@ export function App() {
         try {
             return JSON.parse(jsonText) as unknown
         } catch (error) {
-            setStatus(`导入 JSON 失败: ${String(error)}`)
+            setStatus(`瀵煎叆 JSON 澶辫触: ${String(error)}`)
             return null
         }
     }
@@ -1043,7 +1209,7 @@ export function App() {
             .map(item => item as AffixEntry)
             .filter(item => Number.isFinite(Number(item.id)) && Number(item.id) > 0)
             .map(item => cloneAffixEntry(item))
-        if (rows.length === 0) return setStatus('导入失败：未识别到有效词缀数据。')
+        if (rows.length === 0) return setStatus('未识别到有效词缀数据。')
         setAffixClipboard(rows)
         handlePasteAffix()
         setStatus(`已导入词缀 JSON：${rows.length} 条。`)
@@ -1056,10 +1222,41 @@ export function App() {
             .map(item => item as BuffEntry)
             .filter(item => Number.isFinite(Number(item.buffid)) && Number(item.buffid) > 0)
             .map(item => cloneBuffEntry(item))
-        if (rows.length === 0) return setStatus('导入失败：未识别到有效 Buff 数据。')
+        if (rows.length === 0) return setStatus('未识别到有效 Buff 数据。')
         setBuffClipboard(rows)
         handlePasteBuff()
         setStatus(`已导入 Buff JSON：${rows.length} 条。`)
+    }
+
+    function handleImportWuDaoJson(jsonText: string) {
+        const raw = parseImportJsonText(jsonText)
+        if (!raw) return
+        const rows = collectImportRows(raw, ['id'])
+            .map(item => item as WuDaoEntry)
+            .filter(item => Number.isFinite(Number(item.id)) && Number(item.id) > 0)
+            .map(item => ({ ...item }))
+        if (rows.length === 0) return setStatus('未识别到有效悟道数据。')
+        setWuDaoClipboard(rows)
+        handlePasteWuDao()
+        setStatus(`已导入悟道 JSON：${rows.length} 条。`)
+    }
+
+    function handleImportWuDaoSkillJson(jsonText: string) {
+        const raw = parseImportJsonText(jsonText)
+        if (!raw) return
+        const rows = collectImportRows(raw, ['id'])
+            .map(item => item as WuDaoSkillEntry)
+            .filter(item => Number.isFinite(Number(item.id)) && Number(item.id) > 0)
+            .map(item => ({
+                ...item,
+                Type: Array.isArray(item.Type) ? item.Type.map(value => Number(value)).filter(value => Number.isFinite(value)) : [],
+                seid: Array.isArray(item.seid) ? item.seid.map(value => Number(value)).filter(value => Number.isFinite(value)) : [],
+                seidData: item.seidData && typeof item.seidData === 'object' ? item.seidData : {},
+            }))
+        if (rows.length === 0) return setStatus('未识别到有效悟道技能数据。')
+        setWuDaoSkillClipboard(rows)
+        handlePasteWuDaoSkill()
+        setStatus(`已导入悟道技能 JSON：${rows.length} 条。`)
     }
 
     function handleImportItemJson(jsonText: string) {
@@ -1069,7 +1266,7 @@ export function App() {
             .map(item => item as ItemEntry)
             .filter(item => Number.isFinite(Number(item.id)) && Number(item.id) > 0)
             .map(item => cloneItemEntry(item))
-        if (rows.length === 0) return setStatus('导入失败：未识别到有效物品数据。')
+        if (rows.length === 0) return setStatus('未识别到有效物品数据。')
         setItemClipboard(rows)
         handlePasteItem()
         setStatus(`已导入物品 JSON：${rows.length} 条。`)
@@ -1082,7 +1279,7 @@ export function App() {
             .map(item => item as SkillEntry)
             .filter(item => Number.isFinite(Number(item.id)) && Number(item.id) > 0)
             .map(item => cloneSkillEntry(item))
-        if (rows.length === 0) return setStatus('导入失败：未识别到有效神通数据。')
+        if (rows.length === 0) return setStatus('未识别到有效神通数据。')
         setSkillClipboard(rows)
         handlePasteSkill()
         setStatus(`已导入神通 JSON：${rows.length} 条。`)
@@ -1095,7 +1292,7 @@ export function App() {
             .map(item => item as StaticSkillEntry)
             .filter(item => Number.isFinite(Number(item.id)) && Number(item.id) > 0)
             .map(item => cloneStaticSkillEntry(item))
-        if (rows.length === 0) return setStatus('导入失败：未识别到有效功法数据。')
+        if (rows.length === 0) return setStatus('未识别到有效功法数据。')
         setStaticSkillClipboard(rows)
         handlePasteStaticSkill()
         setStatus(`已导入功法 JSON：${rows.length} 条。`)
@@ -1103,36 +1300,48 @@ export function App() {
 
     const infoPanelPresenter = useInfoPanelPresenter({
         activeModule,
+        setAddWuDaoOpen,
+        setAddWuDaoSkillOpen,
         setAddTalentOpen,
         setAddAffixOpen,
         setAddBuffOpen,
         setAddItemOpen,
         setAddSkillOpen,
         setAddStaticSkillOpen,
+        handleBatchPrefixWuDaoIds,
+        handleBatchPrefixWuDaoSkillIds,
         handleBatchPrefixAffixIds,
         handleBatchPrefixIds,
         handleBatchPrefixBuffIds,
         handleBatchPrefixItemIds,
         handleBatchPrefixSkillIds,
         handleBatchPrefixStaticSkillIds,
+        handleDeleteWuDaos,
+        handleDeleteWuDaoSkills,
         handleDeleteAffixes,
         handleDeleteTalents,
         handleDeleteBuffs,
         handleDeleteItems,
         handleDeleteSkills,
         handleDeleteStaticSkills,
+        handleCopyWuDao,
+        handleCopyWuDaoSkill,
         handleCopyAffix,
         handleCopyTalent,
         handleCopyBuff,
         handleCopyItem,
         handleCopySkill,
         handleCopyStaticSkill,
+        handlePasteWuDao,
+        handlePasteWuDaoSkill,
         handlePasteAffix,
         handlePasteTalent,
         handlePasteBuff,
         handlePasteItem,
         handlePasteSkill,
         handlePasteStaticSkill,
+        handleImportWuDao: handleImportWuDaoJson,
+        handleImportWuDaoSkill: handleImportWuDaoSkillJson,
         handleImportAffix: handleImportAffixJson,
         handleImportTalent: () => setStatus('天赋模块暂不支持该入口导入，请使用对应 JSON 文件。'),
         handleImportBuff: handleImportBuffJson,
@@ -1143,24 +1352,32 @@ export function App() {
         handleGenerateStaticSkillGroup,
         handleGenerateSkillBooksFromSkill,
         handleGenerateSkillBooksFromStaticSkill,
+        handleSelectWuDao,
+        handleSelectWuDaoSkill,
         handleSelectAffix,
         handleSelectTalent,
         handleSelectBuff,
         handleSelectItem,
         handleSelectSkill,
         handleSelectStaticSkill,
+        filteredWuDaoRows,
+        filteredWuDaoSkillRows,
         filteredAffixRows,
         filteredAvatarRows,
         filteredBuffRows,
         filteredItemRows,
         filteredSkillRows,
         filteredStaticSkillRows,
+        selectedWuDaoKey,
+        selectedWuDaoSkillKey,
         selectedAffixKey,
         selectedTalentKey,
         selectedBuffKey,
         selectedItemKey,
         selectedSkillKey,
         selectedStaticSkillKey,
+        selectedWuDaoKeys,
+        selectedWuDaoSkillKeys,
         selectedAffixKeys,
         selectedTalentKeys,
         selectedBuffKeys,
@@ -1204,7 +1421,7 @@ export function App() {
             }
             setStatus(STATUS_MESSAGES.deletedFolder(pickLeafName(pathToDelete)))
         } catch (error) {
-            setStatus(statusError('删除', error))
+            setStatus(statusError('鍒犻櫎', error))
         }
     }
 
@@ -1215,6 +1432,10 @@ export function App() {
         rawConfigObject,
         configForm,
         preservedSettings,
+        wudaoMap,
+        wudaoPath,
+        wudaoSkillMap,
+        wudaoSkillPath,
         talentPath,
         createAvatarPath,
         talentMap,
@@ -1232,6 +1453,8 @@ export function App() {
         saveFilePayload,
         deleteFilePayload,
         setConfigDirty,
+        setWuDaoDirty,
+        setWuDaoSkillDirty,
         setAffixDirty,
         setTalentDirty,
         setBuffDirty,
@@ -1239,6 +1462,7 @@ export function App() {
         setSkillDirty,
         setStaticSkillDirty,
         setAffixCachePath,
+        setWuDaoSkillCachePath,
         setTalentCachePath,
         setBuffCachePath,
         setItemCachePath,
@@ -1247,7 +1471,16 @@ export function App() {
         setStatus,
     })
 
-    const hasUnsavedChanges = configDirty || affixDirty || talentDirty || buffDirty || itemDirty || skillDirty || staticSkillDirty
+    const hasUnsavedChanges =
+        configDirty ||
+        wudaoDirty ||
+        wudaoSkillDirty ||
+        affixDirty ||
+        talentDirty ||
+        buffDirty ||
+        itemDirty ||
+        skillDirty ||
+        staticSkillDirty
 
     useEffect(() => {
         if (!projectPath || !modRootPath) return
@@ -1264,6 +1497,8 @@ export function App() {
                 setRawConfigObject(cached.data.rawConfigObject)
                 setConfigForm(cached.data.configForm)
                 setPreservedSettings(cached.data.preservedSettings)
+                setWuDaoMap((cached.data.wudaoMap as Record<string, WuDaoEntry> | undefined) ?? {})
+                setWuDaoSkillMap((cached.data.wudaoSkillMap as Record<string, WuDaoSkillEntry> | undefined) ?? {})
                 setAffixMap(cached.data.affixMap as Record<string, AffixEntry>)
                 setTalentMap(cached.data.talentMap as Record<string, CreateAvatarEntry>)
                 setBuffMap(cached.data.buffMap as Record<string, BuffEntry>)
@@ -1271,6 +1506,8 @@ export function App() {
                 setSkillMap(cached.data.skillMap as Record<string, SkillEntry>)
                 setStaticSkillMap(cached.data.staticSkillMap as Record<string, StaticSkillEntry>)
                 setConfigDirty(true)
+                setWuDaoDirty(true)
+                setWuDaoSkillDirty(true)
                 setAffixDirty(true)
                 setTalentDirty(true)
                 setBuffDirty(true)
@@ -1298,7 +1535,7 @@ export function App() {
             autoSaveRunningRef.current = true
             void handleSaveProject()
                 .catch(error => {
-                    setStatus(statusError('自动保存', error))
+                    setStatus(statusError('鑷姩淇濆瓨', error))
                     void logError(`auto save failed: ${String(error)}`)
                 })
                 .finally(() => {
@@ -1338,6 +1575,8 @@ export function App() {
                               rawConfigObject,
                               configForm,
                               preservedSettings,
+                              wudaoMap,
+                              wudaoSkillMap,
                               affixMap,
                               talentMap,
                               buffMap,
@@ -1375,6 +1614,8 @@ export function App() {
         rawConfigObject,
         configForm,
         preservedSettings,
+        wudaoMap,
+        wudaoSkillMap,
         affixMap,
         talentMap,
         buffMap,
@@ -1419,7 +1660,7 @@ export function App() {
                 onSubmit={handleCreateProject}
                 open={createOpen}
                 projectName={newProjectName}
-                title={createMode === 'quick' ? '新增mod目录' : '新建项目'}
+                title={createMode === 'quick' ? '鏂板mod鐩綍' : '鏂板缓椤圭洰'}
                 showProjectName={createMode === 'full'}
             />
             <RenameFolderModal
@@ -1433,28 +1674,44 @@ export function App() {
             />
             <AddTalentModal open={addTalentOpen} onClose={() => setAddTalentOpen(false)} onSubmit={handleAddTalent} />
             <AddTalentModal
+                open={addWuDaoOpen}
+                onClose={() => setAddWuDaoOpen(false)}
+                onSubmit={handleAddWuDao}
+                title="鏂板鎮熼亾"
+                confirmText="纭鏂板"
+                placeholder="渚嬪: 28"
+            />
+            <AddTalentModal
+                open={addWuDaoSkillOpen}
+                onClose={() => setAddWuDaoSkillOpen(false)}
+                onSubmit={handleAddWuDaoSkill}
+                title="新增悟道技能"
+                confirmText="确认新增"
+                placeholder="例如: 2801"
+            />
+            <AddTalentModal
                 open={addAffixOpen}
                 onClose={() => setAddAffixOpen(false)}
                 onSubmit={handleAddAffix}
-                title="新增词缀"
-                confirmText="确认新增"
-                placeholder="例如: 70001"
+                title="鏂板璇嶇紑"
+                confirmText="纭鏂板"
+                placeholder="渚嬪: 70001"
             />
             <AddTalentModal
                 open={addBuffOpen}
                 onClose={() => setAddBuffOpen(false)}
                 onSubmit={handleAddBuff}
-                title="新增 Buff"
-                confirmText="确认新增"
-                placeholder="例如: 52000"
+                title="鏂板 Buff"
+                confirmText="纭鏂板"
+                placeholder="渚嬪: 52000"
             />
             <AddTalentModal
                 open={addItemOpen}
                 onClose={() => setAddItemOpen(false)}
                 onSubmit={handleAddItem}
-                title="新增物品"
-                confirmText="确认新增"
-                placeholder="例如: 52500"
+                title="鏂板鐗╁搧"
+                confirmText="纭鏂板"
+                placeholder="渚嬪: 52500"
             />
             <AddTalentModal
                 open={addSkillOpen}
@@ -1468,9 +1725,9 @@ export function App() {
                 open={addStaticSkillOpen}
                 onClose={() => setAddStaticSkillOpen(false)}
                 onSubmit={handleAddStaticSkill}
-                title="新增功法"
-                confirmText="确认新增"
-                placeholder="例如: 253000"
+                title="鏂板鍔熸硶"
+                confirmText="纭鏂板"
+                placeholder="渚嬪: 253000"
             />
             <SeidEditorModal
                 activeSeidId={activeSeidId}
@@ -1552,6 +1809,10 @@ export function App() {
                             setConfigForm(prev => ({ ...prev, ...patch }))
                             setConfigDirty(true)
                         }}
+                        wudaoForm={selectedWuDao}
+                        onChangeWuDaoForm={handleChangeWuDaoForm}
+                        wudaoSkillForm={selectedWuDaoSkill}
+                        onChangeWuDaoSkillForm={handleChangeWuDaoSkillForm}
                         affixForm={selectedAffix}
                         onChangeAffixForm={handleChangeAffixForm}
                         onChangeTalentForm={handleChangeTalentForm}
@@ -1574,6 +1835,7 @@ export function App() {
                         skillConsultTypeOptions={skillConsultTypeOptions}
                         skillPhaseOptions={skillPhaseOptions}
                         skillQualityOptions={skillQualityOptions}
+                        wudaoTypeOptions={wudaoRows.map(row => ({ id: row.id, name: row.title || row.fenLei }))}
                         itemGuideTypeOptions={itemGuideTypeOptions}
                         itemShopTypeOptions={itemShopTypeOptions}
                         itemUseTypeOptions={itemUseTypeOptions}

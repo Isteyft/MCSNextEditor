@@ -9,6 +9,8 @@ type UseModulePathsParams = {
 
 export function useModulePaths({ modRootPath, renameTargetPath }: UseModulePathsParams) {
     const moduleConfigPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Config', 'modConfig.json') : ''), [modRootPath])
+    const wudaoPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Data', 'WuDaoAllTypeJson.json') : ''), [modRootPath])
+    const wudaoSkillPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Data', 'WuDaoJson.json') : ''), [modRootPath])
     const affixPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Data', 'TuJianChunWenBen.json') : ''), [modRootPath])
     const createAvatarPath = useMemo(
         () => (modRootPath ? joinWinPath(modRootPath, 'Data', 'CreateAvatarJsonData.json') : ''),
@@ -25,6 +27,8 @@ export function useModulePaths({ modRootPath, renameTargetPath }: UseModulePaths
 
     return {
         moduleConfigPath,
+        wudaoPath,
+        wudaoSkillPath,
         affixPath,
         createAvatarPath,
         buffDirPath,

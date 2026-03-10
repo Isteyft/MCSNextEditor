@@ -33,6 +33,27 @@ type InfoPanelProps = {
     generateBookLabel?: string
 }
 
+function getColumnLabels(activeModule: ModuleKey | '') {
+    switch (activeModule) {
+        case 'wudao':
+            return { name: '名称', category: '道途' }
+        case 'wudaoskill':
+            return { name: '名称', category: '悟道类型' }
+        case 'affix':
+            return { name: '词缀名', category: '类型' }
+        case 'buff':
+            return { name: 'Buff名', category: 'Buff类型' }
+        case 'item':
+            return { name: '物品名', category: '物品类型' }
+        case 'skill':
+            return { name: '神通名', category: '阶段' }
+        case 'staticskill':
+            return { name: '功法名', category: '品阶' }
+        default:
+            return { name: '名称', category: '分类' }
+    }
+}
+
 export function InfoPanel({
     activeModule,
     rows,
@@ -61,7 +82,7 @@ export function InfoPanel({
 
     const menuPosition = useMemo(() => {
         const itemCount = 2 + (onGenerateGroup ? 1 : 0) + (onGenerateBook ? 1 : 0)
-        const menuWidth = 140
+        const menuWidth = 160
         const menuHeight = 12 + itemCount * 36
         const maxX = Math.max(8, window.innerWidth - menuWidth - 8)
         const maxY = Math.max(8, window.innerHeight - menuHeight - 8)
@@ -76,38 +97,15 @@ export function InfoPanel({
     }, [searchText])
 
     function handleBatchPrefix() {
-        const value = window.prompt('请输入 ID 开头数字，例如 40')
+        const value = window.prompt('请输入新的 ID 开头数字，例如 40')
         if (value === null) return
         const prefix = value.trim()
         if (!prefix) return
         onBatchPrefixIds(prefix)
     }
 
-    const isTableModule = ['affix', 'talent', 'buff', 'item', 'skill', 'staticskill'].includes(activeModule)
-    const nameCol =
-        activeModule === 'affix'
-            ? '词缀名称'
-            : activeModule === 'buff'
-              ? 'Buff 名称'
-              : activeModule === 'item'
-                ? '物品名称'
-                : activeModule === 'skill'
-                  ? '神通名称'
-                  : activeModule === 'staticskill'
-                    ? '功法名称'
-                    : '天赋名称'
-    const cateCol =
-        activeModule === 'affix'
-            ? '项目类型'
-            : activeModule === 'buff'
-              ? 'Buff 类型'
-              : activeModule === 'item'
-                ? '物品类型'
-                : activeModule === 'skill'
-                  ? '释放优先级'
-                  : activeModule === 'staticskill'
-                    ? '属性'
-                    : '分类'
+    const isTableModule = ['wudao', 'wudaoskill', 'affix', 'talent', 'buff', 'item', 'skill', 'staticskill'].includes(activeModule)
+    const columnLabels = getColumnLabels(activeModule)
 
     return (
         <section className="panel panel-data">
@@ -146,7 +144,7 @@ export function InfoPanel({
                                     onKeyDown={event => {
                                         if (event.key === 'Enter') onSearchTextChange(searchDraft)
                                     }}
-                                    placeholder="搜索 id/name/desc/info"
+                                    placeholder="搜索 id / 名称 / 描述"
                                     value={searchDraft}
                                 />
                                 <button
@@ -164,8 +162,8 @@ export function InfoPanel({
                                 <thead>
                                     <tr>
                                         <th>ID</th>
-                                        <th>{nameCol}</th>
-                                        <th>{cateCol}</th>
+                                        <th>{columnLabels.name}</th>
+                                        <th>{columnLabels.category}</th>
                                         <th>描述</th>
                                     </tr>
                                 </thead>
@@ -266,7 +264,7 @@ export function InfoPanel({
                                     <textarea
                                         className="config-desc-input json-import-textarea"
                                         onChange={event => setImportJsonText(event.target.value)}
-                                        placeholder="请粘贴 JSON 数据"
+                                        placeholder="请输入或粘贴 JSON 数据"
                                         value={importJsonText}
                                     />
                                     <div className="settings-window-actions">

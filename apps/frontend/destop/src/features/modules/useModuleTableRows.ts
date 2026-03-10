@@ -6,9 +6,22 @@ import { toItemRows } from '../../components/item/item-domain'
 import { toSkillRows } from '../../components/skill/skill-domain'
 import { toStaticSkillRows } from '../../components/staticskill/staticskill-domain'
 import { toTalentRows } from '../../components/tianfu/talent-domain'
-import type { AffixEntry, BuffEntry, CreateAvatarEntry, ItemEntry, SkillEntry, StaticSkillEntry } from '../../types'
+import { toWuDaoRows } from '../../components/wudao/wudao-domain'
+import { toWuDaoSkillRows } from '../../components/wudaoskill/wudaoskill-domain'
+import type {
+    AffixEntry,
+    BuffEntry,
+    CreateAvatarEntry,
+    ItemEntry,
+    SkillEntry,
+    StaticSkillEntry,
+    WuDaoEntry,
+    WuDaoSkillEntry,
+} from '../../types'
 
 type UseModuleTableRowsParams = {
+    wudaoMap: Record<string, WuDaoEntry>
+    wudaoSkillMap: Record<string, WuDaoSkillEntry>
     affixMap: Record<string, AffixEntry>
     talentMap: Record<string, CreateAvatarEntry>
     buffMap: Record<string, BuffEntry>
@@ -19,6 +32,8 @@ type UseModuleTableRowsParams = {
 }
 
 export function useModuleTableRows({
+    wudaoMap,
+    wudaoSkillMap,
     affixMap,
     talentMap,
     buffMap,
@@ -27,6 +42,8 @@ export function useModuleTableRows({
     staticSkillMap,
     tableSearchText,
 }: UseModuleTableRowsParams) {
+    const wudaoRows = useMemo(() => toWuDaoRows(wudaoMap), [wudaoMap])
+    const wudaoSkillRows = useMemo(() => toWuDaoSkillRows(wudaoSkillMap), [wudaoSkillMap])
     const affixRows = useMemo(() => toAffixRows(affixMap), [affixMap])
     const avatarRows = useMemo(() => toTalentRows(talentMap), [talentMap])
     const buffRows = useMemo(() => toBuffRows(buffMap), [buffMap])
@@ -36,6 +53,15 @@ export function useModuleTableRows({
 
     const keyword = tableSearchText.trim().toLowerCase()
 
+    const filteredWuDaoRows = useMemo(() => {
+        if (!keyword) return wudaoRows
+        return wudaoRows.filter(row => {
+            const source = wudaoMap[row.key]
+            const haystack = `${row.id} ${row.title} ${row.fenLei} ${source?.name1 ?? ''}`.toLowerCase()
+            return haystack.includes(keyword)
+        })
+    }, [wudaoRows, wudaoMap, keyword])
+
     const filteredAvatarRows = useMemo(() => {
         if (!keyword) return avatarRows
         return avatarRows.filter(row => {
@@ -44,6 +70,15 @@ export function useModuleTableRows({
             return haystack.includes(keyword)
         })
     }, [avatarRows, talentMap, keyword])
+
+    const filteredWuDaoSkillRows = useMemo(() => {
+        if (!keyword) return wudaoSkillRows
+        return wudaoSkillRows.filter(row => {
+            const source = wudaoSkillMap[row.key]
+            const haystack = `${row.id} ${row.title} ${row.fenLei} ${row.desc} ${source?.xiaoguo ?? ''}`.toLowerCase()
+            return haystack.includes(keyword)
+        })
+    }, [wudaoSkillRows, wudaoSkillMap, keyword])
 
     const filteredAffixRows = useMemo(() => {
         if (!keyword) return affixRows
@@ -92,12 +127,16 @@ export function useModuleTableRows({
     }, [staticSkillRows, staticSkillMap, keyword])
 
     return {
+        wudaoRows,
+        wudaoSkillRows,
         affixRows,
         avatarRows,
         buffRows,
         itemRows,
         skillRows,
         staticSkillRows,
+        filteredWuDaoRows,
+        filteredWuDaoSkillRows,
         filteredAvatarRows,
         filteredAffixRows,
         filteredBuffRows,

@@ -4,11 +4,23 @@ import { loadItemFiles, mergeItemSeidFiles } from '../../components/item/item-do
 import { loadSkillFiles, mergeSkillSeidFiles } from '../../components/skill/skill-domain'
 import { normalizeStaticSkillMap } from '../../components/staticskill/staticskill-domain'
 import { normalizeTalentMap } from '../../components/tianfu/talent-domain'
-import type { AffixEntry, BuffEntry, CreateAvatarEntry, FsEntry, ItemEntry, SkillEntry, StaticSkillEntry } from '../../types'
+import { normalizeWuDaoMap } from '../../components/wudao/wudao-domain'
+import { normalizeWuDaoSkillMap } from '../../components/wudaoskill/wudaoskill-domain'
+import type {
+    AffixEntry,
+    BuffEntry,
+    CreateAvatarEntry,
+    FsEntry,
+    ItemEntry,
+    SkillEntry,
+    StaticSkillEntry,
+    WuDaoEntry,
+    WuDaoSkillEntry,
+} from '../../types'
 import { joinWinPath } from '../../utils/path'
 
 export type ModuleImportReport = {
-    module: 'talent' | 'affix' | 'staticskill' | 'buff' | 'item' | 'skill'
+    module: 'talent' | 'wudao' | 'wudaoskill' | 'affix' | 'staticskill' | 'buff' | 'item' | 'skill'
     total: number
 }
 
@@ -24,6 +36,28 @@ export function adaptTalentImport(raw: unknown): { data: Record<string, CreateAv
         data,
         report: {
             module: 'talent',
+            total: Object.keys(data).length,
+        },
+    }
+}
+
+export function adaptWuDaoImport(raw: unknown): { data: Record<string, WuDaoEntry>; report: ModuleImportReport } {
+    const data = normalizeWuDaoMap(raw)
+    return {
+        data,
+        report: {
+            module: 'wudao',
+            total: Object.keys(data).length,
+        },
+    }
+}
+
+export function adaptWuDaoSkillImport(raw: unknown): { data: Record<string, WuDaoSkillEntry>; report: ModuleImportReport } {
+    const data = normalizeWuDaoSkillMap(raw)
+    return {
+        data,
+        report: {
+            module: 'wudaoskill',
             total: Object.keys(data).length,
         },
     }
