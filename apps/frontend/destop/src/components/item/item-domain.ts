@@ -7,6 +7,11 @@ function shouldPersistSeidProp(propKey: string) {
     return !RESERVED_SEID_FIELDS.has(propKey)
 }
 
+function isEquipItemType(typeValue: unknown) {
+    const type = Number(typeValue)
+    return type === 0 || type === 1 || type === 2
+}
+
 export function createEmptyItem(id: number): ItemEntry {
     return {
         id,
@@ -142,47 +147,50 @@ export async function mergeItemSeidFiles(params: {
 }): Promise<Record<string, ItemEntry>> {
     const { source, modRootPath, joinWinPath, loadProjectEntries, readFilePayload } = params
     if (!modRootPath) return source
-    const seidDirPath = joinWinPath(modRootPath, 'Data', 'ItemsSeidJsonData')
-    let entries: FsEntry[] = []
-    try {
-        entries = await loadProjectEntries(seidDirPath)
-    } catch {
-        return source
-    }
-    const files = entries.filter(entry => !entry.is_dir && /\.json$/i.test(entry.name))
-    if (files.length === 0) return source
     const next = cloneItemMap(source)
-    for (const file of files) {
-        const seidId = Number(file.name.replace(/\.json$/i, ''))
-        if (!Number.isFinite(seidId) || seidId <= 0) continue
+
+    const seidDirPaths = [joinWinPath(modRootPath, 'Data', 'EquipSeidJsonData'), joinWinPath(modRootPath, 'Data', 'ItemsSeidJsonData')]
+
+    for (const seidDirPath of seidDirPaths) {
+        let entries: FsEntry[] = []
         try {
-            const payload = await readFilePayload(file.path)
-            const parsed = JSON.parse(payload.content) as Record<string, Record<string, unknown>>
-            for (const [itemKey, rawValue] of Object.entries(parsed)) {
-                if (!rawValue || typeof rawValue !== 'object') continue
-                const row = rawValue as Record<string, unknown>
-                const itemId = Number(row.id ?? Number(itemKey))
-                if (!Number.isFinite(itemId) || itemId <= 0) continue
-                const target = next[String(itemId)]
-                if (!target) continue
-                if (!target.seid.includes(seidId)) target.seid.push(seidId)
-                const dataKey = String(seidId)
-                const dataRow = { ...(target.seidData[dataKey] ?? {}) }
-                for (const [propKey, propValue] of Object.entries(row)) {
-                    if (!shouldPersistSeidProp(propKey)) continue
-                    if (Array.isArray(propValue)) {
-                        const numbers = propValue.map(item => Number(item))
-                        dataRow[propKey] = numbers.every(item => Number.isFinite(item)) ? numbers : String(propValue.join(','))
-                    } else if (typeof propValue === 'number') {
-                        dataRow[propKey] = propValue
-                    } else {
-                        dataRow[propKey] = String(propValue ?? '')
-                    }
-                }
-                target.seidData[dataKey] = dataRow
-            }
+            entries = await loadProjectEntries(seidDirPath)
         } catch {
-            // skip invalid
+            continue
+        }
+        const files = entries.filter(entry => !entry.is_dir && /\.json$/i.test(entry.name))
+        for (const file of files) {
+            const seidId = Number(file.name.replace(/\.json$/i, ''))
+            if (!Number.isFinite(seidId) || seidId <= 0) continue
+            try {
+                const payload = await readFilePayload(file.path)
+                const parsed = JSON.parse(payload.content) as Record<string, Record<string, unknown>>
+                for (const [itemKey, rawValue] of Object.entries(parsed)) {
+                    if (!rawValue || typeof rawValue !== 'object') continue
+                    const row = rawValue as Record<string, unknown>
+                    const itemId = Number(row.id ?? Number(itemKey))
+                    if (!Number.isFinite(itemId) || itemId <= 0) continue
+                    const target = next[String(itemId)]
+                    if (!target) continue
+                    if (!target.seid.includes(seidId)) target.seid.push(seidId)
+                    const dataKey = String(seidId)
+                    const dataRow = { ...(target.seidData[dataKey] ?? {}) }
+                    for (const [propKey, propValue] of Object.entries(row)) {
+                        if (!shouldPersistSeidProp(propKey)) continue
+                        if (Array.isArray(propValue)) {
+                            const numbers = propValue.map(item => Number(item))
+                            dataRow[propKey] = numbers.every(item => Number.isFinite(item)) ? numbers : String(propValue.join(','))
+                        } else if (typeof propValue === 'number') {
+                            dataRow[propKey] = propValue
+                        } else {
+                            dataRow[propKey] = String(propValue ?? '')
+                        }
+                    }
+                    target.seidData[dataKey] = dataRow
+                }
+            } catch {
+                // skip invalid
+            }
         }
     }
     return next
@@ -255,13 +263,16 @@ export async function saveItemSeidFiles(params: {
     saveFilePayload: (filePath: string, content: string) => Promise<unknown>
 }) {
     const { itemMap, modRootPath, joinWinPath, loadProjectEntries, deleteFilePayload, saveFilePayload } = params
-    const seidDirPath = joinWinPath(modRootPath, 'Data', 'ItemsSeidJsonData')
-    const seidFilePayload: Record<string, Record<string, Record<string, unknown>>> = {}
+    const equipSeidDirPath = joinWinPath(modRootPath, 'Data', 'EquipSeidJsonData')
+    const useSeidDirPath = joinWinPath(modRootPath, 'Data', 'ItemsSeidJsonData')
+    const equipSeidFilePayload: Record<string, Record<string, Record<string, unknown>>> = {}
+    const useSeidFilePayload: Record<string, Record<string, Record<string, unknown>>> = {}
     for (const row of Object.values(itemMap)) {
+        const targetPayload = isEquipItemType(row.type) ? equipSeidFilePayload : useSeidFilePayload
         for (const seidId of row.seid) {
             if (!Number.isFinite(seidId) || seidId <= 0) continue
             const seidKey = String(seidId)
-            const fileRows = (seidFilePayload[seidKey] ??= {})
+            const fileRows = (targetPayload[seidKey] ??= {})
             const rowPayload: Record<string, unknown> = { id: row.id }
             const cached = row.seidData[seidKey] ?? {}
             for (const [propKey, propValue] of Object.entries(cached)) {
@@ -271,22 +282,28 @@ export async function saveItemSeidFiles(params: {
             fileRows[String(row.id)] = rowPayload
         }
     }
-    const expectedNames = new Set(Object.keys(seidFilePayload).map(seidKey => `${seidKey}.json`))
-    try {
-        const entries = await loadProjectEntries(seidDirPath)
-        for (const entry of entries) {
-            if (entry.is_dir || !/\.json$/i.test(entry.name)) continue
-            if (expectedNames.has(entry.name)) continue
-            await deleteFilePayload(entry.path)
+    const cleanupTargets = [
+        { dirPath: equipSeidDirPath, payload: equipSeidFilePayload },
+        { dirPath: useSeidDirPath, payload: useSeidFilePayload },
+    ]
+    for (const target of cleanupTargets) {
+        const expectedNames = new Set(Object.keys(target.payload).map(seidKey => `${seidKey}.json`))
+        try {
+            const entries = await loadProjectEntries(target.dirPath)
+            for (const entry of entries) {
+                if (entry.is_dir || !/\.json$/i.test(entry.name)) continue
+                if (expectedNames.has(entry.name)) continue
+                await deleteFilePayload(entry.path)
+            }
+        } catch {
+            // ignore cleanup failures
         }
-    } catch {
-        // ignore cleanup failures
+        for (const [seidKey, fileRows] of Object.entries(target.payload)) {
+            const filePath = joinWinPath(target.dirPath, `${seidKey}.json`)
+            await saveFilePayload(filePath, `${JSON.stringify(fileRows, null, 2)}\n`)
+        }
     }
-    for (const [seidKey, fileRows] of Object.entries(seidFilePayload)) {
-        const filePath = joinWinPath(seidDirPath, `${seidKey}.json`)
-        await saveFilePayload(filePath, `${JSON.stringify(fileRows, null, 2)}\n`)
-    }
-    return Object.keys(seidFilePayload).length
+    return Object.keys(equipSeidFilePayload).length + Object.keys(useSeidFilePayload).length
 }
 
 function normalizeSeidPayload(
