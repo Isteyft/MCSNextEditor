@@ -91,8 +91,8 @@ export function toNpcWuDaoRows(map: Record<string, NpcWuDaoEntry> | null | undef
         .map(([key, value]) => ({
             key,
             id: value.id,
-            title: `绫诲瀷 ${value.Type}`,
-            fenLei: `澧冪晫 ${value.lv}`,
+            title: `类型 ${value.Type}`,
+            fenLei: `境界 ${value.lv}`,
             desc: value.wudaoID.join(','),
         }))
         .sort((a, b) => a.id - b.id)

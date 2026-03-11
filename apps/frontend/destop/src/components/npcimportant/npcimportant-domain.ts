@@ -1,4 +1,4 @@
-import type { NpcImportantEntry } from '../../types'
+﻿import type { NpcImportantEntry } from '../../types'
 import type { CreateAvatarRow } from '../workspace/InfoPanel'
 
 export function createEmptyNpcImportant(id: number): NpcImportantEntry {
