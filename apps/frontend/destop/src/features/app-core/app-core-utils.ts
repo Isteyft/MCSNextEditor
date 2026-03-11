@@ -1,4 +1,4 @@
-import type { AffixEntry, BuffEntry, CreateAvatarEntry, ItemEntry, SkillEntry, StaticSkillEntry } from '../../types'
+﻿import type { AffixEntry, BackpackEntry, BuffEntry, CreateAvatarEntry, ItemEntry, SkillEntry, StaticSkillEntry } from '../../types'
 
 type SeidDataValue = Record<string, Record<string, string | number | number[]>>
 
@@ -11,6 +11,14 @@ export function cloneTalentEntry(entry: CreateAvatarEntry): CreateAvatarEntry {
         ...entry,
         seid: [...entry.seid],
         seidData: cloneSeidData(entry.seidData),
+    }
+}
+
+export function cloneBackpackEntry(entry: BackpackEntry): BackpackEntry {
+    return {
+        ...entry,
+        ItemID: [...entry.ItemID],
+        randomNum: [...entry.randomNum],
     }
 }
 

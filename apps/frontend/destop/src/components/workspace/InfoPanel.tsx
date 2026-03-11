@@ -106,7 +106,9 @@ export function InfoPanel({
         onBatchPrefixIds(prefix)
     }
 
-    const isTableModule = ['npc', 'wudao', 'wudaoskill', 'affix', 'talent', 'buff', 'item', 'skill', 'staticskill'].includes(activeModule)
+    const isTableModule = ['npc', 'backpack', 'wudao', 'wudaoskill', 'affix', 'talent', 'buff', 'item', 'skill', 'staticskill'].includes(
+        activeModule
+    )
     const columnLabels = getColumnLabels(activeModule)
 
     return (

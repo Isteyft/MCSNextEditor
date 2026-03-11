@@ -2,6 +2,7 @@
 
 import type {
     AffixEntry,
+    BackpackEntry,
     BuffEntry,
     CreateAvatarEntry,
     ItemEntry,
@@ -13,10 +14,7 @@ import type {
 } from '../../types'
 import type { RootModuleSnapshot } from './useProjectLifecycle'
 
-type RootFolderItem = {
-    path: string
-    name: string
-}
+type RootFolderItem = { path: string; name: string }
 
 type UseProjectShellStateParams = {
     modRootPath: string
@@ -24,6 +22,7 @@ type UseProjectShellStateParams = {
     normalizePath: (value: string) => string
     pickLeafName: (value: string) => string
     npcMap: Record<string, NpcEntry>
+    backpackMap: Record<string, BackpackEntry>
     wudaoMap: Record<string, WuDaoEntry>
     wudaoSkillMap: Record<string, WuDaoSkillEntry>
     affixMap: Record<string, AffixEntry>
@@ -33,6 +32,7 @@ type UseProjectShellStateParams = {
     skillMap: Record<string, SkillEntry>
     staticSkillMap: Record<string, StaticSkillEntry>
     npcDirty: boolean
+    backpackDirty: boolean
     wudaoDirty: boolean
     wudaoSkillDirty: boolean
     affixDirty: boolean
@@ -49,6 +49,7 @@ export function useProjectShellState({
     normalizePath,
     pickLeafName,
     npcMap,
+    backpackMap,
     wudaoMap,
     wudaoSkillMap,
     affixMap,
@@ -58,6 +59,7 @@ export function useProjectShellState({
     skillMap,
     staticSkillMap,
     npcDirty,
+    backpackDirty,
     wudaoDirty,
     wudaoSkillDirty,
     affixDirty,
@@ -105,6 +107,7 @@ export function useProjectShellState({
             ...prev,
             [cacheKey]: {
                 npcMap,
+                backpackMap,
                 wudaoMap,
                 wudaoSkillMap,
                 affixMap,
@@ -114,6 +117,7 @@ export function useProjectShellState({
                 skillMap,
                 staticSkillMap,
                 npcDirty,
+                backpackDirty,
                 wudaoDirty,
                 wudaoSkillDirty,
                 affixDirty,
@@ -128,6 +132,7 @@ export function useProjectShellState({
         modRootPath,
         normalizePath,
         npcMap,
+        backpackMap,
         wudaoMap,
         wudaoSkillMap,
         affixMap,
@@ -137,6 +142,7 @@ export function useProjectShellState({
         skillMap,
         staticSkillMap,
         npcDirty,
+        backpackDirty,
         wudaoDirty,
         wudaoSkillDirty,
         affixDirty,
@@ -147,12 +153,5 @@ export function useProjectShellState({
         staticSkillDirty,
     ])
 
-    return {
-        expandedRootPaths,
-        setExpandedRootPaths,
-        rootSnapshotCache,
-        setRootSnapshotCache,
-        rootFoldersForSidebar,
-        toggleExpandedRoot,
-    }
+    return { expandedRootPaths, setExpandedRootPaths, rootSnapshotCache, setRootSnapshotCache, rootFoldersForSidebar, toggleExpandedRoot }
 }

@@ -1,9 +1,10 @@
-import { useEffect } from 'react'
+﻿import { useEffect } from 'react'
 
 type Params = {
     activeModule: string
     isEditableElement: (target: EventTarget | null) => boolean
     onDeleteNpc: () => void
+    onDeleteBackpack: () => void
     onDeleteWuDao: () => void
     onDeleteWuDaoSkill: () => void
     onDeleteAffix: () => void
@@ -13,6 +14,7 @@ type Params = {
     onDeleteSkill: () => void
     onDeleteStaticSkill: () => void
     onCopyNpc: () => void
+    onCopyBackpack: () => void
     onCopyWuDao: () => void
     onCopyWuDaoSkill: () => void
     onCopyAffix: () => void
@@ -22,6 +24,7 @@ type Params = {
     onCopySkill: () => void
     onCopyStaticSkill: () => void
     onPasteNpc: () => void
+    onPasteBackpack: () => void
     onPasteWuDao: () => void
     onPasteWuDaoSkill: () => void
     onPasteAffix: () => void
@@ -37,6 +40,7 @@ export function useGlobalShortcuts(params: Params) {
         activeModule,
         isEditableElement,
         onDeleteNpc,
+        onDeleteBackpack,
         onDeleteWuDao,
         onDeleteWuDaoSkill,
         onDeleteAffix,
@@ -46,6 +50,7 @@ export function useGlobalShortcuts(params: Params) {
         onDeleteSkill,
         onDeleteStaticSkill,
         onCopyNpc,
+        onCopyBackpack,
         onCopyWuDao,
         onCopyWuDaoSkill,
         onCopyAffix,
@@ -55,6 +60,7 @@ export function useGlobalShortcuts(params: Params) {
         onCopySkill,
         onCopyStaticSkill,
         onPasteNpc,
+        onPasteBackpack,
         onPasteWuDao,
         onPasteWuDaoSkill,
         onPasteAffix,
@@ -68,41 +74,25 @@ export function useGlobalShortcuts(params: Params) {
     useEffect(() => {
         function onKeyDown(event: KeyboardEvent) {
             if (
-                activeModule !== 'npc' &&
-                activeModule !== 'wudao' &&
-                activeModule !== 'wudaoskill' &&
-                activeModule !== 'affix' &&
-                activeModule !== 'talent' &&
-                activeModule !== 'buff' &&
-                activeModule !== 'item' &&
-                activeModule !== 'skill' &&
-                activeModule !== 'staticskill'
+                !['npc', 'backpack', 'wudao', 'wudaoskill', 'affix', 'talent', 'buff', 'item', 'skill', 'staticskill'].includes(
+                    activeModule
+                )
             )
                 return
-
             if (isEditableElement(event.target)) return
 
             if (event.key === 'Delete') {
                 event.preventDefault()
-                if (activeModule === 'npc') {
-                    onDeleteNpc()
-                } else if (activeModule === 'wudao') {
-                    onDeleteWuDao()
-                } else if (activeModule === 'wudaoskill') {
-                    onDeleteWuDaoSkill()
-                } else if (activeModule === 'affix') {
-                    onDeleteAffix()
-                } else if (activeModule === 'buff') {
-                    onDeleteBuff()
-                } else if (activeModule === 'item') {
-                    onDeleteItem()
-                } else if (activeModule === 'skill') {
-                    onDeleteSkill()
-                } else if (activeModule === 'staticskill') {
-                    onDeleteStaticSkill()
-                } else {
-                    onDeleteTalent()
-                }
+                if (activeModule === 'npc') onDeleteNpc()
+                else if (activeModule === 'backpack') onDeleteBackpack()
+                else if (activeModule === 'wudao') onDeleteWuDao()
+                else if (activeModule === 'wudaoskill') onDeleteWuDaoSkill()
+                else if (activeModule === 'affix') onDeleteAffix()
+                else if (activeModule === 'buff') onDeleteBuff()
+                else if (activeModule === 'item') onDeleteItem()
+                else if (activeModule === 'skill') onDeleteSkill()
+                else if (activeModule === 'staticskill') onDeleteStaticSkill()
+                else onDeleteTalent()
                 return
             }
 
@@ -110,57 +100,38 @@ export function useGlobalShortcuts(params: Params) {
             const key = event.key.toLowerCase()
             if (key === 'c') {
                 event.preventDefault()
-                if (activeModule === 'npc') {
-                    onCopyNpc()
-                } else if (activeModule === 'wudao') {
-                    onCopyWuDao()
-                } else if (activeModule === 'wudaoskill') {
-                    onCopyWuDaoSkill()
-                } else if (activeModule === 'affix') {
-                    onCopyAffix()
-                } else if (activeModule === 'buff') {
-                    onCopyBuff()
-                } else if (activeModule === 'item') {
-                    onCopyItem()
-                } else if (activeModule === 'skill') {
-                    onCopySkill()
-                } else if (activeModule === 'staticskill') {
-                    onCopyStaticSkill()
-                } else {
-                    onCopyTalent()
-                }
+                if (activeModule === 'npc') onCopyNpc()
+                else if (activeModule === 'backpack') onCopyBackpack()
+                else if (activeModule === 'wudao') onCopyWuDao()
+                else if (activeModule === 'wudaoskill') onCopyWuDaoSkill()
+                else if (activeModule === 'affix') onCopyAffix()
+                else if (activeModule === 'buff') onCopyBuff()
+                else if (activeModule === 'item') onCopyItem()
+                else if (activeModule === 'skill') onCopySkill()
+                else if (activeModule === 'staticskill') onCopyStaticSkill()
+                else onCopyTalent()
             } else if (key === 'v') {
                 event.preventDefault()
-                if (activeModule === 'npc') {
-                    onPasteNpc()
-                } else if (activeModule === 'wudao') {
-                    onPasteWuDao()
-                } else if (activeModule === 'wudaoskill') {
-                    onPasteWuDaoSkill()
-                } else if (activeModule === 'affix') {
-                    onPasteAffix()
-                } else if (activeModule === 'buff') {
-                    onPasteBuff()
-                } else if (activeModule === 'item') {
-                    onPasteItem()
-                } else if (activeModule === 'skill') {
-                    onPasteSkill()
-                } else if (activeModule === 'staticskill') {
-                    onPasteStaticSkill()
-                } else {
-                    onPasteTalent()
-                }
+                if (activeModule === 'npc') onPasteNpc()
+                else if (activeModule === 'backpack') onPasteBackpack()
+                else if (activeModule === 'wudao') onPasteWuDao()
+                else if (activeModule === 'wudaoskill') onPasteWuDaoSkill()
+                else if (activeModule === 'affix') onPasteAffix()
+                else if (activeModule === 'buff') onPasteBuff()
+                else if (activeModule === 'item') onPasteItem()
+                else if (activeModule === 'skill') onPasteSkill()
+                else if (activeModule === 'staticskill') onPasteStaticSkill()
+                else onPasteTalent()
             }
         }
 
         window.addEventListener('keydown', onKeyDown)
-        return () => {
-            window.removeEventListener('keydown', onKeyDown)
-        }
+        return () => window.removeEventListener('keydown', onKeyDown)
     }, [
         activeModule,
         isEditableElement,
         onDeleteNpc,
+        onDeleteBackpack,
         onDeleteWuDao,
         onDeleteWuDaoSkill,
         onDeleteAffix,
@@ -170,6 +141,7 @@ export function useGlobalShortcuts(params: Params) {
         onDeleteSkill,
         onDeleteStaticSkill,
         onCopyNpc,
+        onCopyBackpack,
         onCopyWuDao,
         onCopyWuDaoSkill,
         onCopyAffix,
@@ -179,6 +151,7 @@ export function useGlobalShortcuts(params: Params) {
         onCopySkill,
         onCopyStaticSkill,
         onPasteNpc,
+        onPasteBackpack,
         onPasteWuDao,
         onPasteWuDaoSkill,
         onPasteAffix,

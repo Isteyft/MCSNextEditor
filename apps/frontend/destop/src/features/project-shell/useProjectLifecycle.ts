@@ -2,6 +2,7 @@
 import type { FormEvent } from 'react'
 
 import { normalizeAffixMap } from '../../components/affix/affix-domain'
+import { normalizeBackpackMap } from '../../components/backpack/backpack-domain'
 import { normalizeNpcMap } from '../../components/npc/npc-domain'
 import { mergeStaticSkillSeidFiles, normalizeStaticSkillMap } from '../../components/staticskill/staticskill-domain'
 import { mergeTalentSeidFiles, normalizeTalentMap } from '../../components/tianfu/talent-domain'
@@ -11,6 +12,7 @@ import type { ModuleKey, ViewMode } from '../../modules'
 import { createModFolder, createProject, loadProjectEntries, readFilePayload, saveFilePayload } from '../../services/project-api'
 import type {
     AffixEntry,
+    BackpackEntry,
     BuffEntry,
     CreateAvatarEntry,
     ItemEntry,
@@ -27,6 +29,7 @@ import { adaptBuffImportWithMerge, adaptItemImportWithMerge, adaptSkillImportWit
 
 export type RootModuleSnapshot = {
     npcMap: Record<string, NpcEntry>
+    backpackMap: Record<string, BackpackEntry>
     wudaoMap: Record<string, WuDaoEntry>
     wudaoSkillMap: Record<string, WuDaoSkillEntry>
     affixMap: Record<string, AffixEntry>
@@ -36,6 +39,7 @@ export type RootModuleSnapshot = {
     skillMap: Record<string, SkillEntry>
     staticSkillMap: Record<string, StaticSkillEntry>
     npcDirty: boolean
+    backpackDirty: boolean
     wudaoDirty: boolean
     wudaoSkillDirty: boolean
     affixDirty: boolean
@@ -81,6 +85,7 @@ type LifecycleParams = {
 function createEmptySnapshot(): RootModuleSnapshot {
     return {
         npcMap: {},
+        backpackMap: {},
         wudaoMap: {},
         wudaoSkillMap: {},
         affixMap: {},
@@ -90,6 +95,7 @@ function createEmptySnapshot(): RootModuleSnapshot {
         skillMap: {},
         staticSkillMap: {},
         npcDirty: false,
+        backpackDirty: false,
         wudaoDirty: false,
         wudaoSkillDirty: false,
         affixDirty: false,
@@ -110,12 +116,20 @@ function resetForRootSwitch(setters: LifecycleSetters) {
     setters.setConfigCachePath('')
     setters.setConfigDirty(false)
     setters.setNpcMap({})
+    setters.setBackpackMap({})
     setters.setNpcCachePath('')
+    setters.setBackpackCachePath('')
     setters.setNpcDirty(false)
+    setters.setBackpackDirty(false)
     setters.setSelectedNpcKey('')
+    setters.setSelectedBackpackKey('')
     setters.setSelectedNpcKeys([])
+    setters.setSelectedBackpackKeys([])
     setters.setNpcSelectionAnchor('')
+    setters.setBackpackSelectionAnchor('')
+    setters.setBackpackSelectionAnchor('')
     setters.setNpcClipboard([])
+    setters.setBackpackClipboard([])
     setters.setWuDaoMap({})
     setters.setWuDaoCachePath('')
     setters.setWuDaoDirty(false)
@@ -172,6 +186,7 @@ function resetForRootSwitch(setters: LifecycleSetters) {
     setters.setSeidEditorOpen(false)
     setters.setSeidPickerOpen(false)
     setters.setActiveSeidId(null)
+    setters.setAddBackpackOpen(false)
     setters.setAddBuffOpen(false)
     setters.setAddWuDaoSkillOpen(false)
     setters.setAddAffixOpen(false)
@@ -252,6 +267,7 @@ export function useProjectLifecycle(params: LifecycleParams) {
 
         const targetWuDaoPath = joinWinPath(targetModRoot, 'Data', 'WuDaoAllTypeJson.json')
         const targetNpcPath = joinWinPath(targetModRoot, 'Data', 'AvatarJsonData.json')
+        const targetBackpackPath = joinWinPath(targetModRoot, 'Data', 'BackpackJsonData.json')
         const targetWuDaoSkillPath = joinWinPath(targetModRoot, 'Data', 'WuDaoJson.json')
         const targetAffixPath = joinWinPath(targetModRoot, 'Data', 'TuJianChunWenBen.json')
         const targetTalentPath = joinWinPath(targetModRoot, 'Data', 'CreateAvatarJsonData.json')
@@ -266,6 +282,19 @@ export function useProjectLifecycle(params: LifecycleParams) {
             })
             const parsedResult = parseJsonUnknown(payload.content, targetNpcPath)
             snapshot.npcMap = normalizeNpcMap(parsedResult.ok ? parsedResult.data : {})
+        } catch {
+            // ignore and continue
+        }
+
+        try {
+            const payload = await readJsonUnknownWithFallback({
+                filePath: targetBackpackPath,
+                defaultContent: '{}\n',
+                readFilePayload,
+                saveFilePayload,
+            })
+            const parsedResult = parseJsonUnknown(payload.content, targetBackpackPath)
+            snapshot.backpackMap = normalizeBackpackMap(parsedResult.ok ? parsedResult.data : {})
         } catch {
             // ignore and continue
         }
@@ -398,6 +427,7 @@ export function useProjectLifecycle(params: LifecycleParams) {
     function applyRootModuleSnapshot(targetModRoot: string, snapshot: RootModuleSnapshot) {
         const targetNpcPath = joinWinPath(targetModRoot, 'Data', 'AvatarJsonData.json')
         const targetWuDaoPath = joinWinPath(targetModRoot, 'Data', 'WuDaoAllTypeJson.json')
+        const targetBackpackPath = joinWinPath(targetModRoot, 'Data', 'BackpackJsonData.json')
         const targetWuDaoSkillPath = joinWinPath(targetModRoot, 'Data', 'WuDaoJson.json')
         const targetAffixPath = joinWinPath(targetModRoot, 'Data', 'TuJianChunWenBen.json')
         const targetTalentPath = joinWinPath(targetModRoot, 'Data', 'CreateAvatarJsonData.json')
@@ -409,10 +439,18 @@ export function useProjectLifecycle(params: LifecycleParams) {
         setters.setNpcMap(snapshot.npcMap)
         setters.setNpcCachePath(targetNpcPath)
         setters.setNpcDirty(snapshot.npcDirty)
+        setters.setBackpackMap(snapshot.backpackMap)
+        setters.setBackpackCachePath(targetBackpackPath)
+        setters.setBackpackDirty(snapshot.backpackDirty)
         const firstNpc = Object.keys(snapshot.npcMap).sort((a, b) => Number(a) - Number(b))[0] ?? ''
         setters.setSelectedNpcKey(firstNpc)
         setters.setSelectedNpcKeys(firstNpc ? [firstNpc] : [])
         setters.setNpcSelectionAnchor(firstNpc)
+
+        const firstBackpack = Object.keys(snapshot.backpackMap).sort((a, b) => Number(a) - Number(b))[0] ?? ''
+        setters.setSelectedBackpackKey(firstBackpack)
+        setters.setSelectedBackpackKeys(firstBackpack ? [firstBackpack] : [])
+        setters.setBackpackSelectionAnchor(firstBackpack)
 
         setters.setWuDaoMap(snapshot.wudaoMap)
         setters.setWuDaoCachePath(targetWuDaoPath)

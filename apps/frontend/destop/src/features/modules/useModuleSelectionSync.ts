@@ -1,8 +1,6 @@
-import { type Dispatch, type SetStateAction, useEffect } from 'react'
+﻿import { type Dispatch, type SetStateAction, useEffect } from 'react'
 
-type RowWithKey = {
-    key: string
-}
+type RowWithKey = { key: string }
 
 type SelectionSyncParams = {
     rows: RowWithKey[]
@@ -14,6 +12,7 @@ type SelectionSyncParams = {
 
 type UseModuleSelectionSyncParams = Partial<{
     npc: SelectionSyncParams
+    backpack: SelectionSyncParams
     wudao: SelectionSyncParams
     wudaoskill: SelectionSyncParams
     affix: SelectionSyncParams
@@ -49,6 +48,7 @@ function useSelectionSync(params?: SelectionSyncParams) {
 
 export function useModuleSelectionSync({
     npc,
+    backpack,
     wudao,
     wudaoskill,
     affix,
@@ -59,6 +59,7 @@ export function useModuleSelectionSync({
     staticSkill,
 }: UseModuleSelectionSyncParams) {
     useSelectionSync(npc)
+    useSelectionSync(backpack)
     useSelectionSync(wudao)
     useSelectionSync(wudaoskill)
     useSelectionSync(affix)

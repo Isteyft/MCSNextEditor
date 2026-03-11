@@ -6,6 +6,7 @@ import { joinWinPath } from '../../utils/path'
 import { parseJsonObject, parseJsonUnknown, readJsonUnknownWithFallback } from '../json-import/json-import-core'
 import {
     adaptAffixImport,
+    adaptBackpackImport,
     adaptBuffImportWithMerge,
     adaptItemImportWithMerge,
     adaptNpcImport,
@@ -25,8 +26,11 @@ type Params = {
     workspaceRoot: string
     configCachePath: string
     npcPath: string
+    backpackPath: string
     npcCachePath: string
+    backpackCachePath: string
     npcDirty: boolean
+    backpackDirty: boolean
     wudaoPath: string
     wudaoCachePath: string
     wudaoDirty: boolean
@@ -60,11 +64,17 @@ type Params = {
     setConfigCachePath: Setter
     setConfigDirty: Setter
     setNpcMap: Setter
+    setBackpackMap: Setter
     setNpcCachePath: Setter
+    setBackpackCachePath: Setter
     setNpcDirty: Setter
+    setBackpackDirty: Setter
     setSelectedNpcKey: Setter
+    setSelectedBackpackKey: Setter
     setSelectedNpcKeys: Setter
+    setSelectedBackpackKeys: Setter
     setNpcSelectionAnchor: Setter
+    setBackpackSelectionAnchor: Setter
     setWuDaoMap: Setter
     setWuDaoCachePath: Setter
     setWuDaoDirty: Setter
@@ -139,8 +149,11 @@ export function useModuleLoaders(params: Params) {
         workspaceRoot,
         configCachePath,
         npcPath,
+        backpackPath,
         npcCachePath,
+        backpackCachePath,
         npcDirty,
+        backpackDirty,
         wudaoPath,
         wudaoCachePath,
         wudaoDirty,
@@ -174,11 +187,17 @@ export function useModuleLoaders(params: Params) {
         setConfigCachePath,
         setConfigDirty,
         setNpcMap,
+        setBackpackMap,
         setNpcCachePath,
+        setBackpackCachePath,
         setNpcDirty,
+        setBackpackDirty,
         setSelectedNpcKey,
+        setSelectedBackpackKey,
         setSelectedNpcKeys,
+        setSelectedBackpackKeys,
         setNpcSelectionAnchor,
+        setBackpackSelectionAnchor,
         setWuDaoMap,
         setWuDaoCachePath,
         setWuDaoDirty,
@@ -273,6 +292,37 @@ export function useModuleLoaders(params: Params) {
             setStatus('已加载非实例NPC数据（AvatarJsonData）。')
         } catch (error) {
             setStatus(`读取非实例NPC数据失败: ${String(error)}`)
+        }
+    }
+
+    async function loadBackpackTable() {
+        setViewMode('table')
+        setActivePath(backpackPath)
+        if (!modRootPath || !backpackPath) return
+        if (backpackCachePath === backpackPath) {
+            setStatus(backpackDirty ? '????????????????' : '????????????')
+            return
+        }
+        try {
+            const payload = await readJsonUnknownWithFallback({
+                filePath: backpackPath,
+                defaultContent: '{}\n',
+                readFilePayload,
+                saveFilePayload,
+            })
+            const parsedResult = parseJsonUnknown(payload.content, backpackPath)
+            const parsed = parsedResult.ok ? parsedResult.data : {}
+            const normalized = adaptBackpackImport(parsed).data
+            const firstKey = Object.keys(normalized).sort((a, b) => Number(a) - Number(b))[0] ?? ''
+            setBackpackMap(normalized)
+            setBackpackCachePath(backpackPath)
+            setBackpackDirty(false)
+            setSelectedBackpackKey(firstKey)
+            setSelectedBackpackKeys(firstKey ? [firstKey] : [])
+            setBackpackSelectionAnchor(firstKey)
+            setStatus('????????BackpackJsonData??')
+        } catch (error) {
+            setStatus(`????????: ${String(error)}`)
         }
     }
 
@@ -590,6 +640,7 @@ export function useModuleLoaders(params: Params) {
         setTableSearchText('')
         if (key === 'project-config') return loadConfigForm()
         if (key === 'npc') return loadNpcTable()
+        if (key === 'backpack') return loadBackpackTable()
         if (key === 'wudao') return loadWuDaoTable()
         if (key === 'wudaoskill') return loadWuDaoSkillTable()
         if (key === 'talent') return loadTalentTable()
@@ -606,6 +657,7 @@ export function useModuleLoaders(params: Params) {
         handleSelectModule,
         loadConfigForm,
         loadNpcTable,
+        loadBackpackTable,
         loadWuDaoTable,
         loadWuDaoSkillTable,
         loadTalentTable,

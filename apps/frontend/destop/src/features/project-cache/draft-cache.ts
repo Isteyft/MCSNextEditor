@@ -1,4 +1,4 @@
-type CacheIO = {
+﻿type CacheIO = {
     readFilePayload: (path: string) => Promise<{ content: string }>
     saveFilePayload: (path: string, content: string) => Promise<unknown>
 }
@@ -14,6 +14,7 @@ export type DraftCachePayload = {
         configForm: { name: string; author: string; version: string; description: string }
         preservedSettings: unknown
         npcMap: Record<string, unknown>
+        backpackMap: Record<string, unknown>
         wudaoMap: Record<string, unknown>
         wudaoSkillMap: Record<string, unknown>
         affixMap: Record<string, unknown>

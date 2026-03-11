@@ -16,6 +16,7 @@ import { InfoPanel } from './components/workspace/InfoPanel'
 import { ModuleSidebar } from './components/workspace/ModuleSidebar'
 import {
     cloneAffixEntry,
+    cloneBackpackEntry,
     cloneBuffEntry,
     cloneItemEntry,
     cloneSkillEntry,
@@ -36,6 +37,7 @@ import { buildInMemoryDrawerOptions, buildSnapshotDrawerOptions, mergeDrawerOpti
 import { useMetaLoader } from './features/meta-loader/useMetaLoader'
 import { useModuleLoaders } from './features/module-loaders/useModuleLoaders'
 import { useAffixHandlers } from './features/modules/affix/useAffixHandlers'
+import { useBackpackHandlers } from './features/modules/backpack/useBackpackHandlers'
 import { useBuffHandlers } from './features/modules/buff/useBuffHandlers'
 import { useItemHandlers } from './features/modules/item/useItemHandlers'
 import { useNpcHandlers } from './features/modules/npc/useNpcHandlers'
@@ -72,6 +74,7 @@ import {
 } from './services/project-api'
 import type {
     AffixEntry,
+    BackpackEntry,
     BuffEntry,
     CreateAvatarEntry,
     ItemEntry,
@@ -112,6 +115,13 @@ export function App() {
     const [selectedNpcKeys, setSelectedNpcKeys] = useState<string[]>([])
     const [npcSelectionAnchor, setNpcSelectionAnchor] = useState('')
     const [npcClipboard, setNpcClipboard] = useState<NpcEntry[]>([])
+    const [backpackMap, setBackpackMap] = useState<Record<string, BackpackEntry>>({})
+    const [backpackCachePath, setBackpackCachePath] = useState('')
+    const [backpackDirty, setBackpackDirty] = useState(false)
+    const [selectedBackpackKey, setSelectedBackpackKey] = useState('')
+    const [selectedBackpackKeys, setSelectedBackpackKeys] = useState<string[]>([])
+    const [backpackSelectionAnchor, setBackpackSelectionAnchor] = useState('')
+    const [backpackClipboard, setBackpackClipboard] = useState<BackpackEntry[]>([])
 
     const [wudaoMap, setWuDaoMap] = useState<Record<string, WuDaoEntry>>({})
     const [wudaoCachePath, setWuDaoCachePath] = useState('')
@@ -202,6 +212,7 @@ export function App() {
     const [activeSeidId, setActiveSeidId] = useState<number | null>(null)
     const [addTalentOpen, setAddTalentOpen] = useState(false)
     const [addNpcOpen, setAddNpcOpen] = useState(false)
+    const [addBackpackOpen, setAddBackpackOpen] = useState(false)
     const [addWuDaoOpen, setAddWuDaoOpen] = useState(false)
     const [addWuDaoSkillOpen, setAddWuDaoSkillOpen] = useState(false)
     const [addAffixOpen, setAddAffixOpen] = useState(false)
@@ -255,6 +266,7 @@ export function App() {
     const {
         moduleConfigPath,
         npcPath,
+        backpackPath,
         wudaoPath,
         wudaoSkillPath,
         affixPath,
@@ -278,6 +290,7 @@ export function App() {
             normalizePath,
             pickLeafName,
             npcMap,
+            backpackMap,
             wudaoMap,
             wudaoSkillMap,
             affixMap,
@@ -287,6 +300,7 @@ export function App() {
             skillMap,
             staticSkillMap,
             npcDirty,
+            backpackDirty,
             wudaoDirty,
             wudaoSkillDirty,
             affixDirty,
@@ -298,6 +312,7 @@ export function App() {
         })
     const {
         npcRows,
+        backpackRows,
         wudaoRows,
         wudaoSkillRows,
         affixRows,
@@ -307,6 +322,7 @@ export function App() {
         skillRows,
         staticSkillRows,
         filteredNpcRows,
+        filteredBackpackRows,
         filteredWuDaoRows,
         filteredWuDaoSkillRows,
         filteredAvatarRows,
@@ -317,6 +333,7 @@ export function App() {
         filteredStaticSkillRows,
     } = useModuleTableRows({
         npcMap,
+        backpackMap,
         wudaoMap,
         wudaoSkillMap,
         affixMap,
@@ -328,6 +345,10 @@ export function App() {
         tableSearchText,
     })
     const selectedNpc = useMemo(() => (selectedNpcKey ? (npcMap[selectedNpcKey] ?? null) : null), [npcMap, selectedNpcKey])
+    const selectedBackpack = useMemo(
+        () => (selectedBackpackKey ? (backpackMap[selectedBackpackKey] ?? null) : null),
+        [backpackMap, selectedBackpackKey]
+    )
     const selectedWuDao = useMemo(() => (selectedWuDaoKey ? (wudaoMap[selectedWuDaoKey] ?? null) : null), [wudaoMap, selectedWuDaoKey])
     const selectedWuDaoSkill = useMemo(
         () => (selectedWuDaoSkillKey ? (wudaoSkillMap[selectedWuDaoSkillKey] ?? null) : null),
@@ -374,6 +395,35 @@ export function App() {
             staticSkillMap,
         })
         return mergeDrawerOptionMaps(mergeDrawerOptionMaps(cached, drawerOptionsMap), current).StaticSkillDrawer ?? []
+    }, [rootSnapshotCache, drawerOptionsMap, affixMap, buffMap, itemMap, skillMap, staticSkillMap])
+    const backpackNpcOptions = useMemo(() => {
+        const optionMap = new Map<number, TalentTypeOption>()
+        const appendNpcOptions = (source: Record<string, NpcEntry>) => {
+            for (const row of Object.values(source)) {
+                if (!Number.isFinite(row.id) || row.id <= 0) continue
+                const current = optionMap.get(row.id)
+                const name = row.Name || ''
+                if (!current || (!current.name && name)) {
+                    optionMap.set(row.id, { id: row.id, name })
+                }
+            }
+        }
+        for (const snapshot of Object.values(rootSnapshotCache)) appendNpcOptions(snapshot.npcMap)
+        appendNpcOptions(npcMap)
+        return [...optionMap.values()].sort((a, b) => a.id - b.id)
+    }, [rootSnapshotCache, npcMap])
+    const backpackItemOptions = useMemo(() => {
+        const cached = buildSnapshotDrawerOptions(
+            Object.values(rootSnapshotCache).map(snapshot => ({
+                affixMap: snapshot.affixMap,
+                buffMap: snapshot.buffMap,
+                itemMap: snapshot.itemMap,
+                skillMap: snapshot.skillMap,
+                staticSkillMap: snapshot.staticSkillMap,
+            }))
+        )
+        const current = buildInMemoryDrawerOptions({ affixMap, buffMap, itemMap, skillMap, staticSkillMap })
+        return mergeDrawerOptionMaps(mergeDrawerOptionMaps(cached, drawerOptionsMap), current).ItemDrawer ?? []
     }, [rootSnapshotCache, drawerOptionsMap, affixMap, buffMap, itemMap, skillMap, staticSkillMap])
     const activeModuleLabel = useMemo(() => MODULES.find(item => item.key === activeModule)?.label ?? '-', [activeModule])
     const {
@@ -422,6 +472,13 @@ export function App() {
             setSelectedKey: setSelectedNpcKey,
             setSelectedKeys: setSelectedNpcKeys,
             setSelectionAnchor: setNpcSelectionAnchor,
+        },
+        backpack: {
+            rows: backpackRows,
+            selectedKey: selectedBackpackKey,
+            setSelectedKey: setSelectedBackpackKey,
+            setSelectedKeys: setSelectedBackpackKeys,
+            setSelectionAnchor: setBackpackSelectionAnchor,
         },
         wudao: {
             rows: wudaoRows,
@@ -668,6 +725,10 @@ export function App() {
             setNpcCachePath,
             setNpcDirty,
             setAddNpcOpen,
+            setBackpackMap,
+            setBackpackCachePath,
+            setBackpackDirty,
+            setAddBackpackOpen,
             setWuDaoMap,
             setWuDaoCachePath,
             setWuDaoDirty,
@@ -682,6 +743,10 @@ export function App() {
             setSelectedNpcKeys,
             setNpcSelectionAnchor,
             setNpcClipboard,
+            setSelectedBackpackKey,
+            setSelectedBackpackKeys,
+            setBackpackSelectionAnchor,
+            setBackpackClipboard,
             setSelectedWuDaoSkillKey,
             setSelectedWuDaoSkillKeys,
             setWuDaoSkillSelectionAnchor,
@@ -781,6 +846,9 @@ export function App() {
         npcPath,
         npcCachePath,
         npcDirty,
+        backpackPath,
+        backpackCachePath,
+        backpackDirty,
         wudaoPath,
         wudaoCachePath,
         wudaoDirty,
@@ -816,9 +884,15 @@ export function App() {
         setNpcMap,
         setNpcCachePath,
         setNpcDirty,
+        setBackpackMap,
+        setBackpackCachePath,
+        setBackpackDirty,
         setSelectedNpcKey,
         setSelectedNpcKeys,
         setNpcSelectionAnchor,
+        setSelectedBackpackKey,
+        setSelectedBackpackKeys,
+        setBackpackSelectionAnchor,
         setWuDaoMap,
         setWuDaoCachePath,
         setWuDaoDirty,
@@ -955,6 +1029,33 @@ export function App() {
             setAddNpcOpen,
             setNpcClipboard,
         })
+
+    const {
+        handleSelectBackpack,
+        handleDeleteBackpacks,
+        handleBatchPrefixBackpackIds,
+        handleAddBackpack,
+        handleCopyBackpack,
+        handlePasteBackpack,
+        handleChangeBackpackForm,
+    } = useBackpackHandlers({
+        filteredBackpackRows,
+        backpackRows,
+        backpackMap,
+        selectedBackpackKey,
+        selectedBackpackKeys,
+        backpackSelectionAnchor,
+        backpackClipboard,
+        cloneBackpackEntry,
+        setSelectedBackpackKey,
+        setSelectedBackpackKeys,
+        setBackpackSelectionAnchor,
+        setBackpackMap,
+        setBackpackDirty,
+        setStatus,
+        setAddBackpackOpen,
+        setBackpackClipboard,
+    })
 
     const {
         handleSelectWuDao,
@@ -1203,6 +1304,7 @@ export function App() {
         activeModule,
         isEditableElement,
         onDeleteNpc: handleDeleteNpcs,
+        onDeleteBackpack: handleDeleteBackpacks,
         onDeleteWuDao: handleDeleteWuDaos,
         onDeleteWuDaoSkill: handleDeleteWuDaoSkills,
         onDeleteAffix: handleDeleteAffixes,
@@ -1212,6 +1314,7 @@ export function App() {
         onDeleteSkill: handleDeleteSkills,
         onDeleteStaticSkill: handleDeleteStaticSkills,
         onCopyNpc: handleCopyNpc,
+        onCopyBackpack: handleCopyBackpack,
         onCopyWuDao: handleCopyWuDao,
         onCopyWuDaoSkill: handleCopyWuDaoSkill,
         onCopyAffix: handleCopyAffix,
@@ -1221,6 +1324,7 @@ export function App() {
         onCopySkill: handleCopySkill,
         onCopyStaticSkill: handleCopyStaticSkill,
         onPasteNpc: handlePasteNpc,
+        onPasteBackpack: handlePasteBackpack,
         onPasteWuDao: handlePasteWuDao,
         onPasteWuDaoSkill: handlePasteWuDaoSkill,
         onPasteAffix: handlePasteAffix,
@@ -1351,6 +1455,29 @@ export function App() {
         setStatus(`已导入非实例NPC JSON：${rows.length} 条。`)
     }
 
+    function handleImportBackpackJson(jsonText: string) {
+        const raw = parseImportJsonText(jsonText)
+        if (!raw) return
+        const rows = collectImportRows(raw, ['id'])
+            .map(item => item as BackpackEntry)
+            .filter(item => Number.isFinite(Number(item.id)) && Number(item.id) > 0)
+            .map(item =>
+                cloneBackpackEntry({
+                    ...item,
+                    ItemID: Array.isArray(item.ItemID)
+                        ? item.ItemID.map(value => Number(value)).filter(value => Number.isFinite(value))
+                        : [],
+                    randomNum: Array.isArray(item.randomNum)
+                        ? item.randomNum.map(value => Number(value)).filter(value => Number.isFinite(value))
+                        : [],
+                })
+            )
+        if (rows.length === 0) return setStatus('未识别到有效背包数据。')
+        setBackpackClipboard(rows)
+        handlePasteBackpack()
+        setStatus(`已导入背包 JSON：${rows.length} 条。`)
+    }
+
     function handleImportBuffJson(jsonText: string) {
         const raw = parseImportJsonText(jsonText)
         if (!raw) return
@@ -1437,6 +1564,7 @@ export function App() {
     const infoPanelPresenter = useInfoPanelPresenter({
         activeModule,
         setAddNpcOpen,
+        setAddBackpackOpen,
         setAddWuDaoOpen,
         setAddWuDaoSkillOpen,
         setAddTalentOpen,
@@ -1446,6 +1574,7 @@ export function App() {
         setAddSkillOpen,
         setAddStaticSkillOpen,
         handleBatchPrefixNpcIds,
+        handleBatchPrefixBackpackIds,
         handleBatchPrefixWuDaoIds,
         handleBatchPrefixWuDaoSkillIds,
         handleBatchPrefixAffixIds,
@@ -1455,6 +1584,7 @@ export function App() {
         handleBatchPrefixSkillIds,
         handleBatchPrefixStaticSkillIds,
         handleDeleteNpcs,
+        handleDeleteBackpacks,
         handleDeleteWuDaos,
         handleDeleteWuDaoSkills,
         handleDeleteAffixes,
@@ -1464,6 +1594,7 @@ export function App() {
         handleDeleteSkills,
         handleDeleteStaticSkills,
         handleCopyNpc,
+        handleCopyBackpack,
         handleCopyWuDao,
         handleCopyWuDaoSkill,
         handleCopyAffix,
@@ -1473,6 +1604,7 @@ export function App() {
         handleCopySkill,
         handleCopyStaticSkill,
         handlePasteNpc,
+        handlePasteBackpack,
         handlePasteWuDao,
         handlePasteWuDaoSkill,
         handlePasteAffix,
@@ -1482,6 +1614,7 @@ export function App() {
         handlePasteSkill,
         handlePasteStaticSkill,
         handleImportNpc: handleImportNpcJson,
+        handleImportBackpack: handleImportBackpackJson,
         handleImportWuDao: handleImportWuDaoJson,
         handleImportWuDaoSkill: handleImportWuDaoSkillJson,
         handleImportAffix: handleImportAffixJson,
@@ -1495,6 +1628,7 @@ export function App() {
         handleGenerateSkillBooksFromSkill,
         handleGenerateSkillBooksFromStaticSkill,
         handleSelectNpc,
+        handleSelectBackpack,
         handleSelectWuDao,
         handleSelectWuDaoSkill,
         handleSelectAffix,
@@ -1504,6 +1638,7 @@ export function App() {
         handleSelectSkill,
         handleSelectStaticSkill,
         filteredNpcRows,
+        filteredBackpackRows,
         filteredWuDaoRows,
         filteredWuDaoSkillRows,
         filteredAffixRows,
@@ -1513,6 +1648,7 @@ export function App() {
         filteredSkillRows,
         filteredStaticSkillRows,
         selectedNpcKey,
+        selectedBackpackKey,
         selectedWuDaoKey,
         selectedWuDaoSkillKey,
         selectedAffixKey,
@@ -1522,6 +1658,7 @@ export function App() {
         selectedSkillKey,
         selectedStaticSkillKey,
         selectedNpcKeys,
+        selectedBackpackKeys,
         selectedWuDaoKeys,
         selectedWuDaoSkillKeys,
         selectedAffixKeys,
@@ -1580,6 +1717,8 @@ export function App() {
         preservedSettings,
         npcMap,
         npcPath,
+        backpackMap,
+        backpackPath,
         wudaoMap,
         wudaoPath,
         wudaoSkillMap,
@@ -1602,6 +1741,7 @@ export function App() {
         deleteFilePayload,
         setConfigDirty,
         setNpcDirty,
+        setBackpackDirty,
         setWuDaoDirty,
         setWuDaoSkillDirty,
         setAffixDirty,
@@ -1611,6 +1751,7 @@ export function App() {
         setSkillDirty,
         setStaticSkillDirty,
         setNpcCachePath,
+        setBackpackCachePath,
         setAffixCachePath,
         setWuDaoSkillCachePath,
         setTalentCachePath,
@@ -1624,6 +1765,7 @@ export function App() {
     const hasUnsavedChanges =
         configDirty ||
         npcDirty ||
+        backpackDirty ||
         wudaoDirty ||
         wudaoSkillDirty ||
         affixDirty ||
@@ -1649,6 +1791,7 @@ export function App() {
                 setConfigForm(cached.data.configForm)
                 setPreservedSettings(cached.data.preservedSettings)
                 setNpcMap((cached.data.npcMap as Record<string, NpcEntry> | undefined) ?? {})
+                setBackpackMap((cached.data.backpackMap as Record<string, BackpackEntry> | undefined) ?? {})
                 setWuDaoMap((cached.data.wudaoMap as Record<string, WuDaoEntry> | undefined) ?? {})
                 setWuDaoSkillMap((cached.data.wudaoSkillMap as Record<string, WuDaoSkillEntry> | undefined) ?? {})
                 setAffixMap(cached.data.affixMap as Record<string, AffixEntry>)
@@ -1659,6 +1802,7 @@ export function App() {
                 setStaticSkillMap(cached.data.staticSkillMap as Record<string, StaticSkillEntry>)
                 setConfigDirty(true)
                 setNpcDirty(true)
+                setBackpackDirty(true)
                 setWuDaoDirty(true)
                 setWuDaoSkillDirty(true)
                 setAffixDirty(true)
@@ -1729,6 +1873,7 @@ export function App() {
                               configForm,
                               preservedSettings,
                               npcMap,
+                              backpackMap,
                               wudaoMap,
                               wudaoSkillMap,
                               affixMap,
@@ -1769,6 +1914,7 @@ export function App() {
         configForm,
         preservedSettings,
         npcMap,
+        backpackMap,
         wudaoMap,
         wudaoSkillMap,
         affixMap,
@@ -1835,6 +1981,14 @@ export function App() {
                 title="新增非实例NPC"
                 confirmText="确认新增"
                 placeholder="例如: 10302"
+            />
+            <AddTalentModal
+                open={addBackpackOpen}
+                onClose={() => setAddBackpackOpen(false)}
+                onSubmit={handleAddBackpack}
+                title="新增背包"
+                confirmText="确认新增"
+                placeholder="例如: 1600"
             />
             <AddTalentModal
                 open={addWuDaoOpen}
@@ -1977,6 +2131,12 @@ export function App() {
                         npcSkillOptions={npcSkillDrawerOptions}
                         npcStaticSkillOptions={npcStaticSkillDrawerOptions}
                         npcItemTypeOptions={itemTypeOptions}
+                        backpackForm={selectedBackpack}
+                        onChangeBackpackForm={handleChangeBackpackForm}
+                        backpackNpcOptions={backpackNpcOptions}
+                        backpackItemOptions={backpackItemOptions}
+                        backpackItemTypeOptions={itemTypeOptions}
+                        backpackItemQualityOptions={itemQualityOptions}
                         wudaoForm={selectedWuDao}
                         onChangeWuDaoForm={handleChangeWuDaoForm}
                         wudaoSkillForm={selectedWuDaoSkill}

@@ -2,6 +2,7 @@
     | 'project-config'
     | 'settings'
     | 'npc'
+    | 'backpack'
     | 'wudao'
     | 'wudaoskill'
     | 'affix'
@@ -16,6 +17,7 @@ export const MODULES: { key: ModuleKey; label: string }[] = [
     { key: 'project-config', label: '项目配置' },
     { key: 'settings', label: '设置' },
     { key: 'npc', label: '非实例NPC' },
+    { key: 'backpack', label: '背包' },
     { key: 'wudao', label: '悟道' },
     { key: 'wudaoskill', label: '悟道技能' },
     { key: 'affix', label: '词缀' },

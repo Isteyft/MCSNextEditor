@@ -1,6 +1,7 @@
 ﻿import { ViewMode } from '../../modules'
-import type { AffixEntry, BuffEntry, ItemEntry, NpcEntry, SkillEntry, StaticSkillEntry, WuDaoSkillEntry } from '../../types'
+import type { AffixEntry, BackpackEntry, BuffEntry, ItemEntry, NpcEntry, SkillEntry, StaticSkillEntry, WuDaoSkillEntry } from '../../types'
 import { AffixForm } from '../affix/AffixForm'
+import { BackpackForm } from '../backpack/BackpackForm'
 import { BuffForm } from '../buff/BuffForm'
 import { ItemForm } from '../item/ItemForm'
 import { NpcForm } from '../npc/NpcForm'
@@ -16,18 +17,19 @@ type EditorPanelProps = {
     viewMode: ViewMode
     activeModule: string
     activeModuleLabel: string
-    configForm: {
-        name: string
-        author: string
-        version: string
-        description: string
-    }
+    configForm: { name: string; author: string; version: string; description: string }
     onChangeConfigForm: (patch: Partial<EditorPanelProps['configForm']>) => void
     npcForm: NpcEntry | null
     onChangeNpcForm: (patch: Partial<NpcEntry>) => void
     npcSkillOptions: { id: number; name: string }[]
     npcStaticSkillOptions: { id: number; name: string }[]
     npcItemTypeOptions: { id: number; name: string }[]
+    backpackForm: BackpackEntry | null
+    onChangeBackpackForm: (patch: Partial<BackpackEntry>) => void
+    backpackNpcOptions: { id: number; name: string }[]
+    backpackItemOptions: { id: number; name: string }[]
+    backpackItemTypeOptions: { id: number; name: string }[]
+    backpackItemQualityOptions: { id: number; name: string }[]
     wudaoForm: import('../../types').WuDaoEntry | null
     onChangeWuDaoForm: (patch: Partial<import('../../types').WuDaoEntry>) => void
     wudaoSkillForm: WuDaoSkillEntry | null
@@ -93,72 +95,76 @@ type EditorPanelProps = {
     onChangeSettingsForm: (patch: Partial<EditorPanelProps['settingsForm']>) => void
 }
 
-export function EditorPanel({
-    viewMode,
-    activeModule,
-    activeModuleLabel,
-    configForm,
-    onChangeConfigForm,
-    npcForm,
-    onChangeNpcForm,
-    npcSkillOptions,
-    npcStaticSkillOptions,
-    npcItemTypeOptions,
-    wudaoForm,
-    onChangeWuDaoForm,
-    wudaoSkillForm,
-    onChangeWuDaoSkillForm,
-    affixForm,
-    onChangeAffixForm,
-    talentForm,
-    onChangeTalentForm,
-    buffForm,
-    buffIconDir,
-    onChangeBuffForm,
-    itemForm,
-    itemIconDir,
-    onChangeItemForm,
-    skillForm,
-    skillIconDir,
-    onChangeSkillForm,
-    staticSkillForm,
-    onChangeStaticSkillForm,
-    talentTypeOptions,
-    buffTypeOptions,
-    buffTriggerOptions,
-    buffRemoveTriggerOptions,
-    buffOverlayTypeOptions,
-    skillAttackTypeOptions,
-    skillConsultTypeOptions,
-    skillPhaseOptions,
-    skillQualityOptions,
-    wudaoTypeOptions,
-    itemGuideTypeOptions,
-    itemShopTypeOptions,
-    itemUseTypeOptions,
-    itemTypeOptions,
-    itemQualityOptions,
-    itemPhaseOptions,
-    affixTypeOptions,
-    affixProjectTypeOptions,
-    affixDrawerOptions,
-    onOpenSeidEditor,
-    seidDisplayRows,
-    settingsForm,
-    onChangeSettingsForm,
-}: EditorPanelProps) {
+export function EditorPanel(props: EditorPanelProps) {
+    const {
+        viewMode,
+        activeModule,
+        activeModuleLabel,
+        configForm,
+        onChangeConfigForm,
+        npcForm,
+        onChangeNpcForm,
+        npcSkillOptions,
+        npcStaticSkillOptions,
+        npcItemTypeOptions,
+        backpackForm,
+        onChangeBackpackForm,
+        backpackNpcOptions,
+        backpackItemOptions,
+        backpackItemTypeOptions,
+        backpackItemQualityOptions,
+        wudaoForm,
+        onChangeWuDaoForm,
+        wudaoSkillForm,
+        onChangeWuDaoSkillForm,
+        affixForm,
+        onChangeAffixForm,
+        talentForm,
+        onChangeTalentForm,
+        buffForm,
+        buffIconDir,
+        onChangeBuffForm,
+        itemForm,
+        itemIconDir,
+        onChangeItemForm,
+        skillForm,
+        skillIconDir,
+        onChangeSkillForm,
+        staticSkillForm,
+        onChangeStaticSkillForm,
+        talentTypeOptions,
+        buffTypeOptions,
+        buffTriggerOptions,
+        buffRemoveTriggerOptions,
+        buffOverlayTypeOptions,
+        skillAttackTypeOptions,
+        skillConsultTypeOptions,
+        skillPhaseOptions,
+        skillQualityOptions,
+        wudaoTypeOptions,
+        itemGuideTypeOptions,
+        itemShopTypeOptions,
+        itemUseTypeOptions,
+        itemTypeOptions,
+        itemQualityOptions,
+        itemPhaseOptions,
+        affixTypeOptions,
+        affixProjectTypeOptions,
+        affixDrawerOptions,
+        onOpenSeidEditor,
+        seidDisplayRows,
+        settingsForm,
+        onChangeSettingsForm,
+    } = props
     return (
         <section className="panel panel-editor">
             <h2>编辑区域</h2>
             <div className="panel-content editor-wrap">
                 {activeModule === 'settings' ? <SettingsForm values={settingsForm} onChange={onChangeSettingsForm} /> : null}
-
                 {viewMode === 'config-form' ? <ProjectConfigForm values={configForm} onChange={onChangeConfigForm} /> : null}
-
                 {activeModule !== 'settings' && viewMode === 'todo' ? (
                     <div className="todo-box">TODO: {activeModuleLabel === '-' ? '请选择模块' : activeModuleLabel}</div>
                 ) : null}
-
                 {activeModule !== 'settings' && viewMode === 'table' ? (
                     activeModule === 'npc' ? (
                         <NpcForm
@@ -167,6 +173,15 @@ export function EditorPanel({
                             skillOptions={npcSkillOptions}
                             staticSkillOptions={npcStaticSkillOptions}
                             itemTypeOptions={npcItemTypeOptions}
+                        />
+                    ) : activeModule === 'backpack' ? (
+                        <BackpackForm
+                            values={backpackForm}
+                            onChange={onChangeBackpackForm}
+                            npcOptions={backpackNpcOptions}
+                            itemOptions={backpackItemOptions}
+                            itemTypeOptions={backpackItemTypeOptions}
+                            itemQualityOptions={backpackItemQualityOptions}
                         />
                     ) : activeModule === 'wudao' ? (
                         <WuDaoForm values={wudaoForm} onChange={onChangeWuDaoForm} />

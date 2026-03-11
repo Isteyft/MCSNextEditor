@@ -810,6 +810,32 @@ body,
     white-space: nowrap;
 }
 
+.backpack-item-row {
+    grid-template-columns: 96px auto minmax(0, 1fr) 56px auto;
+}
+
+.backpack-qty-wrap {
+    width: 56px;
+    min-width: 56px;
+}
+
+.backpack-qty-wrap input {
+    width: 100%;
+    min-width: 0;
+}
+
+.backpack-item-id-input {
+    width: 96px;
+    min-width: 96px;
+    max-width: 96px;
+}
+
+.backpack-item-qty-input {
+    width: 56px;
+    min-width: 56px;
+    max-width: 56px;
+}
+
 .multi-check-list {
     border: 1px solid var(--border);
     border-radius: 8px;
