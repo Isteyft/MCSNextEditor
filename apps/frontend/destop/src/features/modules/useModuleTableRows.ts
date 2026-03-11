@@ -5,6 +5,7 @@ import { toBackpackRows } from '../../components/backpack/backpack-domain'
 import { toBuffRows } from '../../components/buff/buff-domain'
 import { toItemRows } from '../../components/item/item-domain'
 import { toNpcRows } from '../../components/npc/npc-domain'
+import { toNpcImportantRows } from '../../components/npcimportant/npcimportant-domain'
 import { toNpcTypeRows } from '../../components/npctype/npctype-domain'
 import { toNpcWuDaoRows } from '../../components/npcwudao/npcwudao-domain'
 import { toSkillRows } from '../../components/skill/skill-domain'
@@ -19,6 +20,7 @@ import type {
     CreateAvatarEntry,
     ItemEntry,
     NpcEntry,
+    NpcImportantEntry,
     NpcTypeEntry,
     NpcWuDaoEntry,
     SkillEntry,
@@ -29,6 +31,7 @@ import type {
 
 type UseModuleTableRowsParams = {
     npcMap: Record<string, NpcEntry>
+    npcImportantMap: Record<string, NpcImportantEntry>
     npcTypeMap: Record<string, NpcTypeEntry>
     npcWuDaoMap: Record<string, NpcWuDaoEntry>
     backpackMap: Record<string, BackpackEntry>
@@ -45,6 +48,7 @@ type UseModuleTableRowsParams = {
 
 export function useModuleTableRows({
     npcMap,
+    npcImportantMap,
     npcTypeMap,
     npcWuDaoMap,
     backpackMap,
@@ -59,6 +63,7 @@ export function useModuleTableRows({
     tableSearchText,
 }: UseModuleTableRowsParams) {
     const npcRows = useMemo(() => toNpcRows(npcMap), [npcMap])
+    const npcImportantRows = useMemo(() => toNpcImportantRows(npcImportantMap), [npcImportantMap])
     const npcTypeRows = useMemo(() => toNpcTypeRows(npcTypeMap), [npcTypeMap])
     const npcWuDaoRows = useMemo(() => toNpcWuDaoRows(npcWuDaoMap), [npcWuDaoMap])
     const backpackRows = useMemo(() => toBackpackRows(backpackMap), [backpackMap])
@@ -88,6 +93,13 @@ export function useModuleTableRows({
                 .includes(keyword)
         )
     }, [npcWuDaoRows, npcWuDaoMap, keyword])
+
+    const filteredNpcImportantRows = useMemo(() => {
+        if (!keyword) return npcImportantRows
+        return npcImportantRows.filter(row =>
+            `${row.id} ${row.title} ${row.fenLei} ${row.desc} ${npcImportantMap[row.key]?.LiuPai ?? ''}`.toLowerCase().includes(keyword)
+        )
+    }, [npcImportantRows, npcImportantMap, keyword])
 
     const filteredNpcTypeRows = useMemo(() => {
         if (!keyword) return npcTypeRows
@@ -166,6 +178,7 @@ export function useModuleTableRows({
 
     return {
         npcRows,
+        npcImportantRows,
         npcTypeRows,
         npcWuDaoRows,
         backpackRows,
@@ -178,6 +191,7 @@ export function useModuleTableRows({
         skillRows,
         staticSkillRows,
         filteredNpcRows,
+        filteredNpcImportantRows,
         filteredNpcTypeRows,
         filteredNpcWuDaoRows,
         filteredBackpackRows,

@@ -1,4 +1,4 @@
-import type { NpcWuDaoEntry } from '../../types'
+﻿import type { NpcWuDaoEntry } from '../../types'
 import type { CreateAvatarRow } from '../workspace/InfoPanel'
 
 const VALUE_KEYS = [
@@ -26,7 +26,7 @@ export function createEmptyNpcWuDao(id: number): NpcWuDaoEntry {
     return {
         id,
         Type: 0,
-        lv: 0,
+        lv: 1,
         wudaoID: [],
         value1: 0,
         value2: 0,
@@ -54,7 +54,7 @@ export function normalizeNpcWuDaoMap(raw: unknown): Record<string, NpcWuDaoEntry
         if (!Number.isFinite(id) || id <= 0) continue
         const entry = createEmptyNpcWuDao(id)
         entry.Type = Number(row.Type ?? 0)
-        entry.lv = Number(row.lv ?? 0)
+        entry.lv = Number(row.lv ?? 1)
         entry.wudaoID = Array.isArray(row.wudaoID)
             ? row.wudaoID.map(item => Number(item)).filter(item => Number.isFinite(item) && item > 0)
             : []
@@ -91,8 +91,8 @@ export function toNpcWuDaoRows(map: Record<string, NpcWuDaoEntry> | null | undef
         .map(([key, value]) => ({
             key,
             id: value.id,
-            title: `类型 ${value.Type}`,
-            fenLei: `境界 ${value.lv}`,
+            title: `绫诲瀷 ${value.Type}`,
+            fenLei: `澧冪晫 ${value.lv}`,
             desc: value.wudaoID.join(','),
         }))
         .sort((a, b) => a.id - b.id)

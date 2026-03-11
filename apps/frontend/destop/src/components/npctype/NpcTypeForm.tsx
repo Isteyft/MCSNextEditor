@@ -1,4 +1,4 @@
-import { PenLine, Plus, Search, Trash2, X } from 'lucide-react'
+﻿import { PenLine, Plus, Search, Trash2, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import type { NpcTypeEntry } from '../../types'
@@ -16,6 +16,25 @@ type PickerState =
     | { kind: 'skills'; index: number; title: string }
     | { kind: 'staticSkills'; index: number; title: string }
     | { kind: 'yuanying'; title: string }
+
+const LEVEL_OPTIONS: Option[] = [
+    { id: 0, name: '凡人' },
+    { id: 1, name: '炼气前期' },
+    { id: 2, name: '炼气中期' },
+    { id: 3, name: '炼气后期' },
+    { id: 4, name: '筑基前期' },
+    { id: 5, name: '筑基中期' },
+    { id: 6, name: '筑基后期' },
+    { id: 7, name: '金丹前期' },
+    { id: 8, name: '金丹中期' },
+    { id: 9, name: '金丹后期' },
+    { id: 10, name: '元婴前期' },
+    { id: 11, name: '元婴中期' },
+    { id: 12, name: '元婴后期' },
+    { id: 13, name: '化神前期' },
+    { id: 14, name: '化神中期' },
+    { id: 15, name: '化神后期' },
+]
 
 function toSafeNumber(input: string) {
     const value = Number(input)
@@ -36,16 +55,20 @@ function findOptionLabel(options: Option[], id: number) {
     return `${match.id}. ${match.name || '-'}`
 }
 
+function updateFixedArray(source: number[], length: number, index: number, nextValue: number) {
+    const next = Array.from({ length }, (_, idx) => source[idx] ?? 0)
+    next[index] = nextValue
+    return next
+}
+
 export function NpcTypeForm({ values, onChange, skillOptions, staticSkillOptions }: NpcTypeFormProps) {
     const [pickerState, setPickerState] = useState<PickerState | null>(null)
     const [pickerSearchDraft, setPickerSearchDraft] = useState('')
     const [pickerSearchText, setPickerSearchText] = useState('')
 
-    if (!values) return <div className="todo-box">请选择一条 NPC类型 数据</div>
-
     const lingGenLabels = ['金', '木', '水', '火', '土', '魔']
-    const skills = values.skills.slice(0, 10)
-    const staticSkills = values.staticSkills.slice(0, 5)
+    const skills = values?.skills.slice(0, 10) ?? []
+    const staticSkills = values?.staticSkills.slice(0, 5) ?? []
     const activePickerOptions = pickerState?.kind === 'skills' ? skillOptions : staticSkillOptions
     const pickerKeyword = pickerSearchText.trim().toLowerCase()
     const filteredPickerOptions = useMemo(() => {
@@ -60,7 +83,7 @@ export function NpcTypeForm({ values, onChange, skillOptions, staticSkillOptions
     }
 
     function applyPickerValue(optionId: number) {
-        if (!pickerState) return
+        if (!pickerState || !values) return
         if (pickerState.kind === 'skills') {
             const next = [...skills]
             next[pickerState.index] = optionId
@@ -74,6 +97,8 @@ export function NpcTypeForm({ values, onChange, skillOptions, staticSkillOptions
         }
         closePicker()
     }
+
+    if (!values) return <div className="todo-box">请选择一条 NPC类型 数据</div>
 
     return (
         <div className="config-form-wrap">
@@ -103,7 +128,13 @@ export function NpcTypeForm({ values, onChange, skillOptions, staticSkillOptions
             </label>
             <label className="config-field">
                 <span>境界</span>
-                <input inputMode="numeric" value={values.Level} onChange={event => onChange({ Level: toSafeNumber(event.target.value) })} />
+                <select value={values.Level} onChange={event => onChange({ Level: toSafeNumber(event.target.value) })}>
+                    {LEVEL_OPTIONS.map(option => (
+                        <option key={option.id} value={option.id}>
+                            {option.id}. {option.name}
+                        </option>
+                    ))}
+                </select>
             </label>
             <label className="config-field">
                 <span>姓氏</span>
@@ -118,7 +149,7 @@ export function NpcTypeForm({ values, onChange, skillOptions, staticSkillOptions
                 />
             </label>
             <label className="config-field">
-                <span>兴趣大类</span>
+                <span>兴趣类型</span>
                 <input
                     inputMode="numeric"
                     value={values.XinQuType}
@@ -135,22 +166,20 @@ export function NpcTypeForm({ values, onChange, skillOptions, staticSkillOptions
                             <input
                                 inputMode="numeric"
                                 value={values.LingGen[index] ?? 0}
-                                onChange={event => {
-                                    const next = Array.from({ length: 6 }, (_, idx) => values.LingGen[idx] ?? 0)
-                                    next[index] = toSafeNumber(event.target.value)
-                                    onChange({ LingGen: next })
-                                }}
+                                onChange={event =>
+                                    onChange({ LingGen: updateFixedArray(values.LingGen, 6, index, toSafeNumber(event.target.value)) })
+                                }
                             />
                         </div>
                     ))}
                 </div>
             </div>
 
-            <label className="config-field">
+            <div className="config-field">
                 <span>神通</span>
                 <div className="affix-list">
                     {skills.map((skillId, index) => (
-                        <div className="affix-row" key={`${skillId}-${index}`}>
+                        <div className="affix-row" key={`skill-${index}`}>
                             <input
                                 inputMode="numeric"
                                 value={skillId}
@@ -188,13 +217,13 @@ export function NpcTypeForm({ values, onChange, skillOptions, staticSkillOptions
                         </button>
                     ) : null}
                 </div>
-            </label>
+            </div>
 
-            <label className="config-field">
+            <div className="config-field">
                 <span>功法</span>
                 <div className="affix-list">
                     {staticSkills.map((skillId, index) => (
-                        <div className="affix-row" key={`${skillId}-${index}`}>
+                        <div className="affix-row" key={`static-skill-${index}`}>
                             <input
                                 inputMode="numeric"
                                 value={skillId}
@@ -232,7 +261,7 @@ export function NpcTypeForm({ values, onChange, skillOptions, staticSkillOptions
                         </button>
                     ) : null}
                 </div>
-            </label>
+            </div>
 
             <label className="config-field">
                 <span>元婴功法</span>
@@ -301,7 +330,7 @@ export function NpcTypeForm({ values, onChange, skillOptions, staticSkillOptions
                 />
             </label>
             <label className="config-field">
-                <span>衣服类型</span>
+                <span>装备类型</span>
                 <input
                     value={values.equipClothing.join(',')}
                     onChange={event => onChange({ equipClothing: parseNumberList(event.target.value) })}
@@ -321,6 +350,7 @@ export function NpcTypeForm({ values, onChange, skillOptions, staticSkillOptions
                     onChange={event => onChange({ JinDanType: parseNumberList(event.target.value) })}
                 />
             </label>
+
             <div className="config-field">
                 <span>实力</span>
                 <div className="affix-list">
@@ -329,11 +359,7 @@ export function NpcTypeForm({ values, onChange, skillOptions, staticSkillOptions
                         <input
                             inputMode="numeric"
                             value={values.ShiLi[0] ?? 0}
-                            onChange={event => {
-                                const next = [values.ShiLi[0] ?? 0, values.ShiLi[1] ?? 0]
-                                next[0] = toSafeNumber(event.target.value)
-                                onChange({ ShiLi: next })
-                            }}
+                            onChange={event => onChange({ ShiLi: updateFixedArray(values.ShiLi, 2, 0, toSafeNumber(event.target.value)) })}
                         />
                     </label>
                     <label className="affix-row">
@@ -341,11 +367,7 @@ export function NpcTypeForm({ values, onChange, skillOptions, staticSkillOptions
                         <input
                             inputMode="numeric"
                             value={values.ShiLi[1] ?? 0}
-                            onChange={event => {
-                                const next = [values.ShiLi[0] ?? 0, values.ShiLi[1] ?? 0]
-                                next[1] = toSafeNumber(event.target.value)
-                                onChange({ ShiLi: next })
-                            }}
+                            onChange={event => onChange({ ShiLi: updateFixedArray(values.ShiLi, 2, 1, toSafeNumber(event.target.value)) })}
                         />
                     </label>
                 </div>

@@ -4,6 +4,7 @@ import type { FormEvent } from 'react'
 import { normalizeAffixMap } from '../../components/affix/affix-domain'
 import { normalizeBackpackMap } from '../../components/backpack/backpack-domain'
 import { normalizeNpcMap } from '../../components/npc/npc-domain'
+import { normalizeNpcImportantMap } from '../../components/npcimportant/npcimportant-domain'
 import { normalizeNpcTypeMap } from '../../components/npctype/npctype-domain'
 import { normalizeNpcWuDaoMap } from '../../components/npcwudao/npcwudao-domain'
 import { mergeStaticSkillSeidFiles, normalizeStaticSkillMap } from '../../components/staticskill/staticskill-domain'
@@ -19,6 +20,7 @@ import type {
     CreateAvatarEntry,
     ItemEntry,
     NpcEntry,
+    NpcImportantEntry,
     NpcTypeEntry,
     NpcWuDaoEntry,
     SkillEntry,
@@ -33,6 +35,7 @@ import { adaptBuffImportWithMerge, adaptItemImportWithMerge, adaptSkillImportWit
 
 export type RootModuleSnapshot = {
     npcMap: Record<string, NpcEntry>
+    npcImportantMap: Record<string, NpcImportantEntry>
     npcTypeMap: Record<string, NpcTypeEntry>
     npcTypeSourcePath: string
     npcWuDaoMap: Record<string, NpcWuDaoEntry>
@@ -46,6 +49,7 @@ export type RootModuleSnapshot = {
     skillMap: Record<string, SkillEntry>
     staticSkillMap: Record<string, StaticSkillEntry>
     npcDirty: boolean
+    npcImportantDirty: boolean
     npcTypeDirty: boolean
     npcWuDaoDirty: boolean
     backpackDirty: boolean
@@ -91,6 +95,7 @@ type LifecycleParams = {
 function createEmptySnapshot(): RootModuleSnapshot {
     return {
         npcMap: {},
+        npcImportantMap: {},
         npcTypeMap: {},
         npcTypeSourcePath: '',
         npcWuDaoMap: {},
@@ -104,6 +109,7 @@ function createEmptySnapshot(): RootModuleSnapshot {
         skillMap: {},
         staticSkillMap: {},
         npcDirty: false,
+        npcImportantDirty: false,
         npcTypeDirty: false,
         npcWuDaoDirty: false,
         backpackDirty: false,
@@ -127,30 +133,37 @@ function resetForRootSwitch(setters: LifecycleSetters) {
     setters.setConfigCachePath('')
     setters.setConfigDirty(false)
     setters.setNpcMap({})
+    setters.setNpcImportantMap({})
     setters.setNpcTypeMap({})
     setters.setNpcWuDaoMap({})
     setters.setBackpackMap({})
     setters.setNpcCachePath('')
+    setters.setNpcImportantCachePath('')
     setters.setNpcTypeCachePath('')
     setters.setNpcWuDaoCachePath('')
     setters.setBackpackCachePath('')
     setters.setNpcDirty(false)
+    setters.setNpcImportantDirty(false)
     setters.setNpcTypeDirty(false)
     setters.setNpcWuDaoDirty(false)
     setters.setBackpackDirty(false)
     setters.setSelectedNpcKey('')
+    setters.setSelectedNpcImportantKey('')
     setters.setSelectedNpcTypeKey('')
     setters.setSelectedNpcWuDaoKey('')
     setters.setSelectedBackpackKey('')
     setters.setSelectedNpcKeys([])
+    setters.setSelectedNpcImportantKeys([])
     setters.setSelectedNpcTypeKeys([])
     setters.setSelectedNpcWuDaoKeys([])
     setters.setSelectedBackpackKeys([])
     setters.setNpcSelectionAnchor('')
+    setters.setNpcImportantSelectionAnchor('')
     setters.setNpcTypeSelectionAnchor('')
     setters.setNpcWuDaoSelectionAnchor('')
     setters.setBackpackSelectionAnchor('')
     setters.setNpcClipboard([])
+    setters.setNpcImportantClipboard([])
     setters.setNpcTypeClipboard([])
     setters.setNpcWuDaoClipboard([])
     setters.setBackpackClipboard([])
@@ -210,6 +223,7 @@ function resetForRootSwitch(setters: LifecycleSetters) {
     setters.setSeidEditorOpen(false)
     setters.setSeidPickerOpen(false)
     setters.setActiveSeidId(null)
+    setters.setAddNpcImportantOpen(false)
     setters.setAddNpcWuDaoOpen(false)
     setters.setAddBackpackOpen(false)
     setters.setAddBuffOpen(false)
@@ -250,6 +264,9 @@ function resetForProjectReload(setters: LifecycleSetters, siblingFolders: Array<
     setters.setSelectedNpcKey('')
     setters.setSelectedNpcKeys([])
     setters.setNpcSelectionAnchor('')
+    setters.setSelectedNpcImportantKey('')
+    setters.setSelectedNpcImportantKeys([])
+    setters.setNpcImportantSelectionAnchor('')
     setters.setSelectedNpcTypeKey('')
     setters.setSelectedNpcTypeKeys([])
     setters.setNpcTypeSelectionAnchor('')
@@ -327,6 +344,7 @@ export function useProjectLifecycle(params: LifecycleParams) {
         if (!targetModRoot) return snapshot
 
         const targetNpcPath = joinWinPath(targetModRoot, 'Data', 'AvatarJsonData.json')
+        const targetNpcImportantPath = joinWinPath(targetModRoot, 'Data', 'NPCImportantDate.json')
         const targetNpcTypePath = snapshot.npcTypeSourcePath || joinWinPath(targetModRoot, 'Data', 'NPCLeiXingDate.json')
         const targetNpcTypeFallbackPath = joinWinPath(targetModRoot, 'NPCLeiXingDate.json')
         const targetNpcWuDaoPath = joinWinPath(targetModRoot, 'Data', 'NPCWuDaoJson.json')
@@ -348,6 +366,19 @@ export function useProjectLifecycle(params: LifecycleParams) {
             snapshot.npcMap = normalizeNpcMap(parsedResult.ok ? parsedResult.data : {})
         } catch {
             // ignore missing or invalid npc data for this root
+        }
+
+        try {
+            const payload = await readJsonUnknownWithFallback({
+                filePath: targetNpcImportantPath,
+                defaultContent: '{}\n',
+                readFilePayload,
+                saveFilePayload,
+            })
+            const parsedResult = parseJsonUnknown(payload.content, targetNpcImportantPath)
+            snapshot.npcImportantMap = normalizeNpcImportantMap(parsedResult.ok ? parsedResult.data : {})
+        } catch {
+            // ignore missing or invalid npc important data for this root
         }
 
         try {
@@ -499,6 +530,7 @@ export function useProjectLifecycle(params: LifecycleParams) {
 
     function applyRootModuleSnapshot(targetModRoot: string, snapshot: RootModuleSnapshot) {
         const targetNpcPath = joinWinPath(targetModRoot, 'Data', 'AvatarJsonData.json')
+        const targetNpcImportantPath = joinWinPath(targetModRoot, 'Data', 'NPCImportantDate.json')
         const targetNpcTypePath = joinWinPath(targetModRoot, 'Data', 'NPCLeiXingDate.json')
         const targetNpcWuDaoPath = joinWinPath(targetModRoot, 'Data', 'NPCWuDaoJson.json')
         const targetBackpackPath = joinWinPath(targetModRoot, 'Data', 'BackpackJsonData.json')
@@ -518,6 +550,14 @@ export function useProjectLifecycle(params: LifecycleParams) {
         setters.setSelectedNpcKey(firstNpc)
         setters.setSelectedNpcKeys(firstNpc ? [firstNpc] : [])
         setters.setNpcSelectionAnchor(firstNpc)
+
+        setters.setNpcImportantMap(snapshot.npcImportantMap)
+        setters.setNpcImportantCachePath(targetNpcImportantPath)
+        setters.setNpcImportantDirty(snapshot.npcImportantDirty)
+        const firstNpcImportant = Object.keys(snapshot.npcImportantMap).sort((a, b) => Number(a) - Number(b))[0] ?? ''
+        setters.setSelectedNpcImportantKey(firstNpcImportant)
+        setters.setSelectedNpcImportantKeys(firstNpcImportant ? [firstNpcImportant] : [])
+        setters.setNpcImportantSelectionAnchor(firstNpcImportant)
 
         setters.setNpcTypeMap(snapshot.npcTypeMap)
         setters.setNpcTypeCachePath(targetNpcTypePath)

@@ -1,4 +1,4 @@
-import { mergeStaticSkillSeidFiles } from '../../components/staticskill/staticskill-domain'
+﻿import { mergeStaticSkillSeidFiles } from '../../components/staticskill/staticskill-domain'
 import { mergeTalentSeidFiles } from '../../components/tianfu/talent-domain'
 import { mergeWuDaoSkillSeidFiles } from '../../components/wudaoskill/wudaoskill-domain'
 import type { ModuleKey } from '../../modules'
@@ -10,6 +10,7 @@ import {
     adaptBuffImportWithMerge,
     adaptItemImportWithMerge,
     adaptNpcImport,
+    adaptNpcImportantImport,
     adaptNpcTypeImport,
     adaptNpcWuDaoImport,
     adaptSkillImportWithMerge,
@@ -29,14 +30,17 @@ type Params = {
     configCachePath: string
     npcTypeMap: Record<string, any>
     npcPath: string
+    npcImportantPath: string
     npcTypePath: string
     npcWuDaoPath: string
     backpackPath: string
     npcCachePath: string
+    npcImportantCachePath: string
     npcTypeCachePath: string
     npcWuDaoCachePath: string
     backpackCachePath: string
     npcDirty: boolean
+    npcImportantDirty: boolean
     npcTypeDirty: boolean
     npcWuDaoDirty: boolean
     backpackDirty: boolean
@@ -73,26 +77,32 @@ type Params = {
     setConfigCachePath: Setter
     setConfigDirty: Setter
     setNpcMap: Setter
+    setNpcImportantMap: Setter
     setNpcTypeMap: Setter
     setNpcWuDaoMap: Setter
     setBackpackMap: Setter
     setNpcCachePath: Setter
+    setNpcImportantCachePath: Setter
     setNpcTypeCachePath: Setter
     setNpcWuDaoCachePath: Setter
     setBackpackCachePath: Setter
     setNpcDirty: Setter
+    setNpcImportantDirty: Setter
     setNpcTypeDirty: Setter
     setNpcWuDaoDirty: Setter
     setBackpackDirty: Setter
     setSelectedNpcKey: Setter
+    setSelectedNpcImportantKey: Setter
     setSelectedNpcTypeKey: Setter
     setSelectedNpcWuDaoKey: Setter
     setSelectedBackpackKey: Setter
     setSelectedNpcKeys: Setter
+    setSelectedNpcImportantKeys: Setter
     setSelectedNpcTypeKeys: Setter
     setSelectedNpcWuDaoKeys: Setter
     setSelectedBackpackKeys: Setter
     setNpcSelectionAnchor: Setter
+    setNpcImportantSelectionAnchor: Setter
     setNpcTypeSelectionAnchor: Setter
     setNpcWuDaoSelectionAnchor: Setter
     setBackpackSelectionAnchor: Setter
@@ -171,14 +181,17 @@ export function useModuleLoaders(params: Params) {
         configCachePath,
         npcTypeMap,
         npcPath,
+        npcImportantPath,
         npcTypePath,
         npcWuDaoPath,
         backpackPath,
         npcCachePath,
+        npcImportantCachePath,
         npcTypeCachePath,
         npcWuDaoCachePath,
         backpackCachePath,
         npcDirty,
+        npcImportantDirty,
         npcTypeDirty,
         npcWuDaoDirty,
         backpackDirty,
@@ -215,26 +228,32 @@ export function useModuleLoaders(params: Params) {
         setConfigCachePath,
         setConfigDirty,
         setNpcMap,
+        setNpcImportantMap,
         setNpcTypeMap,
         setNpcWuDaoMap,
         setBackpackMap,
         setNpcCachePath,
+        setNpcImportantCachePath,
         setNpcTypeCachePath,
         setNpcWuDaoCachePath,
         setBackpackCachePath,
         setNpcDirty,
+        setNpcImportantDirty,
         setNpcTypeDirty,
         setNpcWuDaoDirty,
         setBackpackDirty,
         setSelectedNpcKey,
+        setSelectedNpcImportantKey,
         setSelectedNpcTypeKey,
         setSelectedNpcWuDaoKey,
         setSelectedBackpackKey,
         setSelectedNpcKeys,
+        setSelectedNpcImportantKeys,
         setSelectedNpcTypeKeys,
         setSelectedNpcWuDaoKeys,
         setSelectedBackpackKeys,
         setNpcSelectionAnchor,
+        setNpcImportantSelectionAnchor,
         setNpcTypeSelectionAnchor,
         setNpcWuDaoSelectionAnchor,
         setBackpackSelectionAnchor,
@@ -316,7 +335,7 @@ export function useModuleLoaders(params: Params) {
         setActivePath(filePath)
         if (!modRootPath || !filePath) return
         if (cachePath === filePath) {
-            setStatus(dirty ? `已加载${label}（缓存，未保存）。` : `已加载${label}（缓存）。`)
+            setStatus(dirty ? `已加载 ${label}（缓存，未保存）。` : `已加载 ${label}（缓存）。`)
             return
         }
         try {
@@ -325,7 +344,7 @@ export function useModuleLoaders(params: Params) {
             const rows = parse(parsedResult.ok ? parsedResult.data : {})
             const firstKey = Object.keys(rows).sort((a, b) => Number(a) - Number(b))[0] ?? ''
             apply(rows, firstKey)
-            setStatus(`已加载${label}。`)
+            setStatus(`已加载 ${label}。`)
         } catch (error) {
             setStatus(`读取${label}失败: ${String(error)}`)
         }
@@ -346,6 +365,24 @@ export function useModuleLoaders(params: Params) {
                 setNpcSelectionAnchor(firstKey)
             },
             '非实例NPC数据'
+        )
+    }
+
+    async function loadNpcImportantTable() {
+        return loadJsonTable(
+            npcImportantPath,
+            npcImportantCachePath,
+            npcImportantDirty,
+            raw => adaptNpcImportantImport(raw).data,
+            (rows, firstKey) => {
+                setNpcImportantMap(rows)
+                setNpcImportantCachePath(npcImportantPath)
+                setNpcImportantDirty(false)
+                setSelectedNpcImportantKey(firstKey)
+                setSelectedNpcImportantKeys(firstKey ? [firstKey] : [])
+                setNpcImportantSelectionAnchor(firstKey)
+            },
+            '重要npc数据'
         )
     }
 
@@ -389,7 +426,7 @@ export function useModuleLoaders(params: Params) {
                 setSelectedNpcWuDaoKeys(firstKey ? [firstKey] : [])
                 setNpcWuDaoSelectionAnchor(firstKey)
             },
-            'NPC悟道数据'
+            'NPC背包数据'
         )
     }
 
@@ -454,7 +491,7 @@ export function useModuleLoaders(params: Params) {
                 setSelectedWuDaoKeys(firstKey ? [firstKey] : [])
                 setWuDaoSelectionAnchor(firstKey)
             },
-            '悟道数据'
+            '鎮熼亾鏁版嵁'
         )
     }
 
@@ -550,7 +587,7 @@ export function useModuleLoaders(params: Params) {
                 setSelectedAffixKeys(firstKey ? [firstKey] : [])
                 setAffixSelectionAnchor(firstKey)
             },
-            '词缀数据'
+            '璇嶇紑鏁版嵁'
         )
     }
 
@@ -678,6 +715,7 @@ export function useModuleLoaders(params: Params) {
         setTableSearchText('')
         if (key === 'project-config') return loadConfigForm()
         if (key === 'npc') return loadNpcTable()
+        if (key === 'npcimportant') return loadNpcImportantTable()
         if (key === 'npctype') return loadNpcTypeTable()
         if (key === 'npcwudao') return loadNpcWuDaoTable()
         if (key === 'backpack') return loadBackpackTable()
@@ -697,6 +735,7 @@ export function useModuleLoaders(params: Params) {
         handleSelectModule,
         loadConfigForm,
         loadNpcTable,
+        loadNpcImportantTable,
         loadNpcTypeTable,
         loadNpcWuDaoTable,
         loadBackpackTable,

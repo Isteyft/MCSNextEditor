@@ -3,6 +3,7 @@ import { normalizeBackpackMap } from '../../components/backpack/backpack-domain'
 import { loadBuffFiles, mergeBuffSeidFiles } from '../../components/buff/buff-domain'
 import { loadItemFiles, mergeItemSeidFiles } from '../../components/item/item-domain'
 import { normalizeNpcMap } from '../../components/npc/npc-domain'
+import { normalizeNpcImportantMap } from '../../components/npcimportant/npcimportant-domain'
 import { normalizeNpcTypeMap } from '../../components/npctype/npctype-domain'
 import { normalizeNpcWuDaoMap } from '../../components/npcwudao/npcwudao-domain'
 import { loadSkillFiles, mergeSkillSeidFiles } from '../../components/skill/skill-domain'
@@ -18,6 +19,7 @@ import type {
     FsEntry,
     ItemEntry,
     NpcEntry,
+    NpcImportantEntry,
     NpcTypeEntry,
     NpcWuDaoEntry,
     SkillEntry,
@@ -38,6 +40,7 @@ export type ModuleImportReport = {
         | 'item'
         | 'skill'
         | 'npc'
+        | 'npcimportant'
         | 'npctype'
         | 'npcwudao'
         | 'backpack'
@@ -63,6 +66,11 @@ export function adaptWuDaoImport(raw: unknown): { data: Record<string, WuDaoEntr
 export function adaptNpcImport(raw: unknown): { data: Record<string, NpcEntry>; report: ModuleImportReport } {
     const data = normalizeNpcMap(raw)
     return { data, report: { module: 'npc', total: Object.keys(data).length } }
+}
+
+export function adaptNpcImportantImport(raw: unknown): { data: Record<string, NpcImportantEntry>; report: ModuleImportReport } {
+    const data = normalizeNpcImportantMap(raw)
+    return { data, report: { module: 'npcimportant', total: Object.keys(data).length } }
 }
 
 export function adaptNpcTypeImport(raw: unknown): { data: Record<string, NpcTypeEntry>; report: ModuleImportReport } {

@@ -3,6 +3,7 @@ import { saveBackpackFile } from '../../components/backpack/backpack-domain'
 import { saveBuffFiles, saveBuffSeidFiles } from '../../components/buff/buff-domain'
 import { saveItemFiles, saveItemSeidFiles } from '../../components/item/item-domain'
 import { saveNpcFile } from '../../components/npc/npc-domain'
+import { saveNpcImportantFile } from '../../components/npcimportant/npcimportant-domain'
 import { saveNpcTypeFile } from '../../components/npctype/npctype-domain'
 import { saveNpcWuDaoFile } from '../../components/npcwudao/npcwudao-domain'
 import { saveSkillFiles, saveSkillSeidFiles } from '../../components/skill/skill-domain'
@@ -24,6 +25,8 @@ type Params = {
     preservedSettings: unknown
     npcMap: Record<string, any>
     npcPath: string
+    npcImportantMap: Record<string, any>
+    npcImportantPath: string
     npcTypeMap: Record<string, any>
     npcTypePath: string
     npcTypeCachePath: string
@@ -53,6 +56,7 @@ type Params = {
     deleteFilePayload: (path: string) => Promise<any>
     setConfigDirty: Setter
     setNpcDirty: Setter
+    setNpcImportantDirty: Setter
     setNpcTypeDirty: Setter
     setNpcWuDaoDirty: Setter
     setBackpackDirty: Setter
@@ -65,6 +69,7 @@ type Params = {
     setSkillDirty: Setter
     setStaticSkillDirty: Setter
     setNpcCachePath: Setter
+    setNpcImportantCachePath: Setter
     setNpcTypeCachePath: Setter
     setNpcWuDaoCachePath: Setter
     setBackpackCachePath: Setter
@@ -89,6 +94,8 @@ export function useProjectSave(params: Params) {
         preservedSettings,
         npcMap,
         npcPath,
+        npcImportantMap,
+        npcImportantPath,
         npcTypeMap,
         npcTypePath,
         npcTypeCachePath,
@@ -118,6 +125,7 @@ export function useProjectSave(params: Params) {
         deleteFilePayload,
         setConfigDirty,
         setNpcDirty,
+        setNpcImportantDirty,
         setNpcTypeDirty,
         setNpcWuDaoDirty,
         setBackpackDirty,
@@ -130,6 +138,7 @@ export function useProjectSave(params: Params) {
         setSkillDirty,
         setStaticSkillDirty,
         setNpcCachePath,
+        setNpcImportantCachePath,
         setNpcTypeCachePath,
         setNpcWuDaoCachePath,
         setBackpackCachePath,
@@ -150,7 +159,7 @@ export function useProjectSave(params: Params) {
             return
         }
 
-        const totalSteps = 19
+        const totalSteps = 20
         let completedSteps = 0
         const report = (message: string) => {
             onProjectSavingChange?.({
@@ -202,6 +211,9 @@ export function useProjectSave(params: Params) {
 
             await saveNpcFile({ npcMap, npcPath, saveFilePayload })
             finishStep('已保存非实例 NPC 数据')
+
+            await saveNpcImportantFile({ npcImportantMap, npcImportantPath, saveFilePayload })
+            finishStep('已保存重要NPC数据')
 
             const resolvedNpcTypePath = npcTypeCachePath || npcTypePath
             await saveNpcTypeFile({ npcTypeMap, npcTypePath: resolvedNpcTypePath, saveFilePayload })
@@ -304,6 +316,7 @@ export function useProjectSave(params: Params) {
 
             setConfigDirty(false)
             setNpcDirty(false)
+            setNpcImportantDirty(false)
             setNpcTypeDirty(false)
             setNpcWuDaoDirty(false)
             setBackpackDirty(false)
@@ -316,6 +329,7 @@ export function useProjectSave(params: Params) {
             setSkillDirty(false)
             setStaticSkillDirty(false)
             setNpcCachePath(npcPath)
+            setNpcImportantCachePath(npcImportantPath)
             setNpcTypeCachePath(resolvedNpcTypePath)
             setNpcWuDaoCachePath(npcWuDaoPath)
             setBackpackCachePath(backpackPath)

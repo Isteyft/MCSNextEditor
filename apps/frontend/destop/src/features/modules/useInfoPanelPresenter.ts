@@ -10,6 +10,7 @@ type SelectFn = (key: string, index: number, options: SelectOptions) => void
 type UseInfoPanelPresenterParams = {
     activeModule: ModuleKey | ''
     setAddNpcOpen: (open: boolean) => void
+    setAddNpcImportantOpen: (open: boolean) => void
     setAddNpcTypeOpen: (open: boolean) => void
     setAddNpcWuDaoOpen: (open: boolean) => void
     setAddBackpackOpen: (open: boolean) => void
@@ -22,6 +23,7 @@ type UseInfoPanelPresenterParams = {
     setAddSkillOpen: (open: boolean) => void
     setAddStaticSkillOpen: (open: boolean) => void
     handleBatchPrefixNpcIds: (prefix: string) => void
+    handleBatchPrefixNpcImportantIds: (prefix: string) => void
     handleBatchPrefixNpcTypeIds: (prefix: string) => void
     handleBatchPrefixNpcWuDaoIds: (prefix: string) => void
     handleBatchPrefixBackpackIds: (prefix: string) => void
@@ -34,6 +36,7 @@ type UseInfoPanelPresenterParams = {
     handleBatchPrefixSkillIds: (prefix: string) => void
     handleBatchPrefixStaticSkillIds: (prefix: string) => void
     handleDeleteNpcs: () => void
+    handleDeleteNpcImportants: () => void
     handleDeleteNpcTypes: () => void
     handleDeleteNpcWuDaos: () => void
     handleDeleteBackpacks: () => void
@@ -46,6 +49,7 @@ type UseInfoPanelPresenterParams = {
     handleDeleteSkills: () => void
     handleDeleteStaticSkills: () => void
     handleCopyNpc: () => void
+    handleCopyNpcImportant: () => void
     handleCopyNpcType: () => void
     handleCopyNpcWuDao: () => void
     handleCopyBackpack: () => void
@@ -58,6 +62,7 @@ type UseInfoPanelPresenterParams = {
     handleCopySkill: () => void
     handleCopyStaticSkill: () => void
     handlePasteNpc: () => void
+    handlePasteNpcImportant: () => void
     handlePasteNpcType: () => void
     handlePasteNpcWuDao: () => void
     handlePasteBackpack: () => void
@@ -70,6 +75,7 @@ type UseInfoPanelPresenterParams = {
     handlePasteSkill: () => void
     handlePasteStaticSkill: () => void
     handleImportNpc: (jsonText: string) => void
+    handleImportNpcImportant: (jsonText: string) => void
     handleImportNpcType: (jsonText: string) => void
     handleImportNpcWuDao: (jsonText: string) => void
     handleImportBackpack: (jsonText: string) => void
@@ -88,6 +94,7 @@ type UseInfoPanelPresenterParams = {
     handleGenerateSkillBooksFromSkill: () => void
     handleGenerateSkillBooksFromStaticSkill: () => void
     handleSelectNpc: SelectFn
+    handleSelectNpcImportant: SelectFn
     handleSelectNpcType: SelectFn
     handleSelectNpcWuDao: SelectFn
     handleSelectBackpack: SelectFn
@@ -100,6 +107,7 @@ type UseInfoPanelPresenterParams = {
     handleSelectSkill: SelectFn
     handleSelectStaticSkill: SelectFn
     filteredNpcRows: CreateAvatarRow[]
+    filteredNpcImportantRows: CreateAvatarRow[]
     filteredNpcTypeRows: CreateAvatarRow[]
     filteredNpcWuDaoRows: CreateAvatarRow[]
     filteredBackpackRows: CreateAvatarRow[]
@@ -112,6 +120,7 @@ type UseInfoPanelPresenterParams = {
     filteredSkillRows: CreateAvatarRow[]
     filteredStaticSkillRows: CreateAvatarRow[]
     selectedNpcKey: string
+    selectedNpcImportantKey: string
     selectedNpcTypeKey: string
     selectedNpcWuDaoKey: string
     selectedBackpackKey: string
@@ -124,6 +133,7 @@ type UseInfoPanelPresenterParams = {
     selectedSkillKey: string
     selectedStaticSkillKey: string
     selectedNpcKeys: string[]
+    selectedNpcImportantKeys: string[]
     selectedNpcTypeKeys: string[]
     selectedNpcWuDaoKeys: string[]
     selectedBackpackKeys: string[]
@@ -145,6 +155,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
     const {
         activeModule,
         setAddNpcOpen,
+        setAddNpcImportantOpen,
         setAddNpcTypeOpen,
         setAddNpcWuDaoOpen,
         setAddBackpackOpen,
@@ -157,6 +168,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         setAddSkillOpen,
         setAddStaticSkillOpen,
         handleBatchPrefixNpcIds,
+        handleBatchPrefixNpcImportantIds,
         handleBatchPrefixNpcTypeIds,
         handleBatchPrefixNpcWuDaoIds,
         handleBatchPrefixBackpackIds,
@@ -169,6 +181,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         handleBatchPrefixSkillIds,
         handleBatchPrefixStaticSkillIds,
         handleDeleteNpcs,
+        handleDeleteNpcImportants,
         handleDeleteNpcTypes,
         handleDeleteNpcWuDaos,
         handleDeleteBackpacks,
@@ -181,6 +194,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         handleDeleteSkills,
         handleDeleteStaticSkills,
         handleCopyNpc,
+        handleCopyNpcImportant,
         handleCopyNpcType,
         handleCopyNpcWuDao,
         handleCopyBackpack,
@@ -193,6 +207,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         handleCopySkill,
         handleCopyStaticSkill,
         handlePasteNpc,
+        handlePasteNpcImportant,
         handlePasteNpcType,
         handlePasteNpcWuDao,
         handlePasteBackpack,
@@ -205,6 +220,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         handlePasteSkill,
         handlePasteStaticSkill,
         handleImportNpc,
+        handleImportNpcImportant,
         handleImportNpcType,
         handleImportNpcWuDao,
         handleImportBackpack,
@@ -223,6 +239,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         handleGenerateSkillBooksFromSkill,
         handleGenerateSkillBooksFromStaticSkill,
         handleSelectNpc,
+        handleSelectNpcImportant,
         handleSelectNpcType,
         handleSelectNpcWuDao,
         handleSelectBackpack,
@@ -235,6 +252,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         handleSelectSkill,
         handleSelectStaticSkill,
         filteredNpcRows,
+        filteredNpcImportantRows,
         filteredNpcTypeRows,
         filteredNpcWuDaoRows,
         filteredBackpackRows,
@@ -247,6 +265,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         filteredSkillRows,
         filteredStaticSkillRows,
         selectedNpcKey,
+        selectedNpcImportantKey,
         selectedNpcTypeKey,
         selectedNpcWuDaoKey,
         selectedBackpackKey,
@@ -259,6 +278,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         selectedSkillKey,
         selectedStaticSkillKey,
         selectedNpcKeys,
+        selectedNpcImportantKeys,
         selectedNpcTypeKeys,
         npcTypeMap,
         selectedNpcWuDaoKeys,
@@ -279,6 +299,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
     return useMemo(() => {
         const onAddTalent = () => {
             if (activeModule === 'npc') return setAddNpcOpen(true)
+            if (activeModule === 'npcimportant') return setAddNpcImportantOpen(true)
             if (activeModule === 'npctype') return setAddNpcTypeOpen(true)
             if (activeModule === 'npcwudao') return setAddNpcWuDaoOpen(true)
             if (activeModule === 'backpack') return setAddBackpackOpen(true)
@@ -294,6 +315,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
 
         const onBatchPrefixIds = (prefix: string) => {
             if (activeModule === 'npc') return handleBatchPrefixNpcIds(prefix)
+            if (activeModule === 'npcimportant') return handleBatchPrefixNpcImportantIds(prefix)
             if (activeModule === 'npctype') return handleBatchPrefixNpcTypeIds(prefix)
             if (activeModule === 'npcwudao') return handleBatchPrefixNpcWuDaoIds(prefix)
             if (activeModule === 'backpack') return handleBatchPrefixBackpackIds(prefix)
@@ -309,6 +331,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
 
         const onDeleteTalents = () => {
             if (activeModule === 'npc') return handleDeleteNpcs()
+            if (activeModule === 'npcimportant') return handleDeleteNpcImportants()
             if (activeModule === 'npctype') return handleDeleteNpcTypes()
             if (activeModule === 'npcwudao') return handleDeleteNpcWuDaos()
             if (activeModule === 'backpack') return handleDeleteBackpacks()
@@ -324,6 +347,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
 
         const onCopyTalent = () => {
             if (activeModule === 'npc') return handleCopyNpc()
+            if (activeModule === 'npcimportant') return handleCopyNpcImportant()
             if (activeModule === 'npctype') return handleCopyNpcType()
             if (activeModule === 'npcwudao') return handleCopyNpcWuDao()
             if (activeModule === 'backpack') return handleCopyBackpack()
@@ -339,6 +363,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
 
         const onPasteTalent = () => {
             if (activeModule === 'npc') return handlePasteNpc()
+            if (activeModule === 'npcimportant') return handlePasteNpcImportant()
             if (activeModule === 'npctype') return handlePasteNpcType()
             if (activeModule === 'npcwudao') return handlePasteNpcWuDao()
             if (activeModule === 'backpack') return handlePasteBackpack()
@@ -354,6 +379,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
 
         const onImportTalent = (jsonText: string) => {
             if (activeModule === 'npc') return handleImportNpc(jsonText)
+            if (activeModule === 'npcimportant') return handleImportNpcImportant(jsonText)
             if (activeModule === 'npctype') return handleImportNpcType(jsonText)
             if (activeModule === 'npcwudao') return handleImportNpcWuDao(jsonText)
             if (activeModule === 'backpack') return handleImportBackpack(jsonText)
@@ -382,11 +408,11 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
             activeModule === 'npctype'
                 ? selectedNpcTypeKeys.length === 1 &&
                   Boolean(selectedNpcTypeKey) &&
-                  Number(npcTypeMap[selectedNpcTypeKey]?.Level ?? -1) === 1
+                  [0, 1].includes(Number(npcTypeMap[selectedNpcTypeKey]?.Level ?? -1))
                 : activeModule === 'npcwudao'
                   ? selectedNpcWuDaoKeys.length === 1 &&
                     Boolean(selectedNpcWuDaoKey) &&
-                    Number(npcWuDaoMap[selectedNpcWuDaoKey]?.lv ?? -1) === 1
+                    [0, 1].includes(Number(npcWuDaoMap[selectedNpcWuDaoKey]?.lv ?? -1))
                   : activeModule === 'skill'
                     ? selectedSkillKeys.length === 1 &&
                       Boolean(selectedSkillKey) &&
@@ -413,6 +439,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
 
         const onSelectTalent: SelectFn = (key, index, options) => {
             if (activeModule === 'npc') return handleSelectNpc(key, index, options)
+            if (activeModule === 'npcimportant') return handleSelectNpcImportant(key, index, options)
             if (activeModule === 'npctype') return handleSelectNpcType(key, index, options)
             if (activeModule === 'npcwudao') return handleSelectNpcWuDao(key, index, options)
             if (activeModule === 'backpack') return handleSelectBackpack(key, index, options)
@@ -429,77 +456,83 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         const rows =
             activeModule === 'npc'
                 ? filteredNpcRows
-                : activeModule === 'npctype'
-                  ? filteredNpcTypeRows
-                  : activeModule === 'npcwudao'
-                    ? filteredNpcWuDaoRows
-                    : activeModule === 'backpack'
-                      ? filteredBackpackRows
-                      : activeModule === 'wudao'
-                        ? filteredWuDaoRows
-                        : activeModule === 'wudaoskill'
-                          ? filteredWuDaoSkillRows
-                          : activeModule === 'affix'
-                            ? filteredAffixRows
-                            : activeModule === 'buff'
-                              ? filteredBuffRows
-                              : activeModule === 'item'
-                                ? filteredItemRows
-                                : activeModule === 'skill'
-                                  ? filteredSkillRows
-                                  : activeModule === 'staticskill'
-                                    ? filteredStaticSkillRows
-                                    : filteredAvatarRows
+                : activeModule === 'npcimportant'
+                  ? filteredNpcImportantRows
+                  : activeModule === 'npctype'
+                    ? filteredNpcTypeRows
+                    : activeModule === 'npcwudao'
+                      ? filteredNpcWuDaoRows
+                      : activeModule === 'backpack'
+                        ? filteredBackpackRows
+                        : activeModule === 'wudao'
+                          ? filteredWuDaoRows
+                          : activeModule === 'wudaoskill'
+                            ? filteredWuDaoSkillRows
+                            : activeModule === 'affix'
+                              ? filteredAffixRows
+                              : activeModule === 'buff'
+                                ? filteredBuffRows
+                                : activeModule === 'item'
+                                  ? filteredItemRows
+                                  : activeModule === 'skill'
+                                    ? filteredSkillRows
+                                    : activeModule === 'staticskill'
+                                      ? filteredStaticSkillRows
+                                      : filteredAvatarRows
 
         const currentSelectedKey =
             activeModule === 'npc'
                 ? selectedNpcKey
-                : activeModule === 'npctype'
-                  ? selectedNpcTypeKey
-                  : activeModule === 'npcwudao'
-                    ? selectedNpcWuDaoKey
-                    : activeModule === 'backpack'
-                      ? selectedBackpackKey
-                      : activeModule === 'wudao'
-                        ? selectedWuDaoKey
-                        : activeModule === 'wudaoskill'
-                          ? selectedWuDaoSkillKey
-                          : activeModule === 'affix'
-                            ? selectedAffixKey
-                            : activeModule === 'buff'
-                              ? selectedBuffKey
-                              : activeModule === 'item'
-                                ? selectedItemKey
-                                : activeModule === 'skill'
-                                  ? selectedSkillKey
-                                  : activeModule === 'staticskill'
-                                    ? selectedStaticSkillKey
-                                    : selectedTalentKey
+                : activeModule === 'npcimportant'
+                  ? selectedNpcImportantKey
+                  : activeModule === 'npctype'
+                    ? selectedNpcTypeKey
+                    : activeModule === 'npcwudao'
+                      ? selectedNpcWuDaoKey
+                      : activeModule === 'backpack'
+                        ? selectedBackpackKey
+                        : activeModule === 'wudao'
+                          ? selectedWuDaoKey
+                          : activeModule === 'wudaoskill'
+                            ? selectedWuDaoSkillKey
+                            : activeModule === 'affix'
+                              ? selectedAffixKey
+                              : activeModule === 'buff'
+                                ? selectedBuffKey
+                                : activeModule === 'item'
+                                  ? selectedItemKey
+                                  : activeModule === 'skill'
+                                    ? selectedSkillKey
+                                    : activeModule === 'staticskill'
+                                      ? selectedStaticSkillKey
+                                      : selectedTalentKey
 
         const currentSelectedKeys =
             activeModule === 'npc'
                 ? selectedNpcKeys
-                : activeModule === 'npctype'
-                  ? selectedNpcTypeKeys
-                  : activeModule === 'npcwudao'
-                    ? selectedNpcWuDaoKeys
-                    : activeModule === 'backpack'
-                      ? selectedBackpackKeys
-                      : activeModule === 'wudao'
-                        ? selectedWuDaoKeys
-                        : activeModule === 'wudaoskill'
-                          ? selectedWuDaoSkillKeys
-                          : activeModule === 'affix'
-                            ? selectedAffixKeys
-                            : activeModule === 'buff'
-                              ? selectedBuffKeys
-                              : activeModule === 'item'
-                                ? selectedItemKeys
-                                : activeModule === 'skill'
-                                  ? selectedSkillKeys
-                                  : activeModule === 'staticskill'
-                                    ? selectedStaticSkillKeys
-                                    : selectedTalentKeys
+                : activeModule === 'npcimportant'
+                  ? selectedNpcImportantKeys
+                  : activeModule === 'npctype'
+                    ? selectedNpcTypeKeys
+                    : activeModule === 'npcwudao'
+                      ? selectedNpcWuDaoKeys
+                      : activeModule === 'backpack'
+                        ? selectedBackpackKeys
+                        : activeModule === 'wudao'
+                          ? selectedWuDaoKeys
+                          : activeModule === 'wudaoskill'
+                            ? selectedWuDaoSkillKeys
+                            : activeModule === 'affix'
+                              ? selectedAffixKeys
+                              : activeModule === 'buff'
+                                ? selectedBuffKeys
+                                : activeModule === 'item'
+                                  ? selectedItemKeys
+                                  : activeModule === 'skill'
+                                    ? selectedSkillKeys
+                                    : activeModule === 'staticskill'
+                                      ? selectedStaticSkillKeys
+                                      : selectedTalentKeys
 
         return {
             onAddTalent,

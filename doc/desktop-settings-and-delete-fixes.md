@@ -357,3 +357,58 @@
 -   `src/features/project-save/useProjectSave.ts`
 -   `src/features/project-shell/useProjectLifecycle.ts`
 -   `src/App.tsx`
+
+## 13. 重要NPC模块接入
+
+### 数据文件
+
+-   `Data/NPCImportantDate.json`
+
+### 数据结构
+
+-   `id`: 主键 ID
+-   `LiuPai`: 流派 ID
+-   `level`: 初始境界
+-   `sex`: 性别
+-   `zizhi`: 资质
+-   `wuxing`: 悟性
+-   `nianling`: 年龄
+-   `XingGe`: 性格
+-   `ChengHao`: 称号
+-   `NPCTag`: NPC 标签
+-   `ZhuJiTime / JinDanTime / YuanYingTime / HuaShengTime`: 关键时间
+-   `DaShiXiong / ZhangMeng / ZhangLao`: 关联 NPC
+-   `EventValue`: 事件值数组
+-   `fuhao`: 字符串标记
+
+### 当前编辑规则
+
+-   `LiuPai / level / zizhi / wuxing / nianling / XingGe / ChengHao / NPCTag` 使用普通输入框
+-   `sex` 复用非实例 NPC 的性别下拉
+-   `ZhuJiTime / JinDanTime / YuanYingTime / HuaShengTime` 拆成 `年 / 月 / 日` 三个输入框
+-   `DaShiXiong / ZhangMeng / ZhangLao / EventValue / fuhao` 当前保留在数据结构中，但默认不在界面显示
+
+### 当前支持
+
+-   打开项目时读取 `NPCImportantDate.json`
+-   切换 mod 时跟随快照切换
+-   中间表格展示与搜索
+-   右侧表单编辑
+-   新增
+-   删除
+-   复制 / 粘贴
+-   批量改 ID
+-   JSON 导入
+-   项目保存
+-   草稿缓存恢复
+
+### 关键文件
+
+-   `src/types/npcimportant.ts`
+-   `src/components/npcimportant/npcimportant-domain.ts`
+-   `src/components/npcimportant/NpcImportantForm.tsx`
+-   `src/features/modules/npcimportant/useNpcImportantHandlers.ts`
+-   `src/features/module-loaders/useModuleLoaders.ts`
+-   `src/features/project-save/useProjectSave.ts`
+-   `src/features/project-shell/useProjectLifecycle.ts`
+-   `src/App.tsx`

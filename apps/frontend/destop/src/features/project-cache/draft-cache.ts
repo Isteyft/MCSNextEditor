@@ -14,6 +14,7 @@ export type DraftCachePayload = {
         configForm: { name: string; author: string; version: string; description: string }
         preservedSettings: unknown
         npcMap: Record<string, unknown>
+        npcImportantMap: Record<string, unknown>
         npcTypeMap: Record<string, unknown>
         npcWuDaoMap: Record<string, unknown>
         backpackMap: Record<string, unknown>

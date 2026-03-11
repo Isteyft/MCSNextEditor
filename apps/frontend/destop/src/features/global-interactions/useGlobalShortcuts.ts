@@ -4,6 +4,7 @@ type Params = {
     activeModule: string
     isEditableElement: (target: EventTarget | null) => boolean
     onDeleteNpc: () => void
+    onDeleteNpcImportant: () => void
     onDeleteNpcType: () => void
     onDeleteNpcWuDao: () => void
     onDeleteBackpack: () => void
@@ -16,6 +17,7 @@ type Params = {
     onDeleteSkill: () => void
     onDeleteStaticSkill: () => void
     onCopyNpc: () => void
+    onCopyNpcImportant: () => void
     onCopyNpcType: () => void
     onCopyNpcWuDao: () => void
     onCopyBackpack: () => void
@@ -28,6 +30,7 @@ type Params = {
     onCopySkill: () => void
     onCopyStaticSkill: () => void
     onPasteNpc: () => void
+    onPasteNpcImportant: () => void
     onPasteNpcType: () => void
     onPasteNpcWuDao: () => void
     onPasteBackpack: () => void
@@ -46,6 +49,7 @@ export function useGlobalShortcuts(params: Params) {
         activeModule,
         isEditableElement,
         onDeleteNpc,
+        onDeleteNpcImportant,
         onDeleteNpcType,
         onDeleteNpcWuDao,
         onDeleteBackpack,
@@ -58,6 +62,7 @@ export function useGlobalShortcuts(params: Params) {
         onDeleteSkill,
         onDeleteStaticSkill,
         onCopyNpc,
+        onCopyNpcImportant,
         onCopyNpcType,
         onCopyNpcWuDao,
         onCopyBackpack,
@@ -70,6 +75,7 @@ export function useGlobalShortcuts(params: Params) {
         onCopySkill,
         onCopyStaticSkill,
         onPasteNpc,
+        onPasteNpcImportant,
         onPasteNpcType,
         onPasteNpcWuDao,
         onPasteBackpack,
@@ -88,6 +94,7 @@ export function useGlobalShortcuts(params: Params) {
             if (
                 ![
                     'npc',
+                    'npcimportant',
                     'npctype',
                     'npcwudao',
                     'backpack',
@@ -107,6 +114,7 @@ export function useGlobalShortcuts(params: Params) {
             if (event.key === 'Delete') {
                 event.preventDefault()
                 if (activeModule === 'npc') onDeleteNpc()
+                else if (activeModule === 'npcimportant') onDeleteNpcImportant()
                 else if (activeModule === 'npctype') onDeleteNpcType()
                 else if (activeModule === 'npcwudao') onDeleteNpcWuDao()
                 else if (activeModule === 'backpack') onDeleteBackpack()
@@ -126,6 +134,7 @@ export function useGlobalShortcuts(params: Params) {
             if (key === 'c') {
                 event.preventDefault()
                 if (activeModule === 'npc') onCopyNpc()
+                else if (activeModule === 'npcimportant') onCopyNpcImportant()
                 else if (activeModule === 'npctype') onCopyNpcType()
                 else if (activeModule === 'npcwudao') onCopyNpcWuDao()
                 else if (activeModule === 'backpack') onCopyBackpack()
@@ -140,6 +149,7 @@ export function useGlobalShortcuts(params: Params) {
             } else if (key === 'v') {
                 event.preventDefault()
                 if (activeModule === 'npc') onPasteNpc()
+                else if (activeModule === 'npcimportant') onPasteNpcImportant()
                 else if (activeModule === 'npctype') onPasteNpcType()
                 else if (activeModule === 'npcwudao') onPasteNpcWuDao()
                 else if (activeModule === 'backpack') onPasteBackpack()
@@ -160,6 +170,7 @@ export function useGlobalShortcuts(params: Params) {
         activeModule,
         isEditableElement,
         onDeleteNpc,
+        onDeleteNpcImportant,
         onDeleteNpcType,
         onDeleteNpcWuDao,
         onDeleteBackpack,
@@ -172,6 +183,7 @@ export function useGlobalShortcuts(params: Params) {
         onDeleteSkill,
         onDeleteStaticSkill,
         onCopyNpc,
+        onCopyNpcImportant,
         onCopyNpcType,
         onCopyNpcWuDao,
         onCopyBackpack,
@@ -184,6 +196,7 @@ export function useGlobalShortcuts(params: Params) {
         onCopySkill,
         onCopyStaticSkill,
         onPasteNpc,
+        onPasteNpcImportant,
         onPasteNpcType,
         onPasteNpcWuDao,
         onPasteBackpack,

@@ -20,6 +20,7 @@ import {
     cloneBackpackEntry,
     cloneBuffEntry,
     cloneItemEntry,
+    cloneNpcImportantEntry,
     cloneNpcTypeEntry,
     cloneNpcWuDaoEntry,
     cloneSkillEntry,
@@ -44,6 +45,7 @@ import { useBackpackHandlers } from './features/modules/backpack/useBackpackHand
 import { useBuffHandlers } from './features/modules/buff/useBuffHandlers'
 import { useItemHandlers } from './features/modules/item/useItemHandlers'
 import { useNpcHandlers } from './features/modules/npc/useNpcHandlers'
+import { useNpcImportantHandlers } from './features/modules/npcimportant/useNpcImportantHandlers'
 import { useNpcTypeHandlers } from './features/modules/npctype/useNpcTypeHandlers'
 import { useNpcWuDaoHandlers } from './features/modules/npcwudao/useNpcWuDaoHandlers'
 import { useSkillHandlers } from './features/modules/skill/useSkillHandlers'
@@ -84,6 +86,7 @@ import type {
     CreateAvatarEntry,
     ItemEntry,
     NpcEntry,
+    NpcImportantEntry,
     NpcTypeEntry,
     NpcWuDaoEntry,
     SkillEntry,
@@ -122,6 +125,13 @@ export function App() {
     const [selectedNpcKeys, setSelectedNpcKeys] = useState<string[]>([])
     const [npcSelectionAnchor, setNpcSelectionAnchor] = useState('')
     const [npcClipboard, setNpcClipboard] = useState<NpcEntry[]>([])
+    const [npcImportantMap, setNpcImportantMap] = useState<Record<string, NpcImportantEntry>>({})
+    const [npcImportantCachePath, setNpcImportantCachePath] = useState('')
+    const [npcImportantDirty, setNpcImportantDirty] = useState(false)
+    const [selectedNpcImportantKey, setSelectedNpcImportantKey] = useState('')
+    const [selectedNpcImportantKeys, setSelectedNpcImportantKeys] = useState<string[]>([])
+    const [npcImportantSelectionAnchor, setNpcImportantSelectionAnchor] = useState('')
+    const [npcImportantClipboard, setNpcImportantClipboard] = useState<NpcImportantEntry[]>([])
     const [npcTypeMap, setNpcTypeMap] = useState<Record<string, NpcTypeEntry>>({})
     const [npcTypeCachePath, setNpcTypeCachePath] = useState('')
     const [npcTypeDirty, setNpcTypeDirty] = useState(false)
@@ -233,6 +243,7 @@ export function App() {
     const [activeSeidId, setActiveSeidId] = useState<number | null>(null)
     const [addTalentOpen, setAddTalentOpen] = useState(false)
     const [addNpcOpen, setAddNpcOpen] = useState(false)
+    const [addNpcImportantOpen, setAddNpcImportantOpen] = useState(false)
     const [addNpcTypeOpen, setAddNpcTypeOpen] = useState(false)
     const [addNpcWuDaoOpen, setAddNpcWuDaoOpen] = useState(false)
     const [addBackpackOpen, setAddBackpackOpen] = useState(false)
@@ -290,6 +301,7 @@ export function App() {
     const {
         moduleConfigPath,
         npcPath,
+        npcImportantPath,
         npcTypePath,
         npcWuDaoPath,
         backpackPath,
@@ -316,6 +328,7 @@ export function App() {
             normalizePath,
             pickLeafName,
             npcMap,
+            npcImportantMap,
             npcTypeMap,
             npcTypeCachePath,
             npcWuDaoMap,
@@ -329,6 +342,7 @@ export function App() {
             skillMap,
             staticSkillMap,
             npcDirty,
+            npcImportantDirty,
             npcTypeDirty,
             npcWuDaoDirty,
             backpackDirty,
@@ -343,6 +357,7 @@ export function App() {
         })
     const {
         npcRows,
+        npcImportantRows,
         npcTypeRows,
         npcWuDaoRows,
         backpackRows,
@@ -355,6 +370,7 @@ export function App() {
         skillRows,
         staticSkillRows,
         filteredNpcRows,
+        filteredNpcImportantRows,
         filteredNpcTypeRows,
         filteredNpcWuDaoRows,
         filteredBackpackRows,
@@ -368,6 +384,7 @@ export function App() {
         filteredStaticSkillRows,
     } = useModuleTableRows({
         npcMap,
+        npcImportantMap,
         npcTypeMap,
         npcWuDaoMap,
         backpackMap,
@@ -382,6 +399,10 @@ export function App() {
         tableSearchText,
     })
     const selectedNpc = useMemo(() => (selectedNpcKey ? (npcMap[selectedNpcKey] ?? null) : null), [npcMap, selectedNpcKey])
+    const selectedNpcImportant = useMemo(
+        () => (selectedNpcImportantKey ? (npcImportantMap[selectedNpcImportantKey] ?? null) : null),
+        [npcImportantMap, selectedNpcImportantKey]
+    )
     const selectedNpcType = useMemo(
         () => (selectedNpcTypeKey ? (npcTypeMap[selectedNpcTypeKey] ?? null) : null),
         [npcTypeMap, selectedNpcTypeKey]
@@ -548,6 +569,13 @@ export function App() {
             setSelectedKey: setSelectedNpcKey,
             setSelectedKeys: setSelectedNpcKeys,
             setSelectionAnchor: setNpcSelectionAnchor,
+        },
+        npcimportant: {
+            rows: npcImportantRows,
+            selectedKey: selectedNpcImportantKey,
+            setSelectedKey: setSelectedNpcImportantKey,
+            setSelectedKeys: setSelectedNpcImportantKeys,
+            setSelectionAnchor: setNpcImportantSelectionAnchor,
         },
         npctype: {
             rows: npcTypeRows,
@@ -812,12 +840,15 @@ export function App() {
             setConfigDirty,
             setConfigCachePath,
             setNpcMap,
+            setNpcImportantMap,
             setNpcTypeMap,
             setNpcWuDaoMap,
             setNpcCachePath,
+            setNpcImportantCachePath,
             setNpcTypeCachePath,
             setNpcWuDaoCachePath,
             setNpcDirty,
+            setNpcImportantDirty,
             setNpcTypeDirty,
             setNpcWuDaoDirty,
             setAddNpcOpen,
@@ -837,15 +868,19 @@ export function App() {
             setWuDaoSelectionAnchor,
             setWuDaoClipboard,
             setSelectedNpcKey,
+            setSelectedNpcImportantKey,
             setSelectedNpcTypeKey,
             setSelectedNpcWuDaoKey,
             setSelectedNpcKeys,
+            setSelectedNpcImportantKeys,
             setSelectedNpcTypeKeys,
             setSelectedNpcWuDaoKeys,
             setNpcSelectionAnchor,
+            setNpcImportantSelectionAnchor,
             setNpcTypeSelectionAnchor,
             setNpcWuDaoSelectionAnchor,
             setNpcClipboard,
+            setNpcImportantClipboard,
             setNpcTypeClipboard,
             setNpcWuDaoClipboard,
             setSelectedBackpackKey,
@@ -926,6 +961,7 @@ export function App() {
             setSeidPickerOpen,
             setActiveSeidId,
             setExpandedRootPaths,
+            setAddNpcImportantOpen,
             setAddBuffOpen,
             setAddWuDaoOpen,
             setAddWuDaoSkillOpen,
@@ -950,12 +986,15 @@ export function App() {
         configCachePath,
         npcTypeMap,
         npcPath,
+        npcImportantPath,
         npcTypePath,
         npcWuDaoPath,
         npcCachePath,
+        npcImportantCachePath,
         npcTypeCachePath,
         npcWuDaoCachePath,
         npcDirty,
+        npcImportantDirty,
         npcTypeDirty,
         npcWuDaoDirty,
         backpackPath,
@@ -994,24 +1033,30 @@ export function App() {
         setConfigCachePath,
         setConfigDirty,
         setNpcMap,
+        setNpcImportantMap,
         setNpcTypeMap,
         setNpcWuDaoMap,
         setNpcCachePath,
+        setNpcImportantCachePath,
         setNpcTypeCachePath,
         setNpcWuDaoCachePath,
         setNpcDirty,
+        setNpcImportantDirty,
         setNpcTypeDirty,
         setNpcWuDaoDirty,
         setBackpackMap,
         setBackpackCachePath,
         setBackpackDirty,
         setSelectedNpcKey,
+        setSelectedNpcImportantKey,
         setSelectedNpcTypeKey,
         setSelectedNpcWuDaoKey,
         setSelectedNpcKeys,
+        setSelectedNpcImportantKeys,
         setSelectedNpcTypeKeys,
         setSelectedNpcWuDaoKeys,
         setNpcSelectionAnchor,
+        setNpcImportantSelectionAnchor,
         setNpcTypeSelectionAnchor,
         setNpcWuDaoSelectionAnchor,
         setSelectedBackpackKey,
@@ -1153,6 +1198,33 @@ export function App() {
             setAddNpcOpen,
             setNpcClipboard,
         })
+
+    const {
+        handleSelectNpcImportant,
+        handleDeleteNpcImportants,
+        handleBatchPrefixNpcImportantIds,
+        handleAddNpcImportant,
+        handleCopyNpcImportant,
+        handlePasteNpcImportant,
+        handleChangeNpcImportantForm,
+    } = useNpcImportantHandlers({
+        filteredNpcImportantRows,
+        npcImportantRows,
+        npcImportantMap,
+        selectedNpcImportantKey,
+        selectedNpcImportantKeys,
+        npcImportantSelectionAnchor,
+        npcImportantClipboard,
+        cloneNpcImportantEntry,
+        setSelectedNpcImportantKey,
+        setSelectedNpcImportantKeys,
+        setNpcImportantSelectionAnchor,
+        setNpcImportantMap,
+        setNpcImportantDirty,
+        setStatus,
+        setAddNpcImportantOpen,
+        setNpcImportantClipboard,
+    })
 
     const {
         handleSelectNpcType,
@@ -1502,6 +1574,7 @@ export function App() {
         activeModule,
         isEditableElement,
         onDeleteNpc: handleDeleteNpcs,
+        onDeleteNpcImportant: handleDeleteNpcImportants,
         onDeleteNpcType: handleDeleteNpcTypes,
         onDeleteNpcWuDao: handleDeleteNpcWuDaos,
         onDeleteBackpack: handleDeleteBackpacks,
@@ -1514,6 +1587,7 @@ export function App() {
         onDeleteSkill: handleDeleteSkills,
         onDeleteStaticSkill: handleDeleteStaticSkills,
         onCopyNpc: handleCopyNpc,
+        onCopyNpcImportant: handleCopyNpcImportant,
         onCopyNpcType: handleCopyNpcType,
         onCopyNpcWuDao: handleCopyNpcWuDao,
         onCopyBackpack: handleCopyBackpack,
@@ -1526,6 +1600,7 @@ export function App() {
         onCopySkill: handleCopySkill,
         onCopyStaticSkill: handleCopyStaticSkill,
         onPasteNpc: handlePasteNpc,
+        onPasteNpcImportant: handlePasteNpcImportant,
         onPasteNpcType: handlePasteNpcType,
         onPasteNpcWuDao: handlePasteNpcWuDao,
         onPasteBackpack: handlePasteBackpack,
@@ -1657,6 +1732,19 @@ export function App() {
         setNpcClipboard(rows)
         handlePasteNpc()
         setStatus(`已导入非实例NPC JSON：${rows.length} 条。`)
+    }
+
+    function handleImportNpcImportantJson(jsonText: string) {
+        const raw = parseImportJsonText(jsonText)
+        if (!raw) return
+        const rows = collectImportRows(raw, ['id'])
+            .map(item => item as NpcImportantEntry)
+            .filter(item => Number.isFinite(Number(item.id)) && Number(item.id) > 0)
+            .map(item => cloneNpcImportantEntry(item))
+        if (rows.length === 0) return setStatus('未识别到有效重要NPC数据。')
+        setNpcImportantClipboard(rows)
+        handlePasteNpcImportant()
+        setStatus(`已导入重要NPC JSON：${rows.length} 条。`)
     }
 
     function handleImportNpcTypeJson(jsonText: string) {
@@ -1863,6 +1951,7 @@ export function App() {
     const infoPanelPresenter = useInfoPanelPresenter({
         activeModule,
         setAddNpcOpen,
+        setAddNpcImportantOpen,
         setAddNpcTypeOpen,
         setAddNpcWuDaoOpen,
         setAddBackpackOpen,
@@ -1875,6 +1964,7 @@ export function App() {
         setAddSkillOpen,
         setAddStaticSkillOpen,
         handleBatchPrefixNpcIds,
+        handleBatchPrefixNpcImportantIds,
         handleBatchPrefixNpcTypeIds,
         handleBatchPrefixNpcWuDaoIds,
         handleBatchPrefixBackpackIds,
@@ -1887,6 +1977,7 @@ export function App() {
         handleBatchPrefixSkillIds,
         handleBatchPrefixStaticSkillIds,
         handleDeleteNpcs,
+        handleDeleteNpcImportants,
         handleDeleteNpcTypes,
         handleDeleteNpcWuDaos,
         handleDeleteBackpacks,
@@ -1899,6 +1990,7 @@ export function App() {
         handleDeleteSkills,
         handleDeleteStaticSkills,
         handleCopyNpc,
+        handleCopyNpcImportant,
         handleCopyNpcType,
         handleCopyNpcWuDao,
         handleCopyBackpack,
@@ -1911,6 +2003,7 @@ export function App() {
         handleCopySkill,
         handleCopyStaticSkill,
         handlePasteNpc,
+        handlePasteNpcImportant,
         handlePasteNpcType,
         handlePasteNpcWuDao,
         handlePasteBackpack,
@@ -1923,6 +2016,7 @@ export function App() {
         handlePasteSkill,
         handlePasteStaticSkill,
         handleImportNpc: handleImportNpcJson,
+        handleImportNpcImportant: handleImportNpcImportantJson,
         handleImportNpcType: handleImportNpcTypeJson,
         handleImportNpcWuDao: handleImportNpcWuDaoJson,
         handleImportBackpack: handleImportBackpackJson,
@@ -1941,6 +2035,7 @@ export function App() {
         handleGenerateSkillBooksFromSkill,
         handleGenerateSkillBooksFromStaticSkill,
         handleSelectNpc,
+        handleSelectNpcImportant,
         handleSelectNpcType,
         handleSelectNpcWuDao,
         handleSelectBackpack,
@@ -1953,6 +2048,7 @@ export function App() {
         handleSelectSkill,
         handleSelectStaticSkill,
         filteredNpcRows,
+        filteredNpcImportantRows,
         filteredNpcTypeRows,
         filteredNpcWuDaoRows,
         filteredBackpackRows,
@@ -1965,6 +2061,7 @@ export function App() {
         filteredSkillRows,
         filteredStaticSkillRows,
         selectedNpcKey,
+        selectedNpcImportantKey,
         selectedNpcTypeKey,
         selectedNpcWuDaoKey,
         selectedBackpackKey,
@@ -1977,6 +2074,7 @@ export function App() {
         selectedSkillKey,
         selectedStaticSkillKey,
         selectedNpcKeys,
+        selectedNpcImportantKeys,
         selectedNpcTypeKeys,
         selectedNpcWuDaoKeys,
         selectedBackpackKeys,
@@ -2040,6 +2138,8 @@ export function App() {
         preservedSettings,
         npcMap,
         npcPath,
+        npcImportantMap,
+        npcImportantPath,
         npcTypeMap,
         npcTypePath,
         npcTypeCachePath,
@@ -2069,6 +2169,7 @@ export function App() {
         deleteFilePayload,
         setConfigDirty,
         setNpcDirty,
+        setNpcImportantDirty,
         setNpcTypeDirty,
         setNpcWuDaoDirty,
         setBackpackDirty,
@@ -2081,6 +2182,7 @@ export function App() {
         setSkillDirty,
         setStaticSkillDirty,
         setNpcCachePath,
+        setNpcImportantCachePath,
         setNpcTypeCachePath,
         setNpcWuDaoCachePath,
         setBackpackCachePath,
@@ -2098,6 +2200,7 @@ export function App() {
     const hasUnsavedChanges =
         configDirty ||
         npcDirty ||
+        npcImportantDirty ||
         npcTypeDirty ||
         npcWuDaoDirty ||
         backpackDirty ||
@@ -2130,6 +2233,9 @@ export function App() {
                 setConfigForm(cached.data.configForm)
                 setPreservedSettings(cached.data.preservedSettings)
                 if ('npcMap' in cached.data) setNpcMap((cached.data.npcMap as Record<string, NpcEntry> | undefined) ?? {})
+                if ('npcImportantMap' in cached.data) {
+                    setNpcImportantMap((cached.data.npcImportantMap as Record<string, NpcImportantEntry> | undefined) ?? {})
+                }
                 const shouldRestoreNpcTypeMap =
                     'npcTypeMap' in cached.data && shouldRestoreObjectMap(cached.data.npcTypeMap, Object.keys(npcTypeMap).length)
                 if (shouldRestoreNpcTypeMap) {
@@ -2155,6 +2261,7 @@ export function App() {
                 }
                 setConfigDirty('rawConfigObject' in cached.data || 'configForm' in cached.data || 'preservedSettings' in cached.data)
                 setNpcDirty('npcMap' in cached.data)
+                setNpcImportantDirty('npcImportantMap' in cached.data)
                 setNpcTypeDirty(shouldRestoreNpcTypeMap)
                 setNpcWuDaoDirty('npcWuDaoMap' in cached.data)
                 setBackpackDirty('backpackMap' in cached.data)
@@ -2228,6 +2335,7 @@ export function App() {
                               configForm,
                               preservedSettings,
                               npcMap,
+                              npcImportantMap,
                               npcTypeMap,
                               npcWuDaoMap,
                               backpackMap,
@@ -2271,6 +2379,7 @@ export function App() {
         configForm,
         preservedSettings,
         npcMap,
+        npcImportantMap,
         npcTypeMap,
         npcWuDaoMap,
         backpackMap,
@@ -2340,6 +2449,14 @@ export function App() {
                 title="新增非实例NPC"
                 confirmText="确认新增"
                 placeholder="例如: 10302"
+            />
+            <AddTalentModal
+                open={addNpcImportantOpen}
+                onClose={() => setAddNpcImportantOpen(false)}
+                onSubmit={handleAddNpcImportant}
+                title="新增重要NPC"
+                confirmText="确认新增"
+                placeholder="例如: 117"
             />
             <AddTalentModal
                 open={addNpcTypeOpen}
@@ -2503,6 +2620,8 @@ export function App() {
                         }}
                         npcForm={selectedNpc}
                         onChangeNpcForm={handleChangeNpcForm}
+                        npcImportantForm={selectedNpcImportant}
+                        onChangeNpcImportantForm={handleChangeNpcImportantForm}
                         npcSkillOptions={npcSkillDrawerOptions}
                         npcStaticSkillOptions={npcStaticSkillDrawerOptions}
                         npcItemTypeOptions={itemTypeOptions}

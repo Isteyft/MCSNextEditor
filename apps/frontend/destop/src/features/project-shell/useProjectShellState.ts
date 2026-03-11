@@ -7,6 +7,7 @@ import type {
     CreateAvatarEntry,
     ItemEntry,
     NpcEntry,
+    NpcImportantEntry,
     NpcTypeEntry,
     NpcWuDaoEntry,
     SkillEntry,
@@ -24,6 +25,7 @@ type UseProjectShellStateParams = {
     normalizePath: (value: string) => string
     pickLeafName: (value: string) => string
     npcMap: Record<string, NpcEntry>
+    npcImportantMap: Record<string, NpcImportantEntry>
     npcTypeMap: Record<string, NpcTypeEntry>
     npcTypeCachePath: string
     npcWuDaoMap: Record<string, NpcWuDaoEntry>
@@ -37,6 +39,7 @@ type UseProjectShellStateParams = {
     skillMap: Record<string, SkillEntry>
     staticSkillMap: Record<string, StaticSkillEntry>
     npcDirty: boolean
+    npcImportantDirty: boolean
     npcTypeDirty: boolean
     npcWuDaoDirty: boolean
     backpackDirty: boolean
@@ -56,6 +59,7 @@ export function useProjectShellState({
     normalizePath,
     pickLeafName,
     npcMap,
+    npcImportantMap,
     npcTypeMap,
     npcTypeCachePath,
     npcWuDaoMap,
@@ -69,6 +73,7 @@ export function useProjectShellState({
     skillMap,
     staticSkillMap,
     npcDirty,
+    npcImportantDirty,
     npcTypeDirty,
     npcWuDaoDirty,
     backpackDirty,
@@ -119,8 +124,9 @@ export function useProjectShellState({
             ...prev,
             [cacheKey]: {
                 npcMap,
-                npcTypeMap,
+                npcImportantMap,
                 npcTypeSourcePath: npcTypeCachePath,
+                npcTypeMap,
                 npcWuDaoMap,
                 backpackMap,
                 wudaoMap,
@@ -132,6 +138,7 @@ export function useProjectShellState({
                 skillMap,
                 staticSkillMap,
                 npcDirty,
+                npcImportantDirty,
                 npcTypeDirty,
                 npcWuDaoDirty,
                 backpackDirty,
@@ -149,6 +156,7 @@ export function useProjectShellState({
         modRootPath,
         normalizePath,
         npcMap,
+        npcImportantMap,
         npcTypeMap,
         npcTypeCachePath,
         npcWuDaoMap,
@@ -162,6 +170,7 @@ export function useProjectShellState({
         skillMap,
         staticSkillMap,
         npcDirty,
+        npcImportantDirty,
         npcTypeDirty,
         npcWuDaoDirty,
         backpackDirty,

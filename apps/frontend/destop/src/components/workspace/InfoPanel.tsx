@@ -1,4 +1,4 @@
-import { ClipboardPaste, Copy, Plus, Search, Trash2, Upload } from 'lucide-react'
+﻿import { ClipboardPaste, Copy, Plus, Search, Trash2, Upload } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { ModuleKey } from '../../modules'
@@ -37,8 +37,10 @@ function getColumnLabels(activeModule: ModuleKey | '') {
     switch (activeModule) {
         case 'npc':
             return { name: '名称', category: '势力' }
+        case 'npcimportant':
+            return { name: '流派', category: '境界/性别' }
         case 'npctype':
-            return { name: '固定姓', category: '流派/门派' }
+            return { name: '姓氏', category: '流派/门派' }
         case 'npcwudao':
             return { name: '类型', category: '境界' }
         case 'backpack':
@@ -114,6 +116,7 @@ export function InfoPanel({
 
     const isTableModule = [
         'npc',
+        'npcimportant',
         'npctype',
         'npcwudao',
         'backpack',

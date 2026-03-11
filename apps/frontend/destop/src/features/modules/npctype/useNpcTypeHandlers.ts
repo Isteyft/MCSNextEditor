@@ -1,7 +1,7 @@
-import { createEmptyNpcType } from '../../../components/npctype/npctype-domain'
+﻿import { createEmptyNpcType } from '../../../components/npctype/npctype-domain'
 import type { NpcTypeEntry } from '../../../types'
 
-type Setter = (value: any) => void
+type Setter<T = any> = (value: T) => void
 
 type Params = {
     filteredNpcTypeRows: Array<{ key: string }>
@@ -239,8 +239,8 @@ export function useNpcTypeHandlers(params: Params) {
         if (!selectedNpcTypeKey) return
         const source = npcTypeMap[selectedNpcTypeKey]
         if (!source) return
-        if (Number(source.Level ?? 0) !== 1) {
-            setStatus('只有境界为 1 的 NPC类型 才能生成一组。')
+        if (![0, 1].includes(Number(source.Level ?? 0))) {
+            setStatus('只有境界为 0 或 1 的 NPC类型才能生成一组。')
             return
         }
 
@@ -274,7 +274,7 @@ export function useNpcTypeHandlers(params: Params) {
         setSelectedNpcTypeKeys(nextKeys)
         setNpcTypeSelectionAnchor(nextKeys[0] ?? '')
         setNpcTypeDirty(true)
-        setStatus(`已生成同类型 15 个境界的 NPC类型，起始 ID 为 ${source.id}。`)
+        setStatus(`已生成同类型 1-15 级的 NPC类型，起始 ID 为 ${source.id}。`)
     }
 
     return {

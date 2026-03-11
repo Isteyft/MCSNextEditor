@@ -5,6 +5,7 @@ import type {
     BuffEntry,
     ItemEntry,
     NpcEntry,
+    NpcImportantEntry,
     NpcTypeEntry,
     NpcWuDaoEntry,
     SkillEntry,
@@ -16,6 +17,7 @@ import { BackpackForm } from '../backpack/BackpackForm'
 import { BuffForm } from '../buff/BuffForm'
 import { ItemForm } from '../item/ItemForm'
 import { NpcForm } from '../npc/NpcForm'
+import { NpcImportantForm } from '../npcimportant/NpcImportantForm'
 import { NpcTypeForm } from '../npctype/NpcTypeForm'
 import { NpcWuDaoForm } from '../npcwudao/NpcWuDaoForm'
 import { SettingsForm } from '../settings/SettingsForm'
@@ -34,6 +36,8 @@ type EditorPanelProps = {
     onChangeConfigForm: (patch: Partial<EditorPanelProps['configForm']>) => void
     npcForm: NpcEntry | null
     onChangeNpcForm: (patch: Partial<NpcEntry>) => void
+    npcImportantForm: NpcImportantEntry | null
+    onChangeNpcImportantForm: (patch: Partial<NpcImportantEntry>) => void
     npcSkillOptions: { id: number; name: string }[]
     npcStaticSkillOptions: { id: number; name: string }[]
     npcItemTypeOptions: { id: number; name: string }[]
@@ -126,6 +130,8 @@ export function EditorPanel(props: EditorPanelProps) {
         onChangeConfigForm,
         npcForm,
         onChangeNpcForm,
+        npcImportantForm,
+        onChangeNpcImportantForm,
         npcSkillOptions,
         npcStaticSkillOptions,
         npcItemTypeOptions,
@@ -204,6 +210,8 @@ export function EditorPanel(props: EditorPanelProps) {
                             staticSkillOptions={npcStaticSkillOptions}
                             itemTypeOptions={npcItemTypeOptions}
                         />
+                    ) : activeModule === 'npcimportant' ? (
+                        <NpcImportantForm values={npcImportantForm} onChange={onChangeNpcImportantForm} />
                     ) : activeModule === 'npctype' ? (
                         <NpcTypeForm
                             values={npcTypeForm}

@@ -2,6 +2,7 @@
     | 'project-config'
     | 'settings'
     | 'npc'
+    | 'npcimportant'
     | 'npctype'
     | 'npcwudao'
     | 'backpack'
@@ -19,6 +20,7 @@ export const MODULES: { key: ModuleKey; label: string }[] = [
     { key: 'project-config', label: '项目配置' },
     { key: 'settings', label: '设置' },
     { key: 'npc', label: '非实例NPC' },
+    { key: 'npcimportant', label: '重要NPC' },
     { key: 'npctype', label: 'NPC类型' },
     { key: 'npcwudao', label: 'NPC悟道' },
     { key: 'backpack', label: '背包' },

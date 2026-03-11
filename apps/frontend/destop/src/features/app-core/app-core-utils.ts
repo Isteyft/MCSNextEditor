@@ -4,6 +4,7 @@ import type {
     BuffEntry,
     CreateAvatarEntry,
     ItemEntry,
+    NpcImportantEntry,
     NpcTypeEntry,
     NpcWuDaoEntry,
     SkillEntry,
@@ -29,6 +30,13 @@ export function cloneBackpackEntry(entry: BackpackEntry): BackpackEntry {
         ...entry,
         ItemID: [...entry.ItemID],
         randomNum: [...entry.randomNum],
+    }
+}
+
+export function cloneNpcImportantEntry(entry: NpcImportantEntry): NpcImportantEntry {
+    return {
+        ...entry,
+        EventValue: [...entry.EventValue],
     }
 }
 

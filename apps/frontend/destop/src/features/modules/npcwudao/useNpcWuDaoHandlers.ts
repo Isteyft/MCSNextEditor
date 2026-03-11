@@ -1,7 +1,7 @@
-import { createEmptyNpcWuDao } from '../../../components/npcwudao/npcwudao-domain'
+﻿import { createEmptyNpcWuDao } from '../../../components/npcwudao/npcwudao-domain'
 import type { NpcWuDaoEntry } from '../../../types'
 
-type Setter = (value: any) => void
+type Setter<T = any> = (value: T) => void
 
 type Params = {
     filteredNpcWuDaoRows: Array<{ key: string }>
@@ -242,8 +242,8 @@ export function useNpcWuDaoHandlers(params: Params) {
         if (!selectedNpcWuDaoKey) return
         const source = npcWuDaoMap[selectedNpcWuDaoKey]
         if (!source) return
-        if (Number(source.lv ?? 0) !== 1) {
-            setStatus('只有境界为 1 的 NPC悟道 才能生成整组。')
+        if (![0, 1].includes(Number(source.lv ?? 0))) {
+            setStatus('只有境界为 0 或 1 的 NPC悟道才能生成一组。')
             return
         }
 
@@ -277,7 +277,7 @@ export function useNpcWuDaoHandlers(params: Params) {
         setSelectedNpcWuDaoKeys(nextKeys)
         setNpcWuDaoSelectionAnchor(nextKeys[0] ?? '')
         setNpcWuDaoDirty(true)
-        setStatus(`已生成同类型 15 个境界的 NPC悟道，起始 ID 为 ${source.id}。`)
+        setStatus(`已生成同类型 1-15 级的 NPC悟道，起始 ID 为 ${source.id}。`)
     }
 
     return {
