@@ -1,4 +1,4 @@
-﻿import { type Dispatch, type SetStateAction, useEffect } from 'react'
+import { type Dispatch, type SetStateAction, useEffect } from 'react'
 
 type RowWithKey = { key: string }
 
@@ -12,6 +12,7 @@ type SelectionSyncParams = {
 
 type UseModuleSelectionSyncParams = Partial<{
     npc: SelectionSyncParams
+    npcwudao: SelectionSyncParams
     backpack: SelectionSyncParams
     wudao: SelectionSyncParams
     wudaoskill: SelectionSyncParams
@@ -48,6 +49,7 @@ function useSelectionSync(params?: SelectionSyncParams) {
 
 export function useModuleSelectionSync({
     npc,
+    npcwudao,
     backpack,
     wudao,
     wudaoskill,
@@ -59,6 +61,7 @@ export function useModuleSelectionSync({
     staticSkill,
 }: UseModuleSelectionSyncParams) {
     useSelectionSync(npc)
+    useSelectionSync(npcwudao)
     useSelectionSync(backpack)
     useSelectionSync(wudao)
     useSelectionSync(wudaoskill)

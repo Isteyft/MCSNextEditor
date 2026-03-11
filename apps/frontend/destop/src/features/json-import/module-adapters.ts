@@ -1,8 +1,9 @@
-﻿import { normalizeAffixMap } from '../../components/affix/affix-domain'
+import { normalizeAffixMap } from '../../components/affix/affix-domain'
 import { normalizeBackpackMap } from '../../components/backpack/backpack-domain'
 import { loadBuffFiles, mergeBuffSeidFiles } from '../../components/buff/buff-domain'
 import { loadItemFiles, mergeItemSeidFiles } from '../../components/item/item-domain'
 import { normalizeNpcMap } from '../../components/npc/npc-domain'
+import { normalizeNpcWuDaoMap } from '../../components/npcwudao/npcwudao-domain'
 import { loadSkillFiles, mergeSkillSeidFiles } from '../../components/skill/skill-domain'
 import { normalizeStaticSkillMap } from '../../components/staticskill/staticskill-domain'
 import { normalizeTalentMap } from '../../components/tianfu/talent-domain'
@@ -16,6 +17,7 @@ import type {
     FsEntry,
     ItemEntry,
     NpcEntry,
+    NpcWuDaoEntry,
     SkillEntry,
     StaticSkillEntry,
     WuDaoEntry,
@@ -24,7 +26,7 @@ import type {
 import { joinWinPath } from '../../utils/path'
 
 export type ModuleImportReport = {
-    module: 'talent' | 'wudao' | 'wudaoskill' | 'affix' | 'staticskill' | 'buff' | 'item' | 'skill' | 'npc' | 'backpack'
+    module: 'talent' | 'wudao' | 'wudaoskill' | 'affix' | 'staticskill' | 'buff' | 'item' | 'skill' | 'npc' | 'npcwudao' | 'backpack'
     total: number
 }
 
@@ -47,6 +49,11 @@ export function adaptWuDaoImport(raw: unknown): { data: Record<string, WuDaoEntr
 export function adaptNpcImport(raw: unknown): { data: Record<string, NpcEntry>; report: ModuleImportReport } {
     const data = normalizeNpcMap(raw)
     return { data, report: { module: 'npc', total: Object.keys(data).length } }
+}
+
+export function adaptNpcWuDaoImport(raw: unknown): { data: Record<string, NpcWuDaoEntry>; report: ModuleImportReport } {
+    const data = normalizeNpcWuDaoMap(raw)
+    return { data, report: { module: 'npcwudao', total: Object.keys(data).length } }
 }
 
 export function adaptBackpackImport(raw: unknown): { data: Record<string, BackpackEntry>; report: ModuleImportReport } {

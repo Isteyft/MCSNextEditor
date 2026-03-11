@@ -1,4 +1,13 @@
-﻿import type { AffixEntry, BackpackEntry, BuffEntry, CreateAvatarEntry, ItemEntry, SkillEntry, StaticSkillEntry } from '../../types'
+import type {
+    AffixEntry,
+    BackpackEntry,
+    BuffEntry,
+    CreateAvatarEntry,
+    ItemEntry,
+    NpcWuDaoEntry,
+    SkillEntry,
+    StaticSkillEntry,
+} from '../../types'
 
 type SeidDataValue = Record<string, Record<string, string | number | number[]>>
 
@@ -19,6 +28,15 @@ export function cloneBackpackEntry(entry: BackpackEntry): BackpackEntry {
         ...entry,
         ItemID: [...entry.ItemID],
         randomNum: [...entry.randomNum],
+    }
+}
+
+export function cloneNpcWuDaoEntry(entry: NpcWuDaoEntry): NpcWuDaoEntry {
+    const runtimeEntry = entry as NpcWuDaoEntry & { __extraValues?: Record<string, number> }
+    return {
+        ...runtimeEntry,
+        wudaoID: [...entry.wudaoID],
+        ...(runtimeEntry.__extraValues ? { __extraValues: { ...runtimeEntry.__extraValues } } : {}),
     }
 }
 

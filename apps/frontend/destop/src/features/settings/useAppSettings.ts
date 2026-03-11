@@ -30,6 +30,7 @@ export function useAppSettings() {
     const hasChanges = useMemo(() => {
         const stored = readAppSettings()
         return (
+            JSON.stringify(stored.npcWuDaoExtraValues) !== JSON.stringify(settingsDraft.npcWuDaoExtraValues) ||
             JSON.stringify(stored.jsonImportFolderPaths) !== JSON.stringify(settingsDraft.jsonImportFolderPaths) ||
             JSON.stringify(stored.jsonImportFilePaths) !== JSON.stringify(settingsDraft.jsonImportFilePaths) ||
             stored.uniqueIdSyncEnabled !== settingsDraft.uniqueIdSyncEnabled ||

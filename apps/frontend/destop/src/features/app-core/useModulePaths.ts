@@ -1,4 +1,4 @@
-﻿import { useMemo } from 'react'
+import { useMemo } from 'react'
 
 import { joinWinPath, pickLeafName } from '../../utils/path'
 
@@ -10,6 +10,7 @@ type UseModulePathsParams = {
 export function useModulePaths({ modRootPath, renameTargetPath }: UseModulePathsParams) {
     const moduleConfigPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Config', 'modConfig.json') : ''), [modRootPath])
     const npcPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Data', 'AvatarJsonData.json') : ''), [modRootPath])
+    const npcWuDaoPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Data', 'NPCWuDaoJson.json') : ''), [modRootPath])
     const backpackPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Data', 'BackpackJsonData.json') : ''), [modRootPath])
     const wudaoPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Data', 'WuDaoAllTypeJson.json') : ''), [modRootPath])
     const wudaoSkillPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Data', 'WuDaoJson.json') : ''), [modRootPath])
@@ -30,6 +31,7 @@ export function useModulePaths({ modRootPath, renameTargetPath }: UseModulePaths
     return {
         moduleConfigPath,
         npcPath,
+        npcWuDaoPath,
         backpackPath,
         wudaoPath,
         wudaoSkillPath,

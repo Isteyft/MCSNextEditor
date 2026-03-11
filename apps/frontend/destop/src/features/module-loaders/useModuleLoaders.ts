@@ -10,6 +10,7 @@ import {
     adaptBuffImportWithMerge,
     adaptItemImportWithMerge,
     adaptNpcImport,
+    adaptNpcWuDaoImport,
     adaptSkillImportWithMerge,
     adaptStaticSkillImport,
     adaptTalentImport,
@@ -26,10 +27,13 @@ type Params = {
     workspaceRoot: string
     configCachePath: string
     npcPath: string
+    npcWuDaoPath: string
     backpackPath: string
     npcCachePath: string
+    npcWuDaoCachePath: string
     backpackCachePath: string
     npcDirty: boolean
+    npcWuDaoDirty: boolean
     backpackDirty: boolean
     wudaoPath: string
     wudaoCachePath: string
@@ -64,16 +68,22 @@ type Params = {
     setConfigCachePath: Setter
     setConfigDirty: Setter
     setNpcMap: Setter
+    setNpcWuDaoMap: Setter
     setBackpackMap: Setter
     setNpcCachePath: Setter
+    setNpcWuDaoCachePath: Setter
     setBackpackCachePath: Setter
     setNpcDirty: Setter
+    setNpcWuDaoDirty: Setter
     setBackpackDirty: Setter
     setSelectedNpcKey: Setter
+    setSelectedNpcWuDaoKey: Setter
     setSelectedBackpackKey: Setter
     setSelectedNpcKeys: Setter
+    setSelectedNpcWuDaoKeys: Setter
     setSelectedBackpackKeys: Setter
     setNpcSelectionAnchor: Setter
+    setNpcWuDaoSelectionAnchor: Setter
     setBackpackSelectionAnchor: Setter
     setWuDaoMap: Setter
     setWuDaoCachePath: Setter
@@ -149,10 +159,13 @@ export function useModuleLoaders(params: Params) {
         workspaceRoot,
         configCachePath,
         npcPath,
+        npcWuDaoPath,
         backpackPath,
         npcCachePath,
+        npcWuDaoCachePath,
         backpackCachePath,
         npcDirty,
+        npcWuDaoDirty,
         backpackDirty,
         wudaoPath,
         wudaoCachePath,
@@ -187,16 +200,22 @@ export function useModuleLoaders(params: Params) {
         setConfigCachePath,
         setConfigDirty,
         setNpcMap,
+        setNpcWuDaoMap,
         setBackpackMap,
         setNpcCachePath,
+        setNpcWuDaoCachePath,
         setBackpackCachePath,
         setNpcDirty,
+        setNpcWuDaoDirty,
         setBackpackDirty,
         setSelectedNpcKey,
+        setSelectedNpcWuDaoKey,
         setSelectedBackpackKey,
         setSelectedNpcKeys,
+        setSelectedNpcWuDaoKeys,
         setSelectedBackpackKeys,
         setNpcSelectionAnchor,
+        setNpcWuDaoSelectionAnchor,
         setBackpackSelectionAnchor,
         setWuDaoMap,
         setWuDaoCachePath,
@@ -264,66 +283,85 @@ export function useModuleLoaders(params: Params) {
         loadSpecialDrawerOptions,
     } = params
 
-    async function loadNpcTable() {
+    async function loadJsonTable(
+        filePath: string,
+        cachePath: string,
+        dirty: boolean,
+        parse: (raw: unknown) => Record<string, any>,
+        apply: (rows: Record<string, any>, firstKey: string) => void,
+        label: string
+    ) {
         setViewMode('table')
-        setActivePath(npcPath)
-        if (!modRootPath || !npcPath) return
-        if (npcCachePath === npcPath) {
-            setStatus(npcDirty ? '已加载非实例NPC数据（缓存，未保存）。' : '已加载非实例NPC数据（缓存）。')
+        setActivePath(filePath)
+        if (!modRootPath || !filePath) return
+        if (cachePath === filePath) {
+            setStatus(dirty ? `已加载${label}（缓存，未保存）。` : `已加载${label}（缓存）。`)
             return
         }
         try {
-            const payload = await readJsonUnknownWithFallback({
-                filePath: npcPath,
-                defaultContent: '{}\n',
-                readFilePayload,
-                saveFilePayload,
-            })
-            const parsedResult = parseJsonUnknown(payload.content, npcPath)
-            const parsed = parsedResult.ok ? parsedResult.data : {}
-            const normalized = adaptNpcImport(parsed).data
-            const firstKey = Object.keys(normalized).sort((a, b) => Number(a) - Number(b))[0] ?? ''
-            setNpcMap(normalized)
-            setNpcCachePath(npcPath)
-            setNpcDirty(false)
-            setSelectedNpcKey(firstKey)
-            setSelectedNpcKeys(firstKey ? [firstKey] : [])
-            setNpcSelectionAnchor(firstKey)
-            setStatus('已加载非实例NPC数据（AvatarJsonData）。')
+            const payload = await readJsonUnknownWithFallback({ filePath, defaultContent: '{}\n', readFilePayload, saveFilePayload })
+            const parsedResult = parseJsonUnknown(payload.content, filePath)
+            const rows = parse(parsedResult.ok ? parsedResult.data : {})
+            const firstKey = Object.keys(rows).sort((a, b) => Number(a) - Number(b))[0] ?? ''
+            apply(rows, firstKey)
+            setStatus(`已加载${label}。`)
         } catch (error) {
-            setStatus(`读取非实例NPC数据失败: ${String(error)}`)
+            setStatus(`读取${label}失败: ${String(error)}`)
         }
     }
 
+    async function loadNpcTable() {
+        return loadJsonTable(
+            npcPath,
+            npcCachePath,
+            npcDirty,
+            raw => adaptNpcImport(raw).data,
+            (rows, firstKey) => {
+                setNpcMap(rows)
+                setNpcCachePath(npcPath)
+                setNpcDirty(false)
+                setSelectedNpcKey(firstKey)
+                setSelectedNpcKeys(firstKey ? [firstKey] : [])
+                setNpcSelectionAnchor(firstKey)
+            },
+            '非实例NPC数据'
+        )
+    }
+
+    async function loadNpcWuDaoTable() {
+        return loadJsonTable(
+            npcWuDaoPath,
+            npcWuDaoCachePath,
+            npcWuDaoDirty,
+            raw => adaptNpcWuDaoImport(raw).data,
+            (rows, firstKey) => {
+                setNpcWuDaoMap(rows)
+                setNpcWuDaoCachePath(npcWuDaoPath)
+                setNpcWuDaoDirty(false)
+                setSelectedNpcWuDaoKey(firstKey)
+                setSelectedNpcWuDaoKeys(firstKey ? [firstKey] : [])
+                setNpcWuDaoSelectionAnchor(firstKey)
+            },
+            'NPC悟道数据'
+        )
+    }
+
     async function loadBackpackTable() {
-        setViewMode('table')
-        setActivePath(backpackPath)
-        if (!modRootPath || !backpackPath) return
-        if (backpackCachePath === backpackPath) {
-            setStatus(backpackDirty ? '????????????????' : '????????????')
-            return
-        }
-        try {
-            const payload = await readJsonUnknownWithFallback({
-                filePath: backpackPath,
-                defaultContent: '{}\n',
-                readFilePayload,
-                saveFilePayload,
-            })
-            const parsedResult = parseJsonUnknown(payload.content, backpackPath)
-            const parsed = parsedResult.ok ? parsedResult.data : {}
-            const normalized = adaptBackpackImport(parsed).data
-            const firstKey = Object.keys(normalized).sort((a, b) => Number(a) - Number(b))[0] ?? ''
-            setBackpackMap(normalized)
-            setBackpackCachePath(backpackPath)
-            setBackpackDirty(false)
-            setSelectedBackpackKey(firstKey)
-            setSelectedBackpackKeys(firstKey ? [firstKey] : [])
-            setBackpackSelectionAnchor(firstKey)
-            setStatus('????????BackpackJsonData??')
-        } catch (error) {
-            setStatus(`????????: ${String(error)}`)
-        }
+        return loadJsonTable(
+            backpackPath,
+            backpackCachePath,
+            backpackDirty,
+            raw => adaptBackpackImport(raw).data,
+            (rows, firstKey) => {
+                setBackpackMap(rows)
+                setBackpackCachePath(backpackPath)
+                setBackpackDirty(false)
+                setSelectedBackpackKey(firstKey)
+                setSelectedBackpackKeys(firstKey ? [firstKey] : [])
+                setBackpackSelectionAnchor(firstKey)
+            },
+            '背包数据'
+        )
     }
 
     async function loadConfigForm() {
@@ -356,34 +394,21 @@ export function useModuleLoaders(params: Params) {
     }
 
     async function loadWuDaoTable() {
-        setViewMode('table')
-        setActivePath(wudaoPath)
-        if (!modRootPath || !wudaoPath) return
-        if (wudaoCachePath === wudaoPath) {
-            setStatus(wudaoDirty ? '已加载悟道数据（缓存，未保存）。' : '已加载悟道数据（缓存）。')
-            return
-        }
-        try {
-            const payload = await readJsonUnknownWithFallback({
-                filePath: wudaoPath,
-                defaultContent: '{}\n',
-                readFilePayload,
-                saveFilePayload,
-            })
-            const parsedResult = parseJsonUnknown(payload.content, wudaoPath)
-            const parsed = parsedResult.ok ? parsedResult.data : {}
-            const normalized = adaptWuDaoImport(parsed).data
-            const firstKey = Object.keys(normalized).sort((a, b) => Number(a) - Number(b))[0] ?? ''
-            setWuDaoMap(normalized)
-            setWuDaoCachePath(wudaoPath)
-            setWuDaoDirty(false)
-            setSelectedWuDaoKey(firstKey)
-            setSelectedWuDaoKeys(firstKey ? [firstKey] : [])
-            setWuDaoSelectionAnchor(firstKey)
-            setStatus('已加载悟道数据（WuDaoAllTypeJson）。')
-        } catch (error) {
-            setStatus(`读取悟道数据失败: ${String(error)}`)
-        }
+        return loadJsonTable(
+            wudaoPath,
+            wudaoCachePath,
+            wudaoDirty,
+            raw => adaptWuDaoImport(raw).data,
+            (rows, firstKey) => {
+                setWuDaoMap(rows)
+                setWuDaoCachePath(wudaoPath)
+                setWuDaoDirty(false)
+                setSelectedWuDaoKey(firstKey)
+                setSelectedWuDaoKeys(firstKey ? [firstKey] : [])
+                setWuDaoSelectionAnchor(firstKey)
+            },
+            '悟道数据'
+        )
     }
 
     async function loadTalentTable() {
@@ -403,8 +428,7 @@ export function useModuleLoaders(params: Params) {
                 saveFilePayload,
             })
             const parsedResult = parseJsonUnknown(payload.content, createAvatarPath)
-            const parsed = parsedResult.ok ? parsedResult.data : {}
-            const normalized = adaptTalentImport(parsed).data
+            const normalized = adaptTalentImport(parsedResult.ok ? parsedResult.data : {}).data
             const finalData = await mergeTalentSeidFiles({
                 source: normalized,
                 modRootPath,
@@ -420,7 +444,7 @@ export function useModuleLoaders(params: Params) {
             setSelectedTalentKey(firstKey)
             setSelectedTalentKeys(firstKey ? [firstKey] : [])
             setTalentSelectionAnchor(firstKey)
-            setStatus('已加载天赋数据（CreateAvatarJsonData）。')
+            setStatus('已加载天赋数据。')
         } catch (error) {
             setStatus(`读取天赋数据失败: ${String(error)}`)
         }
@@ -443,8 +467,7 @@ export function useModuleLoaders(params: Params) {
                 saveFilePayload,
             })
             const parsedResult = parseJsonUnknown(payload.content, wudaoSkillPath)
-            const parsed = parsedResult.ok ? parsedResult.data : {}
-            const normalized = adaptWuDaoSkillImport(parsed).data
+            const normalized = adaptWuDaoSkillImport(parsedResult.ok ? parsedResult.data : {}).data
             const finalData = await mergeWuDaoSkillSeidFiles({
                 source: normalized,
                 modRootPath,
@@ -459,42 +482,29 @@ export function useModuleLoaders(params: Params) {
             setSelectedWuDaoSkillKey(firstKey)
             setSelectedWuDaoSkillKeys(firstKey ? [firstKey] : [])
             setWuDaoSkillSelectionAnchor(firstKey)
-            setStatus('已加载悟道技能数据（WuDaoJson）。')
+            setStatus('已加载悟道技能数据。')
         } catch (error) {
             setStatus(`读取悟道技能数据失败: ${String(error)}`)
         }
     }
 
     async function loadAffixTable() {
-        setViewMode('table')
-        setActivePath(affixPath)
-        if (!modRootPath || !affixPath) return
-        if (affixCachePath === affixPath) {
-            setStatus(affixDirty ? '已加载词缀数据（缓存，未保存）。' : '已加载词缀数据（缓存）。')
-            return
-        }
         await loadAffixEnumMeta([modRootPath, projectPath, workspaceRoot], true)
-        try {
-            const payload = await readJsonUnknownWithFallback({
-                filePath: affixPath,
-                defaultContent: '{}\n',
-                readFilePayload,
-                saveFilePayload,
-            })
-            const parsedResult = parseJsonUnknown(payload.content, affixPath)
-            const parsed = parsedResult.ok ? parsedResult.data : {}
-            const normalized = adaptAffixImport(parsed).data
-            const firstKey = Object.keys(normalized).sort((a, b) => Number(a) - Number(b))[0] ?? ''
-            setAffixMap(normalized)
-            setAffixCachePath(affixPath)
-            setAffixDirty(false)
-            setSelectedAffixKey(firstKey)
-            setSelectedAffixKeys(firstKey ? [firstKey] : [])
-            setAffixSelectionAnchor(firstKey)
-            setStatus('已加载词缀数据（TuJianChunWenBen）。')
-        } catch (error) {
-            setStatus(`读取词缀数据失败: ${String(error)}`)
-        }
+        return loadJsonTable(
+            affixPath,
+            affixCachePath,
+            affixDirty,
+            raw => adaptAffixImport(raw).data,
+            (rows, firstKey) => {
+                setAffixMap(rows)
+                setAffixCachePath(affixPath)
+                setAffixDirty(false)
+                setSelectedAffixKey(firstKey)
+                setSelectedAffixKeys(firstKey ? [firstKey] : [])
+                setAffixSelectionAnchor(firstKey)
+            },
+            '词缀数据'
+        )
     }
 
     async function loadBuffTable() {
@@ -502,7 +512,7 @@ export function useModuleLoaders(params: Params) {
         setActivePath(buffDirPath)
         if (!modRootPath || !buffDirPath) return
         if (buffCachePath === buffDirPath) {
-            setStatus(buffDirty ? '已加载 Buff 数据（缓存，未保存）。' : '已加载 Buff 数据（缓存）。')
+            setStatus(buffDirty ? '已加载Buff数据（缓存，未保存）。' : '已加载Buff数据（缓存）。')
             return
         }
         await preloadMeta([modRootPath, projectPath, workspaceRoot], true)
@@ -510,13 +520,7 @@ export function useModuleLoaders(params: Params) {
         await loadBuffEnumMeta([modRootPath, projectPath, workspaceRoot], true)
         await loadSpecialDrawerOptions([modRootPath, projectPath, workspaceRoot], modRootPath, true)
         try {
-            const finalData = (
-                await adaptBuffImportWithMerge({
-                    modRootPath,
-                    loadProjectEntries,
-                    readFilePayload,
-                })
-            ).data
+            const finalData = (await adaptBuffImportWithMerge({ modRootPath, loadProjectEntries, readFilePayload })).data
             const firstKey = Object.keys(finalData).sort((a, b) => Number(a) - Number(b))[0] ?? ''
             setBuffMap(finalData)
             setBuffCachePath(buffDirPath)
@@ -524,9 +528,9 @@ export function useModuleLoaders(params: Params) {
             setSelectedBuffKey(firstKey)
             setSelectedBuffKeys(firstKey ? [firstKey] : [])
             setBuffSelectionAnchor(firstKey)
-            setStatus('已加载 Buff 数据（BuffJsonData）。')
+            setStatus('已加载Buff数据。')
         } catch (error) {
-            setStatus(`读取 Buff 数据失败: ${String(error)}`)
+            setStatus(`读取Buff数据失败: ${String(error)}`)
         }
     }
 
@@ -535,20 +539,14 @@ export function useModuleLoaders(params: Params) {
         setActivePath(itemDirPath)
         if (!modRootPath || !itemDirPath) return
         if (itemCachePath === itemDirPath) {
-            setStatus(itemDirty ? '已加载 Item 数据（缓存，未保存）。' : '已加载 Item 数据（缓存）。')
+            setStatus(itemDirty ? '已加载物品数据（缓存，未保存）。' : '已加载物品数据（缓存）。')
             return
         }
         await preloadMeta([modRootPath, projectPath, workspaceRoot], true)
         await loadItemSeidMeta([modRootPath, projectPath, workspaceRoot], true)
         await loadItemEnumMeta([modRootPath, projectPath, workspaceRoot], true)
         try {
-            const finalData = (
-                await adaptItemImportWithMerge({
-                    modRootPath,
-                    loadProjectEntries,
-                    readFilePayload,
-                })
-            ).data
+            const finalData = (await adaptItemImportWithMerge({ modRootPath, loadProjectEntries, readFilePayload })).data
             const firstKey = Object.keys(finalData).sort((a, b) => Number(a) - Number(b))[0] ?? ''
             setItemMap(finalData)
             setItemCachePath(itemDirPath)
@@ -556,9 +554,9 @@ export function useModuleLoaders(params: Params) {
             setSelectedItemKey(firstKey)
             setSelectedItemKeys(firstKey ? [firstKey] : [])
             setItemSelectionAnchor(firstKey)
-            setStatus('已加载 Item 数据（ItemJsonData）。')
+            setStatus('已加载物品数据。')
         } catch (error) {
-            setStatus(`读取 Item 数据失败: ${String(error)}`)
+            setStatus(`读取物品数据失败: ${String(error)}`)
         }
     }
 
@@ -567,20 +565,14 @@ export function useModuleLoaders(params: Params) {
         setActivePath(skillDirPath)
         if (!modRootPath || !skillDirPath) return
         if (skillCachePath === skillDirPath) {
-            setStatus(skillDirty ? '已加载 Skill 数据（缓存，未保存）。' : '已加载 Skill 数据（缓存）。')
+            setStatus(skillDirty ? '已加载神通数据（缓存，未保存）。' : '已加载神通数据（缓存）。')
             return
         }
         await preloadMeta([modRootPath, projectPath, workspaceRoot], true)
         await loadSkillSeidMeta([modRootPath, projectPath, workspaceRoot], true)
         await loadSkillEnumMeta([modRootPath, projectPath, workspaceRoot], true)
         try {
-            const finalData = (
-                await adaptSkillImportWithMerge({
-                    modRootPath,
-                    loadProjectEntries,
-                    readFilePayload,
-                })
-            ).data
+            const finalData = (await adaptSkillImportWithMerge({ modRootPath, loadProjectEntries, readFilePayload })).data
             const firstKey = Object.keys(finalData).sort((a, b) => Number(a) - Number(b))[0] ?? ''
             setSkillMap(finalData)
             setSkillCachePath(skillDirPath)
@@ -588,9 +580,9 @@ export function useModuleLoaders(params: Params) {
             setSelectedSkillKey(firstKey)
             setSelectedSkillKeys(firstKey ? [firstKey] : [])
             setSkillSelectionAnchor(firstKey)
-            setStatus('已加载 Skill 数据（skillJsonData）。')
+            setStatus('已加载神通数据。')
         } catch (error) {
-            setStatus(`读取 Skill 数据失败: ${String(error)}`)
+            setStatus(`读取神通数据失败: ${String(error)}`)
         }
     }
 
@@ -613,8 +605,7 @@ export function useModuleLoaders(params: Params) {
                 saveFilePayload,
             })
             const parsedResult = parseJsonUnknown(payload.content, staticSkillPath)
-            const parsed = parsedResult.ok ? parsedResult.data : {}
-            const normalized = adaptStaticSkillImport(parsed).data
+            const normalized = adaptStaticSkillImport(parsedResult.ok ? parsedResult.data : {}).data
             const finalData = await mergeStaticSkillSeidFiles({
                 source: normalized,
                 modRootPath,
@@ -629,7 +620,7 @@ export function useModuleLoaders(params: Params) {
             setSelectedStaticSkillKey(firstKey)
             setSelectedStaticSkillKeys(firstKey ? [firstKey] : [])
             setStaticSkillSelectionAnchor(firstKey)
-            setStatus('已加载功法数据（StaticSkillJsonData）。')
+            setStatus('已加载功法数据。')
         } catch (error) {
             setStatus(`读取功法数据失败: ${String(error)}`)
         }
@@ -640,6 +631,7 @@ export function useModuleLoaders(params: Params) {
         setTableSearchText('')
         if (key === 'project-config') return loadConfigForm()
         if (key === 'npc') return loadNpcTable()
+        if (key === 'npcwudao') return loadNpcWuDaoTable()
         if (key === 'backpack') return loadBackpackTable()
         if (key === 'wudao') return loadWuDaoTable()
         if (key === 'wudaoskill') return loadWuDaoSkillTable()
@@ -657,6 +649,7 @@ export function useModuleLoaders(params: Params) {
         handleSelectModule,
         loadConfigForm,
         loadNpcTable,
+        loadNpcWuDaoTable,
         loadBackpackTable,
         loadWuDaoTable,
         loadWuDaoSkillTable,

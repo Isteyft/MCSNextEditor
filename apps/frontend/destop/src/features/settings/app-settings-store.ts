@@ -8,6 +8,7 @@ const MIN_MAIN_WINDOW_WIDTH = 800
 const MIN_MAIN_WINDOW_HEIGHT = 600
 
 export type AppSettings = {
+    npcWuDaoExtraValues: Array<{ label: string; valueIndex: number }>
     jsonImportFolderPaths: string[]
     jsonImportFilePaths: string[]
     uniqueIdSyncEnabled: boolean
@@ -22,6 +23,7 @@ export type AppSettings = {
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
+    npcWuDaoExtraValues: [],
     jsonImportFolderPaths: [],
     jsonImportFilePaths: [],
     uniqueIdSyncEnabled: false,
@@ -62,11 +64,26 @@ function toMinInt(value: unknown, fallback: number, min: number) {
     return Math.max(min, toPositiveInt(value, fallback))
 }
 
+function normalizeNpcWuDaoExtraValues(value: unknown): Array<{ label: string; valueIndex: number }> {
+    if (!Array.isArray(value)) return []
+    const result: Array<{ label: string; valueIndex: number }> = []
+    for (const item of value) {
+        if (!item || typeof item !== 'object') continue
+        const row = item as Record<string, unknown>
+        const label = String(row.label ?? '').trim()
+        const valueIndex = Math.floor(Number(row.valueIndex ?? 0))
+        if (!label || !Number.isFinite(valueIndex) || valueIndex <= 0) continue
+        result.push({ label, valueIndex })
+    }
+    return result.filter((item, index, array) => array.findIndex(row => row.valueIndex === item.valueIndex) === index)
+}
+
 function normalizeSettings(parsed: Record<string, unknown>): AppSettings {
     const folderPaths = toPathArray(parsed.jsonImportFolderPaths ?? parsed.globalImportRootPath)
     const filePaths = toPathArray(parsed.jsonImportFilePaths ?? parsed.jsonImportFilePath)
     const triggerLevels = toNumberArray(parsed.uniqueIdSyncTriggerLevels)
     return {
+        npcWuDaoExtraValues: normalizeNpcWuDaoExtraValues(parsed.npcWuDaoExtraValues),
         jsonImportFolderPaths: Array.from(new Set(folderPaths)),
         jsonImportFilePaths: Array.from(new Set(filePaths)),
         uniqueIdSyncEnabled: Boolean(parsed.uniqueIdSyncEnabled ?? false),
@@ -133,6 +150,7 @@ export function saveAppSettings(patch: Partial<AppSettings>) {
     const next: AppSettings = {
         ...current,
         ...patch,
+        npcWuDaoExtraValues: normalizeNpcWuDaoExtraValues(patch.npcWuDaoExtraValues ?? current.npcWuDaoExtraValues),
         jsonImportFolderPaths: Array.from(new Set((patch.jsonImportFolderPaths ?? current.jsonImportFolderPaths).filter(Boolean))),
         jsonImportFilePaths: Array.from(new Set((patch.jsonImportFilePaths ?? current.jsonImportFilePaths).filter(Boolean))),
         uniqueIdSyncEnabled: patch.uniqueIdSyncEnabled ?? current.uniqueIdSyncEnabled,

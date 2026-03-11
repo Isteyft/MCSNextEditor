@@ -1,10 +1,11 @@
-﻿import { useMemo } from 'react'
+import { useMemo } from 'react'
 
 import { toAffixRows } from '../../components/affix/affix-domain'
 import { toBackpackRows } from '../../components/backpack/backpack-domain'
 import { toBuffRows } from '../../components/buff/buff-domain'
 import { toItemRows } from '../../components/item/item-domain'
 import { toNpcRows } from '../../components/npc/npc-domain'
+import { toNpcWuDaoRows } from '../../components/npcwudao/npcwudao-domain'
 import { toSkillRows } from '../../components/skill/skill-domain'
 import { toStaticSkillRows } from '../../components/staticskill/staticskill-domain'
 import { toTalentRows } from '../../components/tianfu/talent-domain'
@@ -17,6 +18,7 @@ import type {
     CreateAvatarEntry,
     ItemEntry,
     NpcEntry,
+    NpcWuDaoEntry,
     SkillEntry,
     StaticSkillEntry,
     WuDaoEntry,
@@ -25,6 +27,7 @@ import type {
 
 type UseModuleTableRowsParams = {
     npcMap: Record<string, NpcEntry>
+    npcWuDaoMap: Record<string, NpcWuDaoEntry>
     backpackMap: Record<string, BackpackEntry>
     wudaoMap: Record<string, WuDaoEntry>
     wudaoSkillMap: Record<string, WuDaoSkillEntry>
@@ -39,6 +42,7 @@ type UseModuleTableRowsParams = {
 
 export function useModuleTableRows({
     npcMap,
+    npcWuDaoMap,
     backpackMap,
     wudaoMap,
     wudaoSkillMap,
@@ -51,6 +55,7 @@ export function useModuleTableRows({
     tableSearchText,
 }: UseModuleTableRowsParams) {
     const npcRows = useMemo(() => toNpcRows(npcMap), [npcMap])
+    const npcWuDaoRows = useMemo(() => toNpcWuDaoRows(npcWuDaoMap), [npcWuDaoMap])
     const backpackRows = useMemo(() => toBackpackRows(backpackMap), [backpackMap])
     const wudaoRows = useMemo(() => toWuDaoRows(wudaoMap), [wudaoMap])
     const wudaoSkillRows = useMemo(() => toWuDaoSkillRows(wudaoSkillMap), [wudaoSkillMap])
@@ -69,6 +74,15 @@ export function useModuleTableRows({
             `${row.id} ${row.title} ${row.fenLei} ${row.desc} ${npcMap[row.key]?.menPai ?? ''}`.toLowerCase().includes(keyword)
         )
     }, [npcRows, npcMap, keyword])
+
+    const filteredNpcWuDaoRows = useMemo(() => {
+        if (!keyword) return npcWuDaoRows
+        return npcWuDaoRows.filter(row =>
+            `${row.id} ${row.title} ${row.fenLei} ${row.desc} ${(npcWuDaoMap[row.key]?.wudaoID ?? []).join(' ')}`
+                .toLowerCase()
+                .includes(keyword)
+        )
+    }, [npcWuDaoRows, npcWuDaoMap, keyword])
 
     const filteredBackpackRows = useMemo(() => {
         if (!keyword) return backpackRows
@@ -140,6 +154,7 @@ export function useModuleTableRows({
 
     return {
         npcRows,
+        npcWuDaoRows,
         backpackRows,
         wudaoRows,
         wudaoSkillRows,
@@ -150,6 +165,7 @@ export function useModuleTableRows({
         skillRows,
         staticSkillRows,
         filteredNpcRows,
+        filteredNpcWuDaoRows,
         filteredBackpackRows,
         filteredWuDaoRows,
         filteredWuDaoSkillRows,

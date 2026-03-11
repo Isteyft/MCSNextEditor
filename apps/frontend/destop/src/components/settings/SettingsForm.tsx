@@ -2,6 +2,7 @@
 
 type SettingsFormProps = {
     values: {
+        npcWuDaoExtraValues: Array<{ label: string; valueIndex: number }>
         jsonImportFolderPaths: string[]
         jsonImportFilePaths: string[]
         uniqueIdSyncEnabled: boolean
@@ -32,6 +33,26 @@ const MAIN_WINDOW_RESOLUTION_OPTIONS = ['800x600', '1280x968', '1440x1080', '192
 export function SettingsForm({ values, onChange }: SettingsFormProps) {
     const triggerLevelsText = values.uniqueIdSyncTriggerLevels.join(',')
     const selectedResolution = `${values.mainWindowWidth}x${values.mainWindowHeight}`
+
+    function updateNpcWuDaoExtraValue(index: number, patch: Partial<{ label: string; valueIndex: number }>) {
+        onChange({
+            npcWuDaoExtraValues: values.npcWuDaoExtraValues.map((item, currentIndex) =>
+                currentIndex === index ? { ...item, ...patch } : item
+            ),
+        })
+    }
+
+    function addNpcWuDaoExtraValue() {
+        onChange({
+            npcWuDaoExtraValues: [...values.npcWuDaoExtraValues, { label: '', valueIndex: 0 }],
+        })
+    }
+
+    function removeNpcWuDaoExtraValue(index: number) {
+        onChange({
+            npcWuDaoExtraValues: values.npcWuDaoExtraValues.filter((_, currentIndex) => currentIndex !== index),
+        })
+    }
 
     async function handlePickJsonFolders() {
         const selected = await open({
@@ -208,6 +229,55 @@ export function SettingsForm({ values, onChange }: SettingsFormProps) {
                                     </option>
                                 ))}
                             </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="settings-pref-section">
+                <h3>NPC悟道扩展值</h3>
+                <div className="settings-pref-card">
+                    <div className="settings-pref-row settings-pref-row-list">
+                        <span>扩展属性映射</span>
+                        <div className="settings-pref-list-wrap settings-grid-wrap">
+                            <div className="settings-grid-head">
+                                <span>属性</span>
+                                <span>Value序号</span>
+                                <span />
+                            </div>
+                            {values.npcWuDaoExtraValues.map((item, index) => (
+                                <div className="settings-grid-row" key={`npcwudao-extra-${index}`}>
+                                    <input
+                                        className="settings-level-input"
+                                        onChange={event => updateNpcWuDaoExtraValue(index, { label: event.target.value })}
+                                        placeholder="例如：魔"
+                                        type="text"
+                                        value={item.label}
+                                    />
+                                    <input
+                                        className="settings-level-input"
+                                        inputMode="numeric"
+                                        min={1}
+                                        onChange={event =>
+                                            updateNpcWuDaoExtraValue(index, {
+                                                valueIndex: Math.max(0, Number.parseInt(event.target.value || '0', 10) || 0),
+                                            })
+                                        }
+                                        placeholder="例如：21"
+                                        type="number"
+                                        value={item.valueIndex || ''}
+                                    />
+                                    <button className="settings-remove-btn" onClick={() => removeNpcWuDaoExtraValue(index)} type="button">
+                                        删除
+                                    </button>
+                                </div>
+                            ))}
+                            {values.npcWuDaoExtraValues.length === 0 ? <div className="muted">暂无扩展属性</div> : null}
+                            <div className="settings-grid-actions">
+                                <button className="settings-action-btn" onClick={addNpcWuDaoExtraValue} type="button">
+                                    新增一行
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

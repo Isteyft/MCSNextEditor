@@ -1,9 +1,10 @@
-﻿import { open } from '@tauri-apps/plugin-dialog'
+import { open } from '@tauri-apps/plugin-dialog'
 import type { FormEvent } from 'react'
 
 import { normalizeAffixMap } from '../../components/affix/affix-domain'
 import { normalizeBackpackMap } from '../../components/backpack/backpack-domain'
 import { normalizeNpcMap } from '../../components/npc/npc-domain'
+import { normalizeNpcWuDaoMap } from '../../components/npcwudao/npcwudao-domain'
 import { mergeStaticSkillSeidFiles, normalizeStaticSkillMap } from '../../components/staticskill/staticskill-domain'
 import { mergeTalentSeidFiles, normalizeTalentMap } from '../../components/tianfu/talent-domain'
 import { normalizeWuDaoMap } from '../../components/wudao/wudao-domain'
@@ -17,6 +18,7 @@ import type {
     CreateAvatarEntry,
     ItemEntry,
     NpcEntry,
+    NpcWuDaoEntry,
     SkillEntry,
     StaticSkillEntry,
     WuDaoEntry,
@@ -29,6 +31,7 @@ import { adaptBuffImportWithMerge, adaptItemImportWithMerge, adaptSkillImportWit
 
 export type RootModuleSnapshot = {
     npcMap: Record<string, NpcEntry>
+    npcWuDaoMap: Record<string, NpcWuDaoEntry>
     backpackMap: Record<string, BackpackEntry>
     wudaoMap: Record<string, WuDaoEntry>
     wudaoSkillMap: Record<string, WuDaoSkillEntry>
@@ -39,6 +42,7 @@ export type RootModuleSnapshot = {
     skillMap: Record<string, SkillEntry>
     staticSkillMap: Record<string, StaticSkillEntry>
     npcDirty: boolean
+    npcWuDaoDirty: boolean
     backpackDirty: boolean
     wudaoDirty: boolean
     wudaoSkillDirty: boolean
@@ -51,10 +55,7 @@ export type RootModuleSnapshot = {
 }
 
 type Setter = (value: any) => void
-
-type LifecycleSetters = {
-    [key: string]: Setter
-}
+type LifecycleSetters = { [key: string]: Setter }
 
 type LifecycleParams = {
     projectPath: string
@@ -85,6 +86,7 @@ type LifecycleParams = {
 function createEmptySnapshot(): RootModuleSnapshot {
     return {
         npcMap: {},
+        npcWuDaoMap: {},
         backpackMap: {},
         wudaoMap: {},
         wudaoSkillMap: {},
@@ -95,6 +97,7 @@ function createEmptySnapshot(): RootModuleSnapshot {
         skillMap: {},
         staticSkillMap: {},
         npcDirty: false,
+        npcWuDaoDirty: false,
         backpackDirty: false,
         wudaoDirty: false,
         wudaoSkillDirty: false,
@@ -116,19 +119,25 @@ function resetForRootSwitch(setters: LifecycleSetters) {
     setters.setConfigCachePath('')
     setters.setConfigDirty(false)
     setters.setNpcMap({})
+    setters.setNpcWuDaoMap({})
     setters.setBackpackMap({})
     setters.setNpcCachePath('')
+    setters.setNpcWuDaoCachePath('')
     setters.setBackpackCachePath('')
     setters.setNpcDirty(false)
+    setters.setNpcWuDaoDirty(false)
     setters.setBackpackDirty(false)
     setters.setSelectedNpcKey('')
+    setters.setSelectedNpcWuDaoKey('')
     setters.setSelectedBackpackKey('')
     setters.setSelectedNpcKeys([])
+    setters.setSelectedNpcWuDaoKeys([])
     setters.setSelectedBackpackKeys([])
     setters.setNpcSelectionAnchor('')
-    setters.setBackpackSelectionAnchor('')
+    setters.setNpcWuDaoSelectionAnchor('')
     setters.setBackpackSelectionAnchor('')
     setters.setNpcClipboard([])
+    setters.setNpcWuDaoClipboard([])
     setters.setBackpackClipboard([])
     setters.setWuDaoMap({})
     setters.setWuDaoCachePath('')
@@ -186,6 +195,7 @@ function resetForRootSwitch(setters: LifecycleSetters) {
     setters.setSeidEditorOpen(false)
     setters.setSeidPickerOpen(false)
     setters.setActiveSeidId(null)
+    setters.setAddNpcWuDaoOpen(false)
     setters.setAddBackpackOpen(false)
     setters.setAddBuffOpen(false)
     setters.setAddWuDaoSkillOpen(false)
@@ -225,6 +235,9 @@ function resetForProjectReload(setters: LifecycleSetters, siblingFolders: Array<
     setters.setSelectedNpcKey('')
     setters.setSelectedNpcKeys([])
     setters.setNpcSelectionAnchor('')
+    setters.setSelectedNpcWuDaoKey('')
+    setters.setSelectedNpcWuDaoKeys([])
+    setters.setNpcWuDaoSelectionAnchor('')
     setters.setSelectedTalentKey('')
     setters.setSelectedTalentKeys([])
     setters.setTalentSelectionAnchor('')
@@ -265,9 +278,10 @@ export function useProjectLifecycle(params: LifecycleParams) {
         const snapshot = createEmptySnapshot()
         if (!targetModRoot) return snapshot
 
-        const targetWuDaoPath = joinWinPath(targetModRoot, 'Data', 'WuDaoAllTypeJson.json')
         const targetNpcPath = joinWinPath(targetModRoot, 'Data', 'AvatarJsonData.json')
+        const targetNpcWuDaoPath = joinWinPath(targetModRoot, 'Data', 'NPCWuDaoJson.json')
         const targetBackpackPath = joinWinPath(targetModRoot, 'Data', 'BackpackJsonData.json')
+        const targetWuDaoPath = joinWinPath(targetModRoot, 'Data', 'WuDaoAllTypeJson.json')
         const targetWuDaoSkillPath = joinWinPath(targetModRoot, 'Data', 'WuDaoJson.json')
         const targetAffixPath = joinWinPath(targetModRoot, 'Data', 'TuJianChunWenBen.json')
         const targetTalentPath = joinWinPath(targetModRoot, 'Data', 'CreateAvatarJsonData.json')
@@ -283,7 +297,20 @@ export function useProjectLifecycle(params: LifecycleParams) {
             const parsedResult = parseJsonUnknown(payload.content, targetNpcPath)
             snapshot.npcMap = normalizeNpcMap(parsedResult.ok ? parsedResult.data : {})
         } catch {
-            // ignore and continue
+            // ignore missing or invalid npc data for this root
+        }
+
+        try {
+            const payload = await readJsonUnknownWithFallback({
+                filePath: targetNpcWuDaoPath,
+                defaultContent: '{}\n',
+                readFilePayload,
+                saveFilePayload,
+            })
+            const parsedResult = parseJsonUnknown(payload.content, targetNpcWuDaoPath)
+            snapshot.npcWuDaoMap = normalizeNpcWuDaoMap(parsedResult.ok ? parsedResult.data : {})
+        } catch {
+            // ignore missing or invalid npc wudao data for this root
         }
 
         try {
@@ -296,7 +323,7 @@ export function useProjectLifecycle(params: LifecycleParams) {
             const parsedResult = parseJsonUnknown(payload.content, targetBackpackPath)
             snapshot.backpackMap = normalizeBackpackMap(parsedResult.ok ? parsedResult.data : {})
         } catch {
-            // ignore and continue
+            // ignore missing or invalid backpack data for this root
         }
 
         try {
@@ -309,7 +336,7 @@ export function useProjectLifecycle(params: LifecycleParams) {
             const parsedResult = parseJsonUnknown(payload.content, targetWuDaoPath)
             snapshot.wudaoMap = normalizeWuDaoMap(parsedResult.ok ? parsedResult.data : {})
         } catch {
-            // ignore and continue
+            // ignore missing or invalid wudao data for this root
         }
 
         try {
@@ -329,7 +356,7 @@ export function useProjectLifecycle(params: LifecycleParams) {
                 readFilePayload,
             })
         } catch {
-            // ignore and continue
+            // ignore missing or invalid wudao skill data for this root
         }
 
         try {
@@ -342,7 +369,7 @@ export function useProjectLifecycle(params: LifecycleParams) {
             const parsedResult = parseJsonUnknown(payload.content, targetAffixPath)
             snapshot.affixMap = normalizeAffixMap(parsedResult.ok ? parsedResult.data : {})
         } catch {
-            // ignore and continue
+            // ignore missing or invalid affix data for this root
         }
 
         try {
@@ -362,43 +389,25 @@ export function useProjectLifecycle(params: LifecycleParams) {
                 readFilePayload,
             })
         } catch {
-            // ignore and continue
+            // ignore missing or invalid talent data for this root
         }
 
         try {
-            snapshot.buffMap = (
-                await adaptBuffImportWithMerge({
-                    modRootPath: targetModRoot,
-                    loadProjectEntries,
-                    readFilePayload,
-                })
-            ).data
+            snapshot.buffMap = (await adaptBuffImportWithMerge({ modRootPath: targetModRoot, loadProjectEntries, readFilePayload })).data
         } catch {
-            // ignore and continue
+            // ignore missing or invalid buff data for this root
         }
 
         try {
-            snapshot.itemMap = (
-                await adaptItemImportWithMerge({
-                    modRootPath: targetModRoot,
-                    loadProjectEntries,
-                    readFilePayload,
-                })
-            ).data
+            snapshot.itemMap = (await adaptItemImportWithMerge({ modRootPath: targetModRoot, loadProjectEntries, readFilePayload })).data
         } catch {
-            // ignore and continue
+            // ignore missing or invalid item data for this root
         }
 
         try {
-            snapshot.skillMap = (
-                await adaptSkillImportWithMerge({
-                    modRootPath: targetModRoot,
-                    loadProjectEntries,
-                    readFilePayload,
-                })
-            ).data
+            snapshot.skillMap = (await adaptSkillImportWithMerge({ modRootPath: targetModRoot, loadProjectEntries, readFilePayload })).data
         } catch {
-            // ignore and continue
+            // ignore missing or invalid skill data for this root
         }
 
         try {
@@ -418,7 +427,7 @@ export function useProjectLifecycle(params: LifecycleParams) {
                 readFilePayload,
             })
         } catch {
-            // ignore and continue
+            // ignore missing or invalid static skill data for this root
         }
 
         return snapshot
@@ -426,8 +435,9 @@ export function useProjectLifecycle(params: LifecycleParams) {
 
     function applyRootModuleSnapshot(targetModRoot: string, snapshot: RootModuleSnapshot) {
         const targetNpcPath = joinWinPath(targetModRoot, 'Data', 'AvatarJsonData.json')
-        const targetWuDaoPath = joinWinPath(targetModRoot, 'Data', 'WuDaoAllTypeJson.json')
+        const targetNpcWuDaoPath = joinWinPath(targetModRoot, 'Data', 'NPCWuDaoJson.json')
         const targetBackpackPath = joinWinPath(targetModRoot, 'Data', 'BackpackJsonData.json')
+        const targetWuDaoPath = joinWinPath(targetModRoot, 'Data', 'WuDaoAllTypeJson.json')
         const targetWuDaoSkillPath = joinWinPath(targetModRoot, 'Data', 'WuDaoJson.json')
         const targetAffixPath = joinWinPath(targetModRoot, 'Data', 'TuJianChunWenBen.json')
         const targetTalentPath = joinWinPath(targetModRoot, 'Data', 'CreateAvatarJsonData.json')
@@ -439,14 +449,22 @@ export function useProjectLifecycle(params: LifecycleParams) {
         setters.setNpcMap(snapshot.npcMap)
         setters.setNpcCachePath(targetNpcPath)
         setters.setNpcDirty(snapshot.npcDirty)
-        setters.setBackpackMap(snapshot.backpackMap)
-        setters.setBackpackCachePath(targetBackpackPath)
-        setters.setBackpackDirty(snapshot.backpackDirty)
         const firstNpc = Object.keys(snapshot.npcMap).sort((a, b) => Number(a) - Number(b))[0] ?? ''
         setters.setSelectedNpcKey(firstNpc)
         setters.setSelectedNpcKeys(firstNpc ? [firstNpc] : [])
         setters.setNpcSelectionAnchor(firstNpc)
 
+        setters.setNpcWuDaoMap(snapshot.npcWuDaoMap)
+        setters.setNpcWuDaoCachePath(targetNpcWuDaoPath)
+        setters.setNpcWuDaoDirty(snapshot.npcWuDaoDirty)
+        const firstNpcWuDao = Object.keys(snapshot.npcWuDaoMap).sort((a, b) => Number(a) - Number(b))[0] ?? ''
+        setters.setSelectedNpcWuDaoKey(firstNpcWuDao)
+        setters.setSelectedNpcWuDaoKeys(firstNpcWuDao ? [firstNpcWuDao] : [])
+        setters.setNpcWuDaoSelectionAnchor(firstNpcWuDao)
+
+        setters.setBackpackMap(snapshot.backpackMap)
+        setters.setBackpackCachePath(targetBackpackPath)
+        setters.setBackpackDirty(snapshot.backpackDirty)
         const firstBackpack = Object.keys(snapshot.backpackMap).sort((a, b) => Number(a) - Number(b))[0] ?? ''
         setters.setSelectedBackpackKey(firstBackpack)
         setters.setSelectedBackpackKeys(firstBackpack ? [firstBackpack] : [])
@@ -570,9 +588,7 @@ export function useProjectLifecycle(params: LifecycleParams) {
             }
             setters.setRootSnapshotCache(nextCache)
             const activeSnapshot = nextCache[normalizePath(nextModRoot)]
-            if (activeSnapshot) {
-                applyRootModuleSnapshot(nextModRoot, activeSnapshot)
-            }
+            if (activeSnapshot) applyRootModuleSnapshot(nextModRoot, activeSnapshot)
             setters.setStatus(
                 modRoot ? STATUS_MESSAGES.openProjectLoaded(rootPath) : STATUS_MESSAGES.openProjectLoadedFallback(nextModRoot)
             )
@@ -672,9 +688,5 @@ export function useProjectLifecycle(params: LifecycleParams) {
         }
     }
 
-    return {
-        handleOpenProject,
-        handleCreateProject,
-        handleSelectModRoot,
-    }
+    return { handleOpenProject, handleCreateProject, handleSelectModRoot }
 }

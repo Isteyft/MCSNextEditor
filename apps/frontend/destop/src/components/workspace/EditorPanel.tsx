@@ -1,10 +1,21 @@
-﻿import { ViewMode } from '../../modules'
-import type { AffixEntry, BackpackEntry, BuffEntry, ItemEntry, NpcEntry, SkillEntry, StaticSkillEntry, WuDaoSkillEntry } from '../../types'
+import { ViewMode } from '../../modules'
+import type {
+    AffixEntry,
+    BackpackEntry,
+    BuffEntry,
+    ItemEntry,
+    NpcEntry,
+    NpcWuDaoEntry,
+    SkillEntry,
+    StaticSkillEntry,
+    WuDaoSkillEntry,
+} from '../../types'
 import { AffixForm } from '../affix/AffixForm'
 import { BackpackForm } from '../backpack/BackpackForm'
 import { BuffForm } from '../buff/BuffForm'
 import { ItemForm } from '../item/ItemForm'
 import { NpcForm } from '../npc/NpcForm'
+import { NpcWuDaoForm } from '../npcwudao/NpcWuDaoForm'
 import { SettingsForm } from '../settings/SettingsForm'
 import { SkillForm } from '../skill/SkillForm'
 import { StaticSkillForm } from '../staticskill/StaticSkillForm'
@@ -24,6 +35,12 @@ type EditorPanelProps = {
     npcSkillOptions: { id: number; name: string }[]
     npcStaticSkillOptions: { id: number; name: string }[]
     npcItemTypeOptions: { id: number; name: string }[]
+    npcWuDaoForm: NpcWuDaoEntry | null
+    onChangeNpcWuDaoForm: (patch: Partial<NpcWuDaoEntry>) => void
+    npcWuDaoSkillOptions: { id: number; name: string }[]
+    npcWuDaoExtraValueMappings: Array<{ label: string; valueIndex: number }>
+    npcWuDaoExtraValues: Record<string, number>
+    onChangeNpcWuDaoExtraValue: (valueIndex: number, value: number) => void
     backpackForm: BackpackEntry | null
     onChangeBackpackForm: (patch: Partial<BackpackEntry>) => void
     backpackNpcOptions: { id: number; name: string }[]
@@ -80,6 +97,7 @@ type EditorPanelProps = {
     onOpenSeidEditor: () => void
     seidDisplayRows: { id: number; name: string }[]
     settingsForm: {
+        npcWuDaoExtraValues: Array<{ label: string; valueIndex: number }>
         jsonImportFolderPaths: string[]
         jsonImportFilePaths: string[]
         uniqueIdSyncEnabled: boolean
@@ -107,6 +125,12 @@ export function EditorPanel(props: EditorPanelProps) {
         npcSkillOptions,
         npcStaticSkillOptions,
         npcItemTypeOptions,
+        npcWuDaoForm,
+        onChangeNpcWuDaoForm,
+        npcWuDaoSkillOptions,
+        npcWuDaoExtraValueMappings,
+        npcWuDaoExtraValues,
+        onChangeNpcWuDaoExtraValue,
         backpackForm,
         onChangeBackpackForm,
         backpackNpcOptions,
@@ -173,6 +197,15 @@ export function EditorPanel(props: EditorPanelProps) {
                             skillOptions={npcSkillOptions}
                             staticSkillOptions={npcStaticSkillOptions}
                             itemTypeOptions={npcItemTypeOptions}
+                        />
+                    ) : activeModule === 'npcwudao' ? (
+                        <NpcWuDaoForm
+                            values={npcWuDaoForm}
+                            onChange={onChangeNpcWuDaoForm}
+                            wudaoSkillOptions={npcWuDaoSkillOptions}
+                            extraValueMappings={npcWuDaoExtraValueMappings}
+                            extraValues={npcWuDaoExtraValues}
+                            onChangeExtraValue={onChangeNpcWuDaoExtraValue}
                         />
                     ) : activeModule === 'backpack' ? (
                         <BackpackForm

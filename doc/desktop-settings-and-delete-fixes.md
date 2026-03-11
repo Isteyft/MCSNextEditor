@@ -286,3 +286,74 @@
 4. 打开项目时确认加载弹窗阻塞交互，直到进度完成。
 5. 在同级 mod 中新增数据，确认 Drawer 刷新后仍能看到。
 6. 新增一条悟道技能，编辑 Seid，保存后重开项目，确认 `WuDaoJson.json` 与 `WuDaoSeidJsonData` 都正确恢复。
+
+## 12. NPC悟道模块接入
+
+### 数据文件
+
+-   `Data/NPCWuDaoJson.json`
+
+### 数据结构
+
+-   `id`: 主键 ID
+-   `Type`: 类型
+-   `lv`: 境界
+-   `wudaoID`: 悟道技能 ID 列表
+-   `value1-value12`: 12 项熟练度字段
+
+### 字段说明
+
+-   `lv` 使用境界枚举：
+    -   `0` 凡人
+    -   `1-3` 炼气前/中/后期
+    -   `4-6` 筑基前/中/后期
+    -   `7-9` 金丹前/中/后期
+    -   `10-12` 元婴前/中/后期
+    -   `13-15` 化神前/中/后期
+-   `wudaoID` 使用弹窗选择，交互方式与 Seid 中的 drawer 类似
+-   `wudaoID` 的候选源来自 `悟道技能` 模块
+-   `value1-value12` 分别表示：
+    -   `value1` 金
+    -   `value2` 木
+    -   `value3` 水
+    -   `value4` 火
+    -   `value5` 土
+    -   `value6` 神
+    -   `value7` 体
+    -   `value8` 剑
+    -   `value9` 气
+    -   `value10` 阵
+    -   `value11` 丹
+    -   `value12` 器
+-   每项熟练度都使用 0-5 枚举：
+    -   `0` 一窍不通
+    -   `1` 初窥门径
+    -   `2` 略有小成
+    -   `3` 融会贯通
+    -   `4` 大道已成
+    -   `5` 道之真境
+
+### 当前支持
+
+-   列表展示
+-   搜索
+-   新增
+-   删除
+-   复制/粘贴
+-   批量修改 ID
+-   JSON 导入
+-   右侧表单编辑
+-   项目保存
+-   草稿缓存恢复
+-   切换 mod 时跟随快照切换
+
+### 关键文件
+
+-   `src/types/npcwudao.ts`
+-   `src/components/npcwudao/npcwudao-domain.ts`
+-   `src/components/npcwudao/NpcWuDaoForm.tsx`
+-   `src/features/modules/npcwudao/useNpcWuDaoHandlers.ts`
+-   `src/features/module-loaders/useModuleLoaders.ts`
+-   `src/features/project-save/useProjectSave.ts`
+-   `src/features/project-shell/useProjectLifecycle.ts`
+-   `src/App.tsx`

@@ -1,9 +1,10 @@
-﻿import { useEffect } from 'react'
+import { useEffect } from 'react'
 
 type Params = {
     activeModule: string
     isEditableElement: (target: EventTarget | null) => boolean
     onDeleteNpc: () => void
+    onDeleteNpcWuDao: () => void
     onDeleteBackpack: () => void
     onDeleteWuDao: () => void
     onDeleteWuDaoSkill: () => void
@@ -14,6 +15,7 @@ type Params = {
     onDeleteSkill: () => void
     onDeleteStaticSkill: () => void
     onCopyNpc: () => void
+    onCopyNpcWuDao: () => void
     onCopyBackpack: () => void
     onCopyWuDao: () => void
     onCopyWuDaoSkill: () => void
@@ -24,6 +26,7 @@ type Params = {
     onCopySkill: () => void
     onCopyStaticSkill: () => void
     onPasteNpc: () => void
+    onPasteNpcWuDao: () => void
     onPasteBackpack: () => void
     onPasteWuDao: () => void
     onPasteWuDaoSkill: () => void
@@ -40,6 +43,7 @@ export function useGlobalShortcuts(params: Params) {
         activeModule,
         isEditableElement,
         onDeleteNpc,
+        onDeleteNpcWuDao,
         onDeleteBackpack,
         onDeleteWuDao,
         onDeleteWuDaoSkill,
@@ -50,6 +54,7 @@ export function useGlobalShortcuts(params: Params) {
         onDeleteSkill,
         onDeleteStaticSkill,
         onCopyNpc,
+        onCopyNpcWuDao,
         onCopyBackpack,
         onCopyWuDao,
         onCopyWuDaoSkill,
@@ -60,6 +65,7 @@ export function useGlobalShortcuts(params: Params) {
         onCopySkill,
         onCopyStaticSkill,
         onPasteNpc,
+        onPasteNpcWuDao,
         onPasteBackpack,
         onPasteWuDao,
         onPasteWuDaoSkill,
@@ -74,7 +80,7 @@ export function useGlobalShortcuts(params: Params) {
     useEffect(() => {
         function onKeyDown(event: KeyboardEvent) {
             if (
-                !['npc', 'backpack', 'wudao', 'wudaoskill', 'affix', 'talent', 'buff', 'item', 'skill', 'staticskill'].includes(
+                !['npc', 'npcwudao', 'backpack', 'wudao', 'wudaoskill', 'affix', 'talent', 'buff', 'item', 'skill', 'staticskill'].includes(
                     activeModule
                 )
             )
@@ -84,6 +90,7 @@ export function useGlobalShortcuts(params: Params) {
             if (event.key === 'Delete') {
                 event.preventDefault()
                 if (activeModule === 'npc') onDeleteNpc()
+                else if (activeModule === 'npcwudao') onDeleteNpcWuDao()
                 else if (activeModule === 'backpack') onDeleteBackpack()
                 else if (activeModule === 'wudao') onDeleteWuDao()
                 else if (activeModule === 'wudaoskill') onDeleteWuDaoSkill()
@@ -101,6 +108,7 @@ export function useGlobalShortcuts(params: Params) {
             if (key === 'c') {
                 event.preventDefault()
                 if (activeModule === 'npc') onCopyNpc()
+                else if (activeModule === 'npcwudao') onCopyNpcWuDao()
                 else if (activeModule === 'backpack') onCopyBackpack()
                 else if (activeModule === 'wudao') onCopyWuDao()
                 else if (activeModule === 'wudaoskill') onCopyWuDaoSkill()
@@ -113,6 +121,7 @@ export function useGlobalShortcuts(params: Params) {
             } else if (key === 'v') {
                 event.preventDefault()
                 if (activeModule === 'npc') onPasteNpc()
+                else if (activeModule === 'npcwudao') onPasteNpcWuDao()
                 else if (activeModule === 'backpack') onPasteBackpack()
                 else if (activeModule === 'wudao') onPasteWuDao()
                 else if (activeModule === 'wudaoskill') onPasteWuDaoSkill()
@@ -131,6 +140,7 @@ export function useGlobalShortcuts(params: Params) {
         activeModule,
         isEditableElement,
         onDeleteNpc,
+        onDeleteNpcWuDao,
         onDeleteBackpack,
         onDeleteWuDao,
         onDeleteWuDaoSkill,
@@ -141,6 +151,7 @@ export function useGlobalShortcuts(params: Params) {
         onDeleteSkill,
         onDeleteStaticSkill,
         onCopyNpc,
+        onCopyNpcWuDao,
         onCopyBackpack,
         onCopyWuDao,
         onCopyWuDaoSkill,
@@ -151,6 +162,7 @@ export function useGlobalShortcuts(params: Params) {
         onCopySkill,
         onCopyStaticSkill,
         onPasteNpc,
+        onPasteNpcWuDao,
         onPasteBackpack,
         onPasteWuDao,
         onPasteWuDaoSkill,

@@ -1,8 +1,9 @@
-﻿import { saveAffixFile } from '../../components/affix/affix-domain'
+import { saveAffixFile } from '../../components/affix/affix-domain'
 import { saveBackpackFile } from '../../components/backpack/backpack-domain'
 import { saveBuffFiles, saveBuffSeidFiles } from '../../components/buff/buff-domain'
 import { saveItemFiles, saveItemSeidFiles } from '../../components/item/item-domain'
 import { saveNpcFile } from '../../components/npc/npc-domain'
+import { saveNpcWuDaoFile } from '../../components/npcwudao/npcwudao-domain'
 import { saveSkillFiles, saveSkillSeidFiles } from '../../components/skill/skill-domain'
 import { saveStaticSkillFile, saveStaticSkillSeidFiles } from '../../components/staticskill/staticskill-domain'
 import { saveTalentSeidFiles } from '../../components/tianfu/talent-domain'
@@ -22,6 +23,8 @@ type Params = {
     preservedSettings: unknown
     npcMap: Record<string, any>
     npcPath: string
+    npcWuDaoMap: Record<string, any>
+    npcWuDaoPath: string
     backpackMap: Record<string, any>
     backpackPath: string
     wudaoMap: Record<string, any>
@@ -46,6 +49,7 @@ type Params = {
     deleteFilePayload: (path: string) => Promise<any>
     setConfigDirty: Setter
     setNpcDirty: Setter
+    setNpcWuDaoDirty: Setter
     setBackpackDirty: Setter
     setWuDaoDirty: Setter
     setWuDaoSkillDirty: Setter
@@ -56,6 +60,7 @@ type Params = {
     setSkillDirty: Setter
     setStaticSkillDirty: Setter
     setNpcCachePath: Setter
+    setNpcWuDaoCachePath: Setter
     setBackpackCachePath: Setter
     setAffixCachePath: Setter
     setWuDaoSkillCachePath: Setter
@@ -77,6 +82,8 @@ export function useProjectSave(params: Params) {
         preservedSettings,
         npcMap,
         npcPath,
+        npcWuDaoMap,
+        npcWuDaoPath,
         backpackMap,
         backpackPath,
         wudaoMap,
@@ -101,6 +108,7 @@ export function useProjectSave(params: Params) {
         deleteFilePayload,
         setConfigDirty,
         setNpcDirty,
+        setNpcWuDaoDirty,
         setBackpackDirty,
         setWuDaoDirty,
         setWuDaoSkillDirty,
@@ -111,6 +119,7 @@ export function useProjectSave(params: Params) {
         setSkillDirty,
         setStaticSkillDirty,
         setNpcCachePath,
+        setNpcWuDaoCachePath,
         setBackpackCachePath,
         setAffixCachePath,
         setWuDaoSkillCachePath,
@@ -156,6 +165,7 @@ export function useProjectSave(params: Params) {
             })
             const affixFileCount = await saveAffixFile({ affixMap, affixPath, saveFilePayload })
             await saveNpcFile({ npcMap, npcPath, saveFilePayload })
+            const npcWuDaoFileCount = await saveNpcWuDaoFile({ npcWuDaoMap, npcWuDaoPath, saveFilePayload })
             const backpackFileCount = await saveBackpackFile({ backpackMap, backpackPath, saveFilePayload })
             await saveWuDaoFile({ wudaoMap, wudaoPath, saveFilePayload })
             const wudaoSkillFileCount = await saveWuDaoSkillFile({ wudaoSkillMap, wudaoSkillPath, saveFilePayload })
@@ -227,6 +237,7 @@ export function useProjectSave(params: Params) {
 
             setConfigDirty(false)
             setNpcDirty(false)
+            setNpcWuDaoDirty(false)
             setBackpackDirty(false)
             setWuDaoDirty(false)
             setWuDaoSkillDirty(false)
@@ -237,6 +248,7 @@ export function useProjectSave(params: Params) {
             setSkillDirty(false)
             setStaticSkillDirty(false)
             setNpcCachePath(npcPath)
+            setNpcWuDaoCachePath(npcWuDaoPath)
             setBackpackCachePath(backpackPath)
             setAffixCachePath(affixPath)
             setWuDaoSkillCachePath(wudaoSkillPath)
@@ -246,7 +258,7 @@ export function useProjectSave(params: Params) {
             setSkillCachePath(skillDirPath)
             setStaticSkillCachePath(staticSkillPath)
             setStatus(
-                `项目已保存：背包 ${backpackFileCount} 条；悟道 ${Object.keys(wudaoMap).length} 条；悟道技能 ${wudaoSkillFileCount} 条，WuDaoSeid ${wudaoSkillSeidFileCount} 个；词缀 ${affixFileCount} 条；天赋Seid ${talentSeidFileCount} 个；Buff ${buffFileCount} 个，BuffSeid ${buffSeidFileCount} 个；Item ${itemFileCount} 个，ItemSeid ${itemSeidFileCount} 个；Skill ${skillFileCount} 个，SkillSeid ${skillSeidFileCount} 个；StaticSkill ${staticSkillFileCount} 条，StaticSkillSeid ${staticSkillSeidFileCount} 个`
+                `项目已保存：NPC悟道 ${npcWuDaoFileCount} 条；背包 ${backpackFileCount} 条；悟道 ${Object.keys(wudaoMap).length} 条；悟道技能 ${wudaoSkillFileCount} 条，WuDaoSeid ${wudaoSkillSeidFileCount} 个；词缀 ${affixFileCount} 条；天赋Seid ${talentSeidFileCount} 个；Buff ${buffFileCount} 个，BuffSeid ${buffSeidFileCount} 个；Item ${itemFileCount} 个，ItemSeid ${itemSeidFileCount} 个；Skill ${skillFileCount} 个，SkillSeid ${skillSeidFileCount} 个；StaticSkill ${staticSkillFileCount} 条，StaticSkillSeid ${staticSkillSeidFileCount} 个`
             )
         } catch (error) {
             setStatus(`保存项目失败: ${String(error)}`)
