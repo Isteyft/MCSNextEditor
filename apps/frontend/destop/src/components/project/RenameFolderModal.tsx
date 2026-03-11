@@ -1,4 +1,4 @@
-import { X } from 'lucide-react'
+﻿import { X } from 'lucide-react'
 import { FormEvent, useEffect, useState } from 'react'
 
 type RenameFolderModalProps = {

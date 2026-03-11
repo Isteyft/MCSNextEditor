@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+﻿import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import type {
     AffixEntry,
     BuffEntry,
     CreateAvatarEntry,
     ItemEntry,
+    NpcEntry,
     SkillEntry,
     StaticSkillEntry,
     WuDaoEntry,
@@ -22,6 +23,7 @@ type UseProjectShellStateParams = {
     modRootFolders: RootFolderItem[]
     normalizePath: (value: string) => string
     pickLeafName: (value: string) => string
+    npcMap: Record<string, NpcEntry>
     wudaoMap: Record<string, WuDaoEntry>
     wudaoSkillMap: Record<string, WuDaoSkillEntry>
     affixMap: Record<string, AffixEntry>
@@ -30,6 +32,7 @@ type UseProjectShellStateParams = {
     itemMap: Record<string, ItemEntry>
     skillMap: Record<string, SkillEntry>
     staticSkillMap: Record<string, StaticSkillEntry>
+    npcDirty: boolean
     wudaoDirty: boolean
     wudaoSkillDirty: boolean
     affixDirty: boolean
@@ -45,6 +48,7 @@ export function useProjectShellState({
     modRootFolders,
     normalizePath,
     pickLeafName,
+    npcMap,
     wudaoMap,
     wudaoSkillMap,
     affixMap,
@@ -53,6 +57,7 @@ export function useProjectShellState({
     itemMap,
     skillMap,
     staticSkillMap,
+    npcDirty,
     wudaoDirty,
     wudaoSkillDirty,
     affixDirty,
@@ -99,6 +104,7 @@ export function useProjectShellState({
         setRootSnapshotCache(prev => ({
             ...prev,
             [cacheKey]: {
+                npcMap,
                 wudaoMap,
                 wudaoSkillMap,
                 affixMap,
@@ -107,6 +113,7 @@ export function useProjectShellState({
                 itemMap,
                 skillMap,
                 staticSkillMap,
+                npcDirty,
                 wudaoDirty,
                 wudaoSkillDirty,
                 affixDirty,
@@ -120,6 +127,7 @@ export function useProjectShellState({
     }, [
         modRootPath,
         normalizePath,
+        npcMap,
         wudaoMap,
         wudaoSkillMap,
         affixMap,
@@ -128,6 +136,7 @@ export function useProjectShellState({
         itemMap,
         skillMap,
         staticSkillMap,
+        npcDirty,
         wudaoDirty,
         wudaoSkillDirty,
         affixDirty,

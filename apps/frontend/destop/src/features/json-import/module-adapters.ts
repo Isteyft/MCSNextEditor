@@ -1,6 +1,7 @@
 import { normalizeAffixMap } from '../../components/affix/affix-domain'
 import { loadBuffFiles, mergeBuffSeidFiles } from '../../components/buff/buff-domain'
 import { loadItemFiles, mergeItemSeidFiles } from '../../components/item/item-domain'
+import { normalizeNpcMap } from '../../components/npc/npc-domain'
 import { loadSkillFiles, mergeSkillSeidFiles } from '../../components/skill/skill-domain'
 import { normalizeStaticSkillMap } from '../../components/staticskill/staticskill-domain'
 import { normalizeTalentMap } from '../../components/tianfu/talent-domain'
@@ -12,6 +13,7 @@ import type {
     CreateAvatarEntry,
     FsEntry,
     ItemEntry,
+    NpcEntry,
     SkillEntry,
     StaticSkillEntry,
     WuDaoEntry,
@@ -20,7 +22,7 @@ import type {
 import { joinWinPath } from '../../utils/path'
 
 export type ModuleImportReport = {
-    module: 'talent' | 'wudao' | 'wudaoskill' | 'affix' | 'staticskill' | 'buff' | 'item' | 'skill'
+    module: 'talent' | 'wudao' | 'wudaoskill' | 'affix' | 'staticskill' | 'buff' | 'item' | 'skill' | 'npc'
     total: number
 }
 
@@ -47,6 +49,17 @@ export function adaptWuDaoImport(raw: unknown): { data: Record<string, WuDaoEntr
         data,
         report: {
             module: 'wudao',
+            total: Object.keys(data).length,
+        },
+    }
+}
+
+export function adaptNpcImport(raw: unknown): { data: Record<string, NpcEntry>; report: ModuleImportReport } {
+    const data = normalizeNpcMap(raw)
+    return {
+        data,
+        report: {
+            module: 'npc',
             total: Object.keys(data).length,
         },
     }

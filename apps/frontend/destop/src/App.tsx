@@ -38,6 +38,7 @@ import { useModuleLoaders } from './features/module-loaders/useModuleLoaders'
 import { useAffixHandlers } from './features/modules/affix/useAffixHandlers'
 import { useBuffHandlers } from './features/modules/buff/useBuffHandlers'
 import { useItemHandlers } from './features/modules/item/useItemHandlers'
+import { useNpcHandlers } from './features/modules/npc/useNpcHandlers'
 import { useSkillHandlers } from './features/modules/skill/useSkillHandlers'
 import { useStaticSkillHandlers } from './features/modules/staticskill/useStaticSkillHandlers'
 import { useTalentHandlers } from './features/modules/talent/useTalentHandlers'
@@ -74,6 +75,7 @@ import type {
     BuffEntry,
     CreateAvatarEntry,
     ItemEntry,
+    NpcEntry,
     SkillEntry,
     StaticSkillEntry,
     TalentTypeOption,
@@ -102,6 +104,14 @@ export function App() {
     const [preservedSettings, setPreservedSettings] = useState<unknown>([])
     const [configDirty, setConfigDirty] = useState(false)
     const [configCachePath, setConfigCachePath] = useState('')
+
+    const [npcMap, setNpcMap] = useState<Record<string, NpcEntry>>({})
+    const [npcCachePath, setNpcCachePath] = useState('')
+    const [npcDirty, setNpcDirty] = useState(false)
+    const [selectedNpcKey, setSelectedNpcKey] = useState('')
+    const [selectedNpcKeys, setSelectedNpcKeys] = useState<string[]>([])
+    const [npcSelectionAnchor, setNpcSelectionAnchor] = useState('')
+    const [npcClipboard, setNpcClipboard] = useState<NpcEntry[]>([])
 
     const [wudaoMap, setWuDaoMap] = useState<Record<string, WuDaoEntry>>({})
     const [wudaoCachePath, setWuDaoCachePath] = useState('')
@@ -191,6 +201,7 @@ export function App() {
     const [seidPickerOpen, setSeidPickerOpen] = useState(false)
     const [activeSeidId, setActiveSeidId] = useState<number | null>(null)
     const [addTalentOpen, setAddTalentOpen] = useState(false)
+    const [addNpcOpen, setAddNpcOpen] = useState(false)
     const [addWuDaoOpen, setAddWuDaoOpen] = useState(false)
     const [addWuDaoSkillOpen, setAddWuDaoSkillOpen] = useState(false)
     const [addAffixOpen, setAddAffixOpen] = useState(false)
@@ -243,6 +254,7 @@ export function App() {
 
     const {
         moduleConfigPath,
+        npcPath,
         wudaoPath,
         wudaoSkillPath,
         affixPath,
@@ -265,6 +277,7 @@ export function App() {
             modRootFolders,
             normalizePath,
             pickLeafName,
+            npcMap,
             wudaoMap,
             wudaoSkillMap,
             affixMap,
@@ -273,6 +286,7 @@ export function App() {
             itemMap,
             skillMap,
             staticSkillMap,
+            npcDirty,
             wudaoDirty,
             wudaoSkillDirty,
             affixDirty,
@@ -283,6 +297,7 @@ export function App() {
             staticSkillDirty,
         })
     const {
+        npcRows,
         wudaoRows,
         wudaoSkillRows,
         affixRows,
@@ -291,6 +306,7 @@ export function App() {
         itemRows,
         skillRows,
         staticSkillRows,
+        filteredNpcRows,
         filteredWuDaoRows,
         filteredWuDaoSkillRows,
         filteredAvatarRows,
@@ -300,6 +316,7 @@ export function App() {
         filteredSkillRows,
         filteredStaticSkillRows,
     } = useModuleTableRows({
+        npcMap,
         wudaoMap,
         wudaoSkillMap,
         affixMap,
@@ -310,6 +327,7 @@ export function App() {
         staticSkillMap,
         tableSearchText,
     })
+    const selectedNpc = useMemo(() => (selectedNpcKey ? (npcMap[selectedNpcKey] ?? null) : null), [npcMap, selectedNpcKey])
     const selectedWuDao = useMemo(() => (selectedWuDaoKey ? (wudaoMap[selectedWuDaoKey] ?? null) : null), [wudaoMap, selectedWuDaoKey])
     const selectedWuDaoSkill = useMemo(
         () => (selectedWuDaoSkillKey ? (wudaoSkillMap[selectedWuDaoSkillKey] ?? null) : null),
@@ -317,6 +335,46 @@ export function App() {
     )
     const selectedAffix = useMemo(() => (selectedAffixKey ? (affixMap[selectedAffixKey] ?? null) : null), [affixMap, selectedAffixKey])
     const affixDrawerOptions = useMemo(() => drawerOptionsMap.AffixDrawer ?? [], [drawerOptionsMap])
+    const npcSkillDrawerOptions = useMemo(() => {
+        const optionMap = new Map<number, TalentTypeOption>()
+        const appendSkillOptions = (source: Record<string, SkillEntry>) => {
+            for (const row of Object.values(source)) {
+                const uniqueId = Number(row.Skill_ID ?? 0)
+                if (!Number.isFinite(uniqueId) || uniqueId <= 0) continue
+                const current = optionMap.get(uniqueId)
+                const name = row.name || ''
+                if (!current || (!current.name && name)) {
+                    optionMap.set(uniqueId, { id: uniqueId, name })
+                }
+            }
+        }
+
+        for (const snapshot of Object.values(rootSnapshotCache)) {
+            appendSkillOptions(snapshot.skillMap)
+        }
+        appendSkillOptions(skillMap)
+
+        return [...optionMap.values()].sort((a, b) => a.id - b.id)
+    }, [rootSnapshotCache, skillMap])
+    const npcStaticSkillDrawerOptions = useMemo(() => {
+        const cached = buildSnapshotDrawerOptions(
+            Object.values(rootSnapshotCache).map(snapshot => ({
+                affixMap: snapshot.affixMap,
+                buffMap: snapshot.buffMap,
+                itemMap: snapshot.itemMap,
+                skillMap: snapshot.skillMap,
+                staticSkillMap: snapshot.staticSkillMap,
+            }))
+        )
+        const current = buildInMemoryDrawerOptions({
+            affixMap,
+            buffMap,
+            itemMap,
+            skillMap,
+            staticSkillMap,
+        })
+        return mergeDrawerOptionMaps(mergeDrawerOptionMaps(cached, drawerOptionsMap), current).StaticSkillDrawer ?? []
+    }, [rootSnapshotCache, drawerOptionsMap, affixMap, buffMap, itemMap, skillMap, staticSkillMap])
     const activeModuleLabel = useMemo(() => MODULES.find(item => item.key === activeModule)?.label ?? '-', [activeModule])
     const {
         selectedTalent,
@@ -358,6 +416,13 @@ export function App() {
 
     useSeidActiveSync({ activeSeidId, seidEditorOpen, selectedTalent: selectedSeidOwner, setActiveSeidId })
     useModuleSelectionSync({
+        npc: {
+            rows: npcRows,
+            selectedKey: selectedNpcKey,
+            setSelectedKey: setSelectedNpcKey,
+            setSelectedKeys: setSelectedNpcKeys,
+            setSelectionAnchor: setNpcSelectionAnchor,
+        },
         wudao: {
             rows: wudaoRows,
             selectedKey: selectedWuDaoKey,
@@ -599,6 +664,10 @@ export function App() {
             setPreservedSettings,
             setConfigDirty,
             setConfigCachePath,
+            setNpcMap,
+            setNpcCachePath,
+            setNpcDirty,
+            setAddNpcOpen,
             setWuDaoMap,
             setWuDaoCachePath,
             setWuDaoDirty,
@@ -609,6 +678,10 @@ export function App() {
             setSelectedWuDaoKeys,
             setWuDaoSelectionAnchor,
             setWuDaoClipboard,
+            setSelectedNpcKey,
+            setSelectedNpcKeys,
+            setNpcSelectionAnchor,
+            setNpcClipboard,
             setSelectedWuDaoSkillKey,
             setSelectedWuDaoSkillKeys,
             setWuDaoSkillSelectionAnchor,
@@ -705,6 +778,9 @@ export function App() {
         projectPath,
         workspaceRoot,
         configCachePath,
+        npcPath,
+        npcCachePath,
+        npcDirty,
         wudaoPath,
         wudaoCachePath,
         wudaoDirty,
@@ -737,6 +813,12 @@ export function App() {
         setConfigForm,
         setConfigCachePath,
         setConfigDirty,
+        setNpcMap,
+        setNpcCachePath,
+        setNpcDirty,
+        setSelectedNpcKey,
+        setSelectedNpcKeys,
+        setNpcSelectionAnchor,
         setWuDaoMap,
         setWuDaoCachePath,
         setWuDaoDirty,
@@ -847,6 +929,32 @@ export function App() {
             )
         )
     }, [modRootPath, rootSnapshotCache, affixMap, buffMap, itemMap, skillMap, staticSkillMap])
+
+    const { handleSelectNpc, handleDeleteNpcs, handleBatchPrefixNpcIds, handleAddNpc, handleCopyNpc, handlePasteNpc, handleChangeNpcForm } =
+        useNpcHandlers({
+            filteredNpcRows,
+            npcRows,
+            npcMap,
+            selectedNpcKey,
+            selectedNpcKeys,
+            npcSelectionAnchor,
+            npcClipboard,
+            cloneNpcEntry: entry => ({
+                ...entry,
+                LingGen: [...entry.LingGen],
+                skills: [...entry.skills],
+                staticSkills: [...entry.staticSkills],
+                paimaifenzu: [...entry.paimaifenzu],
+            }),
+            setSelectedNpcKey,
+            setSelectedNpcKeys,
+            setNpcSelectionAnchor,
+            setNpcMap,
+            setNpcDirty,
+            setStatus,
+            setAddNpcOpen,
+            setNpcClipboard,
+        })
 
     const {
         handleSelectWuDao,
@@ -1094,6 +1202,7 @@ export function App() {
     useGlobalShortcuts({
         activeModule,
         isEditableElement,
+        onDeleteNpc: handleDeleteNpcs,
         onDeleteWuDao: handleDeleteWuDaos,
         onDeleteWuDaoSkill: handleDeleteWuDaoSkills,
         onDeleteAffix: handleDeleteAffixes,
@@ -1102,6 +1211,7 @@ export function App() {
         onDeleteItem: handleDeleteItems,
         onDeleteSkill: handleDeleteSkills,
         onDeleteStaticSkill: handleDeleteStaticSkills,
+        onCopyNpc: handleCopyNpc,
         onCopyWuDao: handleCopyWuDao,
         onCopyWuDaoSkill: handleCopyWuDaoSkill,
         onCopyAffix: handleCopyAffix,
@@ -1110,6 +1220,7 @@ export function App() {
         onCopyItem: handleCopyItem,
         onCopySkill: handleCopySkill,
         onCopyStaticSkill: handleCopyStaticSkill,
+        onPasteNpc: handlePasteNpc,
         onPasteWuDao: handlePasteWuDao,
         onPasteWuDaoSkill: handlePasteWuDaoSkill,
         onPasteAffix: handlePasteAffix,
@@ -1186,7 +1297,7 @@ export function App() {
         try {
             return JSON.parse(jsonText) as unknown
         } catch (error) {
-            setStatus(`瀵煎叆 JSON 澶辫触: ${String(error)}`)
+            setStatus(`导入 JSON 失败: ${String(error)}`)
             return null
         }
     }
@@ -1213,6 +1324,31 @@ export function App() {
         setAffixClipboard(rows)
         handlePasteAffix()
         setStatus(`已导入词缀 JSON：${rows.length} 条。`)
+    }
+
+    function handleImportNpcJson(jsonText: string) {
+        const raw = parseImportJsonText(jsonText)
+        if (!raw) return
+        const rows = collectImportRows(raw, ['id'])
+            .map(item => item as NpcEntry)
+            .filter(item => Number.isFinite(Number(item.id)) && Number(item.id) > 0)
+            .map(item => ({
+                ...item,
+                LingGen: Array.isArray(item.LingGen)
+                    ? item.LingGen.map(value => Number(value)).filter(value => Number.isFinite(value))
+                    : [],
+                skills: Array.isArray(item.skills) ? item.skills.map(value => Number(value)).filter(value => Number.isFinite(value)) : [],
+                staticSkills: Array.isArray(item.staticSkills)
+                    ? item.staticSkills.map(value => Number(value)).filter(value => Number.isFinite(value))
+                    : [],
+                paimaifenzu: Array.isArray(item.paimaifenzu)
+                    ? item.paimaifenzu.map(value => Number(value)).filter(value => Number.isFinite(value))
+                    : [],
+            }))
+        if (rows.length === 0) return setStatus('未识别到有效非实例NPC数据。')
+        setNpcClipboard(rows)
+        handlePasteNpc()
+        setStatus(`已导入非实例NPC JSON：${rows.length} 条。`)
     }
 
     function handleImportBuffJson(jsonText: string) {
@@ -1300,6 +1436,7 @@ export function App() {
 
     const infoPanelPresenter = useInfoPanelPresenter({
         activeModule,
+        setAddNpcOpen,
         setAddWuDaoOpen,
         setAddWuDaoSkillOpen,
         setAddTalentOpen,
@@ -1308,6 +1445,7 @@ export function App() {
         setAddItemOpen,
         setAddSkillOpen,
         setAddStaticSkillOpen,
+        handleBatchPrefixNpcIds,
         handleBatchPrefixWuDaoIds,
         handleBatchPrefixWuDaoSkillIds,
         handleBatchPrefixAffixIds,
@@ -1316,6 +1454,7 @@ export function App() {
         handleBatchPrefixItemIds,
         handleBatchPrefixSkillIds,
         handleBatchPrefixStaticSkillIds,
+        handleDeleteNpcs,
         handleDeleteWuDaos,
         handleDeleteWuDaoSkills,
         handleDeleteAffixes,
@@ -1324,6 +1463,7 @@ export function App() {
         handleDeleteItems,
         handleDeleteSkills,
         handleDeleteStaticSkills,
+        handleCopyNpc,
         handleCopyWuDao,
         handleCopyWuDaoSkill,
         handleCopyAffix,
@@ -1332,6 +1472,7 @@ export function App() {
         handleCopyItem,
         handleCopySkill,
         handleCopyStaticSkill,
+        handlePasteNpc,
         handlePasteWuDao,
         handlePasteWuDaoSkill,
         handlePasteAffix,
@@ -1340,6 +1481,7 @@ export function App() {
         handlePasteItem,
         handlePasteSkill,
         handlePasteStaticSkill,
+        handleImportNpc: handleImportNpcJson,
         handleImportWuDao: handleImportWuDaoJson,
         handleImportWuDaoSkill: handleImportWuDaoSkillJson,
         handleImportAffix: handleImportAffixJson,
@@ -1352,6 +1494,7 @@ export function App() {
         handleGenerateStaticSkillGroup,
         handleGenerateSkillBooksFromSkill,
         handleGenerateSkillBooksFromStaticSkill,
+        handleSelectNpc,
         handleSelectWuDao,
         handleSelectWuDaoSkill,
         handleSelectAffix,
@@ -1360,6 +1503,7 @@ export function App() {
         handleSelectItem,
         handleSelectSkill,
         handleSelectStaticSkill,
+        filteredNpcRows,
         filteredWuDaoRows,
         filteredWuDaoSkillRows,
         filteredAffixRows,
@@ -1368,6 +1512,7 @@ export function App() {
         filteredItemRows,
         filteredSkillRows,
         filteredStaticSkillRows,
+        selectedNpcKey,
         selectedWuDaoKey,
         selectedWuDaoSkillKey,
         selectedAffixKey,
@@ -1376,6 +1521,7 @@ export function App() {
         selectedItemKey,
         selectedSkillKey,
         selectedStaticSkillKey,
+        selectedNpcKeys,
         selectedWuDaoKeys,
         selectedWuDaoSkillKeys,
         selectedAffixKeys,
@@ -1421,7 +1567,7 @@ export function App() {
             }
             setStatus(STATUS_MESSAGES.deletedFolder(pickLeafName(pathToDelete)))
         } catch (error) {
-            setStatus(statusError('鍒犻櫎', error))
+            setStatus(statusError('删除', error))
         }
     }
 
@@ -1432,6 +1578,8 @@ export function App() {
         rawConfigObject,
         configForm,
         preservedSettings,
+        npcMap,
+        npcPath,
         wudaoMap,
         wudaoPath,
         wudaoSkillMap,
@@ -1453,6 +1601,7 @@ export function App() {
         saveFilePayload,
         deleteFilePayload,
         setConfigDirty,
+        setNpcDirty,
         setWuDaoDirty,
         setWuDaoSkillDirty,
         setAffixDirty,
@@ -1461,6 +1610,7 @@ export function App() {
         setItemDirty,
         setSkillDirty,
         setStaticSkillDirty,
+        setNpcCachePath,
         setAffixCachePath,
         setWuDaoSkillCachePath,
         setTalentCachePath,
@@ -1473,6 +1623,7 @@ export function App() {
 
     const hasUnsavedChanges =
         configDirty ||
+        npcDirty ||
         wudaoDirty ||
         wudaoSkillDirty ||
         affixDirty ||
@@ -1497,6 +1648,7 @@ export function App() {
                 setRawConfigObject(cached.data.rawConfigObject)
                 setConfigForm(cached.data.configForm)
                 setPreservedSettings(cached.data.preservedSettings)
+                setNpcMap((cached.data.npcMap as Record<string, NpcEntry> | undefined) ?? {})
                 setWuDaoMap((cached.data.wudaoMap as Record<string, WuDaoEntry> | undefined) ?? {})
                 setWuDaoSkillMap((cached.data.wudaoSkillMap as Record<string, WuDaoSkillEntry> | undefined) ?? {})
                 setAffixMap(cached.data.affixMap as Record<string, AffixEntry>)
@@ -1506,6 +1658,7 @@ export function App() {
                 setSkillMap(cached.data.skillMap as Record<string, SkillEntry>)
                 setStaticSkillMap(cached.data.staticSkillMap as Record<string, StaticSkillEntry>)
                 setConfigDirty(true)
+                setNpcDirty(true)
                 setWuDaoDirty(true)
                 setWuDaoSkillDirty(true)
                 setAffixDirty(true)
@@ -1535,7 +1688,7 @@ export function App() {
             autoSaveRunningRef.current = true
             void handleSaveProject()
                 .catch(error => {
-                    setStatus(statusError('鑷姩淇濆瓨', error))
+                    setStatus(statusError('自动保存', error))
                     void logError(`auto save failed: ${String(error)}`)
                 })
                 .finally(() => {
@@ -1575,6 +1728,7 @@ export function App() {
                               rawConfigObject,
                               configForm,
                               preservedSettings,
+                              npcMap,
                               wudaoMap,
                               wudaoSkillMap,
                               affixMap,
@@ -1614,6 +1768,7 @@ export function App() {
         rawConfigObject,
         configForm,
         preservedSettings,
+        npcMap,
         wudaoMap,
         wudaoSkillMap,
         affixMap,
@@ -1660,7 +1815,7 @@ export function App() {
                 onSubmit={handleCreateProject}
                 open={createOpen}
                 projectName={newProjectName}
-                title={createMode === 'quick' ? '鏂板mod鐩綍' : '鏂板缓椤圭洰'}
+                title={createMode === 'quick' ? '新增mod目录' : '新建项目'}
                 showProjectName={createMode === 'full'}
             />
             <RenameFolderModal
@@ -1674,12 +1829,20 @@ export function App() {
             />
             <AddTalentModal open={addTalentOpen} onClose={() => setAddTalentOpen(false)} onSubmit={handleAddTalent} />
             <AddTalentModal
+                open={addNpcOpen}
+                onClose={() => setAddNpcOpen(false)}
+                onSubmit={handleAddNpc}
+                title="新增非实例NPC"
+                confirmText="确认新增"
+                placeholder="例如: 10302"
+            />
+            <AddTalentModal
                 open={addWuDaoOpen}
                 onClose={() => setAddWuDaoOpen(false)}
                 onSubmit={handleAddWuDao}
-                title="鏂板鎮熼亾"
-                confirmText="纭鏂板"
-                placeholder="渚嬪: 28"
+                title="新增悟道"
+                confirmText="确认新增"
+                placeholder="例如: 28"
             />
             <AddTalentModal
                 open={addWuDaoSkillOpen}
@@ -1693,25 +1856,25 @@ export function App() {
                 open={addAffixOpen}
                 onClose={() => setAddAffixOpen(false)}
                 onSubmit={handleAddAffix}
-                title="鏂板璇嶇紑"
-                confirmText="纭鏂板"
-                placeholder="渚嬪: 70001"
+                title="新增词缀"
+                confirmText="确认新增"
+                placeholder="例如: 70001"
             />
             <AddTalentModal
                 open={addBuffOpen}
                 onClose={() => setAddBuffOpen(false)}
                 onSubmit={handleAddBuff}
-                title="鏂板 Buff"
-                confirmText="纭鏂板"
-                placeholder="渚嬪: 52000"
+                title="新增 Buff"
+                confirmText="确认新增"
+                placeholder="例如: 52000"
             />
             <AddTalentModal
                 open={addItemOpen}
                 onClose={() => setAddItemOpen(false)}
                 onSubmit={handleAddItem}
-                title="鏂板鐗╁搧"
-                confirmText="纭鏂板"
-                placeholder="渚嬪: 52500"
+                title="新增物品"
+                confirmText="确认新增"
+                placeholder="例如: 52500"
             />
             <AddTalentModal
                 open={addSkillOpen}
@@ -1725,9 +1888,9 @@ export function App() {
                 open={addStaticSkillOpen}
                 onClose={() => setAddStaticSkillOpen(false)}
                 onSubmit={handleAddStaticSkill}
-                title="鏂板鍔熸硶"
-                confirmText="纭鏂板"
-                placeholder="渚嬪: 253000"
+                title="新增功法"
+                confirmText="确认新增"
+                placeholder="例如: 253000"
             />
             <SeidEditorModal
                 activeSeidId={activeSeidId}
@@ -1809,6 +1972,11 @@ export function App() {
                             setConfigForm(prev => ({ ...prev, ...patch }))
                             setConfigDirty(true)
                         }}
+                        npcForm={selectedNpc}
+                        onChangeNpcForm={handleChangeNpcForm}
+                        npcSkillOptions={npcSkillDrawerOptions}
+                        npcStaticSkillOptions={npcStaticSkillDrawerOptions}
+                        npcItemTypeOptions={itemTypeOptions}
                         wudaoForm={selectedWuDao}
                         onChangeWuDaoForm={handleChangeWuDaoForm}
                         wudaoSkillForm={selectedWuDaoSkill}

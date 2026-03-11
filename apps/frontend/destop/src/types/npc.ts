@@ -1,0 +1,37 @@
+﻿export type NpcEntry = {
+    id: number
+    Title: string
+    FirstName: string
+    Name: string
+    face: number
+    fightFace: number
+    SexType: number
+    AvatarType: number
+    Level: number
+    HP: number
+    dunSu: number
+    ziZhi: number
+    wuXin: number
+    shengShi: number
+    shaQi: number
+    shouYuan: number
+    age: number
+    menPai: string
+    equipWeapon: number
+    equipClothing: number
+    equipRing: number
+    LingGen: number[]
+    skills: number[]
+    staticSkills: number[]
+    yuanying: number
+    HuaShenLingYu: number
+    MoneyType: number
+    IsRefresh: number
+    dropType: number
+    canjiaPaiMai: number
+    paimaifenzu: number[]
+    wudaoType: number
+    XinQuType: number
+    gudingjiage: number
+    sellPercent: number
+}

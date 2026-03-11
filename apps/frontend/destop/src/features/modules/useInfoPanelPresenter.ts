@@ -9,6 +9,7 @@ type SelectFn = (key: string, index: number, options: SelectOptions) => void
 
 type UseInfoPanelPresenterParams = {
     activeModule: ModuleKey | ''
+    setAddNpcOpen: (open: boolean) => void
     setAddWuDaoOpen: (open: boolean) => void
     setAddWuDaoSkillOpen: (open: boolean) => void
     setAddTalentOpen: (open: boolean) => void
@@ -17,6 +18,7 @@ type UseInfoPanelPresenterParams = {
     setAddItemOpen: (open: boolean) => void
     setAddSkillOpen: (open: boolean) => void
     setAddStaticSkillOpen: (open: boolean) => void
+    handleBatchPrefixNpcIds: (prefix: string) => void
     handleBatchPrefixWuDaoIds: (prefix: string) => void
     handleBatchPrefixWuDaoSkillIds: (prefix: string) => void
     handleBatchPrefixAffixIds: (prefix: string) => void
@@ -25,6 +27,7 @@ type UseInfoPanelPresenterParams = {
     handleBatchPrefixItemIds: (prefix: string) => void
     handleBatchPrefixSkillIds: (prefix: string) => void
     handleBatchPrefixStaticSkillIds: (prefix: string) => void
+    handleDeleteNpcs: () => void
     handleDeleteWuDaos: () => void
     handleDeleteWuDaoSkills: () => void
     handleDeleteAffixes: () => void
@@ -33,6 +36,7 @@ type UseInfoPanelPresenterParams = {
     handleDeleteItems: () => void
     handleDeleteSkills: () => void
     handleDeleteStaticSkills: () => void
+    handleCopyNpc: () => void
     handleCopyWuDao: () => void
     handleCopyWuDaoSkill: () => void
     handleCopyAffix: () => void
@@ -41,6 +45,7 @@ type UseInfoPanelPresenterParams = {
     handleCopyItem: () => void
     handleCopySkill: () => void
     handleCopyStaticSkill: () => void
+    handlePasteNpc: () => void
     handlePasteWuDao: () => void
     handlePasteWuDaoSkill: () => void
     handlePasteAffix: () => void
@@ -49,6 +54,7 @@ type UseInfoPanelPresenterParams = {
     handlePasteItem: () => void
     handlePasteSkill: () => void
     handlePasteStaticSkill: () => void
+    handleImportNpc: (jsonText: string) => void
     handleImportWuDao: (jsonText: string) => void
     handleImportWuDaoSkill: (jsonText: string) => void
     handleImportAffix: (jsonText: string) => void
@@ -61,6 +67,7 @@ type UseInfoPanelPresenterParams = {
     handleGenerateStaticSkillGroup: () => void
     handleGenerateSkillBooksFromSkill: () => void
     handleGenerateSkillBooksFromStaticSkill: () => void
+    handleSelectNpc: SelectFn
     handleSelectWuDao: SelectFn
     handleSelectWuDaoSkill: SelectFn
     handleSelectAffix: SelectFn
@@ -69,6 +76,7 @@ type UseInfoPanelPresenterParams = {
     handleSelectItem: SelectFn
     handleSelectSkill: SelectFn
     handleSelectStaticSkill: SelectFn
+    filteredNpcRows: CreateAvatarRow[]
     filteredWuDaoRows: CreateAvatarRow[]
     filteredWuDaoSkillRows: CreateAvatarRow[]
     filteredAffixRows: CreateAvatarRow[]
@@ -77,6 +85,7 @@ type UseInfoPanelPresenterParams = {
     filteredItemRows: CreateAvatarRow[]
     filteredSkillRows: CreateAvatarRow[]
     filteredStaticSkillRows: CreateAvatarRow[]
+    selectedNpcKey: string
     selectedWuDaoKey: string
     selectedWuDaoSkillKey: string
     selectedAffixKey: string
@@ -85,6 +94,7 @@ type UseInfoPanelPresenterParams = {
     selectedItemKey: string
     selectedSkillKey: string
     selectedStaticSkillKey: string
+    selectedNpcKeys: string[]
     selectedWuDaoKeys: string[]
     selectedWuDaoSkillKeys: string[]
     selectedAffixKeys: string[]
@@ -100,6 +110,7 @@ type UseInfoPanelPresenterParams = {
 export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
     const {
         activeModule,
+        setAddNpcOpen,
         setAddWuDaoOpen,
         setAddWuDaoSkillOpen,
         setAddTalentOpen,
@@ -108,6 +119,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         setAddItemOpen,
         setAddSkillOpen,
         setAddStaticSkillOpen,
+        handleBatchPrefixNpcIds,
         handleBatchPrefixWuDaoIds,
         handleBatchPrefixWuDaoSkillIds,
         handleBatchPrefixAffixIds,
@@ -116,6 +128,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         handleBatchPrefixItemIds,
         handleBatchPrefixSkillIds,
         handleBatchPrefixStaticSkillIds,
+        handleDeleteNpcs,
         handleDeleteWuDaos,
         handleDeleteWuDaoSkills,
         handleDeleteAffixes,
@@ -124,6 +137,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         handleDeleteItems,
         handleDeleteSkills,
         handleDeleteStaticSkills,
+        handleCopyNpc,
         handleCopyWuDao,
         handleCopyWuDaoSkill,
         handleCopyAffix,
@@ -132,6 +146,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         handleCopyItem,
         handleCopySkill,
         handleCopyStaticSkill,
+        handlePasteNpc,
         handlePasteWuDao,
         handlePasteWuDaoSkill,
         handlePasteAffix,
@@ -140,6 +155,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         handlePasteItem,
         handlePasteSkill,
         handlePasteStaticSkill,
+        handleImportNpc,
         handleImportWuDao,
         handleImportWuDaoSkill,
         handleImportAffix,
@@ -152,6 +168,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         handleGenerateStaticSkillGroup,
         handleGenerateSkillBooksFromSkill,
         handleGenerateSkillBooksFromStaticSkill,
+        handleSelectNpc,
         handleSelectWuDao,
         handleSelectWuDaoSkill,
         handleSelectAffix,
@@ -160,6 +177,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         handleSelectItem,
         handleSelectSkill,
         handleSelectStaticSkill,
+        filteredNpcRows,
         filteredWuDaoRows,
         filteredWuDaoSkillRows,
         filteredAffixRows,
@@ -168,28 +186,31 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         filteredItemRows,
         filteredSkillRows,
         filteredStaticSkillRows,
-        selectedWuDaoKey: selectedWuDaoKeyState,
-        selectedWuDaoSkillKey: selectedWuDaoSkillKeyState,
-        selectedAffixKey: selectedAffixKeyState,
-        selectedTalentKey: selectedTalentKeyState,
-        selectedBuffKey: selectedBuffKeyState,
-        selectedItemKey: selectedItemKeyState,
-        selectedSkillKey: selectedSkillKeyState,
-        selectedStaticSkillKey: selectedStaticSkillKeyState,
-        selectedWuDaoKeys: selectedWuDaoKeysState,
-        selectedWuDaoSkillKeys: selectedWuDaoSkillKeysState,
-        selectedAffixKeys: selectedAffixKeysState,
-        selectedTalentKeys: selectedTalentKeysState,
-        selectedBuffKeys: selectedBuffKeysState,
-        selectedItemKeys: selectedItemKeysState,
-        selectedSkillKeys: selectedSkillKeysState,
-        selectedStaticSkillKeys: selectedStaticSkillKeysState,
+        selectedNpcKey,
+        selectedWuDaoKey,
+        selectedWuDaoSkillKey,
+        selectedAffixKey,
+        selectedTalentKey,
+        selectedBuffKey,
+        selectedItemKey,
+        selectedSkillKey,
+        selectedStaticSkillKey,
+        selectedNpcKeys,
+        selectedWuDaoKeys,
+        selectedWuDaoSkillKeys,
+        selectedAffixKeys,
+        selectedTalentKeys,
+        selectedBuffKeys,
+        selectedItemKeys,
+        selectedSkillKeys,
+        selectedStaticSkillKeys,
         skillMap,
         staticSkillMap,
     } = params
 
     return useMemo(() => {
         const onAddTalent = () => {
+            if (activeModule === 'npc') return setAddNpcOpen(true)
             if (activeModule === 'wudao') return setAddWuDaoOpen(true)
             if (activeModule === 'wudaoskill') return setAddWuDaoSkillOpen(true)
             if (activeModule === 'affix') return setAddAffixOpen(true)
@@ -201,6 +222,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         }
 
         const onBatchPrefixIds = (prefix: string) => {
+            if (activeModule === 'npc') return handleBatchPrefixNpcIds(prefix)
             if (activeModule === 'wudao') return handleBatchPrefixWuDaoIds(prefix)
             if (activeModule === 'wudaoskill') return handleBatchPrefixWuDaoSkillIds(prefix)
             if (activeModule === 'affix') return handleBatchPrefixAffixIds(prefix)
@@ -212,6 +234,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         }
 
         const onDeleteTalents = () => {
+            if (activeModule === 'npc') return handleDeleteNpcs()
             if (activeModule === 'wudao') return handleDeleteWuDaos()
             if (activeModule === 'wudaoskill') return handleDeleteWuDaoSkills()
             if (activeModule === 'affix') return handleDeleteAffixes()
@@ -223,6 +246,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         }
 
         const onCopyTalent = () => {
+            if (activeModule === 'npc') return handleCopyNpc()
             if (activeModule === 'wudao') return handleCopyWuDao()
             if (activeModule === 'wudaoskill') return handleCopyWuDaoSkill()
             if (activeModule === 'affix') return handleCopyAffix()
@@ -234,6 +258,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         }
 
         const onPasteTalent = () => {
+            if (activeModule === 'npc') return handlePasteNpc()
             if (activeModule === 'wudao') return handlePasteWuDao()
             if (activeModule === 'wudaoskill') return handlePasteWuDaoSkill()
             if (activeModule === 'affix') return handlePasteAffix()
@@ -245,6 +270,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         }
 
         const onImportTalent = (jsonText: string) => {
+            if (activeModule === 'npc') return handleImportNpc(jsonText)
             if (activeModule === 'wudao') return handleImportWuDao(jsonText)
             if (activeModule === 'wudaoskill') return handleImportWuDaoSkill(jsonText)
             if (activeModule === 'affix') return handleImportAffix(jsonText)
@@ -264,13 +290,11 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
 
         const canGenerateGroup =
             activeModule === 'skill'
-                ? selectedSkillKeysState.length === 1 &&
-                  Boolean(selectedSkillKeyState) &&
-                  Number(skillMap[selectedSkillKeyState]?.Skill_Lv ?? -1) === 0
+                ? selectedSkillKeys.length === 1 && Boolean(selectedSkillKey) && Number(skillMap[selectedSkillKey]?.Skill_Lv ?? -1) === 0
                 : activeModule === 'staticskill'
-                  ? selectedStaticSkillKeysState.length === 1 &&
-                    Boolean(selectedStaticSkillKeyState) &&
-                    Number(staticSkillMap[selectedStaticSkillKeyState]?.Skill_Lv ?? -1) === 0
+                  ? selectedStaticSkillKeys.length === 1 &&
+                    Boolean(selectedStaticSkillKey) &&
+                    Number(staticSkillMap[selectedStaticSkillKey]?.Skill_Lv ?? -1) === 0
                   : false
 
         const onGenerateBook =
@@ -282,12 +306,13 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
 
         const canGenerateBook =
             activeModule === 'skill'
-                ? selectedSkillKeysState.length > 0 || Boolean(selectedSkillKeyState)
+                ? selectedSkillKeys.length > 0 || Boolean(selectedSkillKey)
                 : activeModule === 'staticskill'
-                  ? selectedStaticSkillKeysState.length > 0 || Boolean(selectedStaticSkillKeyState)
+                  ? selectedStaticSkillKeys.length > 0 || Boolean(selectedStaticSkillKey)
                   : false
 
         const onSelectTalent: SelectFn = (key, index, options) => {
+            if (activeModule === 'npc') return handleSelectNpc(key, index, options)
             if (activeModule === 'wudao') return handleSelectWuDao(key, index, options)
             if (activeModule === 'wudaoskill') return handleSelectWuDaoSkill(key, index, options)
             if (activeModule === 'affix') return handleSelectAffix(key, index, options)
@@ -299,55 +324,61 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         }
 
         const rows =
-            activeModule === 'wudao'
-                ? filteredWuDaoRows
-                : activeModule === 'wudaoskill'
-                  ? filteredWuDaoSkillRows
-                  : activeModule === 'affix'
-                    ? filteredAffixRows
-                    : activeModule === 'buff'
-                      ? filteredBuffRows
-                      : activeModule === 'item'
-                        ? filteredItemRows
-                        : activeModule === 'skill'
-                          ? filteredSkillRows
-                          : activeModule === 'staticskill'
-                            ? filteredStaticSkillRows
-                            : filteredAvatarRows
+            activeModule === 'npc'
+                ? filteredNpcRows
+                : activeModule === 'wudao'
+                  ? filteredWuDaoRows
+                  : activeModule === 'wudaoskill'
+                    ? filteredWuDaoSkillRows
+                    : activeModule === 'affix'
+                      ? filteredAffixRows
+                      : activeModule === 'buff'
+                        ? filteredBuffRows
+                        : activeModule === 'item'
+                          ? filteredItemRows
+                          : activeModule === 'skill'
+                            ? filteredSkillRows
+                            : activeModule === 'staticskill'
+                              ? filteredStaticSkillRows
+                              : filteredAvatarRows
 
-        const selectedTalentKey =
-            activeModule === 'wudao'
-                ? selectedWuDaoKeyState
-                : activeModule === 'wudaoskill'
-                  ? selectedWuDaoSkillKeyState
-                  : activeModule === 'affix'
-                    ? selectedAffixKeyState
-                    : activeModule === 'buff'
-                      ? selectedBuffKeyState
-                      : activeModule === 'item'
-                        ? selectedItemKeyState
-                        : activeModule === 'skill'
-                          ? selectedSkillKeyState
-                          : activeModule === 'staticskill'
-                            ? selectedStaticSkillKeyState
-                            : selectedTalentKeyState
+        const currentSelectedKey =
+            activeModule === 'npc'
+                ? selectedNpcKey
+                : activeModule === 'wudao'
+                  ? selectedWuDaoKey
+                  : activeModule === 'wudaoskill'
+                    ? selectedWuDaoSkillKey
+                    : activeModule === 'affix'
+                      ? selectedAffixKey
+                      : activeModule === 'buff'
+                        ? selectedBuffKey
+                        : activeModule === 'item'
+                          ? selectedItemKey
+                          : activeModule === 'skill'
+                            ? selectedSkillKey
+                            : activeModule === 'staticskill'
+                              ? selectedStaticSkillKey
+                              : selectedTalentKey
 
-        const selectedTalentKeys =
-            activeModule === 'wudao'
-                ? selectedWuDaoKeysState
-                : activeModule === 'wudaoskill'
-                  ? selectedWuDaoSkillKeysState
-                  : activeModule === 'affix'
-                    ? selectedAffixKeysState
-                    : activeModule === 'buff'
-                      ? selectedBuffKeysState
-                      : activeModule === 'item'
-                        ? selectedItemKeysState
-                        : activeModule === 'skill'
-                          ? selectedSkillKeysState
-                          : activeModule === 'staticskill'
-                            ? selectedStaticSkillKeysState
-                            : selectedTalentKeysState
+        const currentSelectedKeys =
+            activeModule === 'npc'
+                ? selectedNpcKeys
+                : activeModule === 'wudao'
+                  ? selectedWuDaoKeys
+                  : activeModule === 'wudaoskill'
+                    ? selectedWuDaoSkillKeys
+                    : activeModule === 'affix'
+                      ? selectedAffixKeys
+                      : activeModule === 'buff'
+                        ? selectedBuffKeys
+                        : activeModule === 'item'
+                          ? selectedItemKeys
+                          : activeModule === 'skill'
+                            ? selectedSkillKeys
+                            : activeModule === 'staticskill'
+                              ? selectedStaticSkillKeys
+                              : selectedTalentKeys
 
         return {
             onAddTalent,
@@ -364,18 +395,21 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
             generateBookLabel: '生成技能书',
             onSelectTalent,
             rows,
-            selectedTalentKey,
-            selectedTalentKeys,
+            selectedTalentKey: currentSelectedKey,
+            selectedTalentKeys: currentSelectedKeys,
         }
     }, [
         activeModule,
+        setAddNpcOpen,
         setAddWuDaoOpen,
-        setAddAffixOpen,
+        setAddWuDaoSkillOpen,
         setAddTalentOpen,
+        setAddAffixOpen,
         setAddBuffOpen,
         setAddItemOpen,
         setAddSkillOpen,
         setAddStaticSkillOpen,
+        handleBatchPrefixNpcIds,
         handleBatchPrefixWuDaoIds,
         handleBatchPrefixWuDaoSkillIds,
         handleBatchPrefixAffixIds,
@@ -384,6 +418,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         handleBatchPrefixItemIds,
         handleBatchPrefixSkillIds,
         handleBatchPrefixStaticSkillIds,
+        handleDeleteNpcs,
         handleDeleteWuDaos,
         handleDeleteWuDaoSkills,
         handleDeleteAffixes,
@@ -392,6 +427,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         handleDeleteItems,
         handleDeleteSkills,
         handleDeleteStaticSkills,
+        handleCopyNpc,
         handleCopyWuDao,
         handleCopyWuDaoSkill,
         handleCopyAffix,
@@ -400,6 +436,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         handleCopyItem,
         handleCopySkill,
         handleCopyStaticSkill,
+        handlePasteNpc,
         handlePasteWuDao,
         handlePasteWuDaoSkill,
         handlePasteAffix,
@@ -408,6 +445,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         handlePasteItem,
         handlePasteSkill,
         handlePasteStaticSkill,
+        handleImportNpc,
         handleImportWuDao,
         handleImportWuDaoSkill,
         handleImportAffix,
@@ -420,6 +458,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         handleGenerateStaticSkillGroup,
         handleGenerateSkillBooksFromSkill,
         handleGenerateSkillBooksFromStaticSkill,
+        handleSelectNpc,
         handleSelectWuDao,
         handleSelectWuDaoSkill,
         handleSelectAffix,
@@ -428,6 +467,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         handleSelectItem,
         handleSelectSkill,
         handleSelectStaticSkill,
+        filteredNpcRows,
         filteredWuDaoRows,
         filteredWuDaoSkillRows,
         filteredAffixRows,
@@ -436,20 +476,24 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         filteredItemRows,
         filteredSkillRows,
         filteredStaticSkillRows,
-        selectedWuDaoKeyState,
-        selectedAffixKeyState,
-        selectedTalentKeyState,
-        selectedBuffKeyState,
-        selectedItemKeyState,
-        selectedSkillKeyState,
-        selectedStaticSkillKeyState,
-        selectedWuDaoKeysState,
-        selectedAffixKeysState,
-        selectedTalentKeysState,
-        selectedBuffKeysState,
-        selectedItemKeysState,
-        selectedSkillKeysState,
-        selectedStaticSkillKeysState,
+        selectedNpcKey,
+        selectedWuDaoKey,
+        selectedWuDaoSkillKey,
+        selectedAffixKey,
+        selectedTalentKey,
+        selectedBuffKey,
+        selectedItemKey,
+        selectedSkillKey,
+        selectedStaticSkillKey,
+        selectedNpcKeys,
+        selectedWuDaoKeys,
+        selectedWuDaoSkillKeys,
+        selectedAffixKeys,
+        selectedTalentKeys,
+        selectedBuffKeys,
+        selectedItemKeys,
+        selectedSkillKeys,
+        selectedStaticSkillKeys,
         skillMap,
         staticSkillMap,
     ])

@@ -3,6 +3,7 @@ import { useMemo } from 'react'
 import { toAffixRows } from '../../components/affix/affix-domain'
 import { toBuffRows } from '../../components/buff/buff-domain'
 import { toItemRows } from '../../components/item/item-domain'
+import { toNpcRows } from '../../components/npc/npc-domain'
 import { toSkillRows } from '../../components/skill/skill-domain'
 import { toStaticSkillRows } from '../../components/staticskill/staticskill-domain'
 import { toTalentRows } from '../../components/tianfu/talent-domain'
@@ -13,6 +14,7 @@ import type {
     BuffEntry,
     CreateAvatarEntry,
     ItemEntry,
+    NpcEntry,
     SkillEntry,
     StaticSkillEntry,
     WuDaoEntry,
@@ -20,6 +22,7 @@ import type {
 } from '../../types'
 
 type UseModuleTableRowsParams = {
+    npcMap: Record<string, NpcEntry>
     wudaoMap: Record<string, WuDaoEntry>
     wudaoSkillMap: Record<string, WuDaoSkillEntry>
     affixMap: Record<string, AffixEntry>
@@ -32,6 +35,7 @@ type UseModuleTableRowsParams = {
 }
 
 export function useModuleTableRows({
+    npcMap,
     wudaoMap,
     wudaoSkillMap,
     affixMap,
@@ -42,6 +46,7 @@ export function useModuleTableRows({
     staticSkillMap,
     tableSearchText,
 }: UseModuleTableRowsParams) {
+    const npcRows = useMemo(() => toNpcRows(npcMap), [npcMap])
     const wudaoRows = useMemo(() => toWuDaoRows(wudaoMap), [wudaoMap])
     const wudaoSkillRows = useMemo(() => toWuDaoSkillRows(wudaoSkillMap), [wudaoSkillMap])
     const affixRows = useMemo(() => toAffixRows(affixMap), [affixMap])
@@ -52,6 +57,15 @@ export function useModuleTableRows({
     const staticSkillRows = useMemo(() => toStaticSkillRows(staticSkillMap), [staticSkillMap])
 
     const keyword = tableSearchText.trim().toLowerCase()
+
+    const filteredNpcRows = useMemo(() => {
+        if (!keyword) return npcRows
+        return npcRows.filter(row => {
+            const source = npcMap[row.key]
+            const haystack = `${row.id} ${row.title} ${row.fenLei} ${row.desc} ${source?.menPai ?? ''}`.toLowerCase()
+            return haystack.includes(keyword)
+        })
+    }, [npcRows, npcMap, keyword])
 
     const filteredWuDaoRows = useMemo(() => {
         if (!keyword) return wudaoRows
@@ -127,6 +141,7 @@ export function useModuleTableRows({
     }, [staticSkillRows, staticSkillMap, keyword])
 
     return {
+        npcRows,
         wudaoRows,
         wudaoSkillRows,
         affixRows,
@@ -135,6 +150,7 @@ export function useModuleTableRows({
         itemRows,
         skillRows,
         staticSkillRows,
+        filteredNpcRows,
         filteredWuDaoRows,
         filteredWuDaoSkillRows,
         filteredAvatarRows,

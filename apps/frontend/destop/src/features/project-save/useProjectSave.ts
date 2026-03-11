@@ -1,6 +1,7 @@
 import { saveAffixFile } from '../../components/affix/affix-domain'
 import { saveBuffFiles, saveBuffSeidFiles } from '../../components/buff/buff-domain'
 import { saveItemFiles, saveItemSeidFiles } from '../../components/item/item-domain'
+import { saveNpcFile } from '../../components/npc/npc-domain'
 import { saveSkillFiles, saveSkillSeidFiles } from '../../components/skill/skill-domain'
 import { saveStaticSkillFile, saveStaticSkillSeidFiles } from '../../components/staticskill/staticskill-domain'
 import { saveTalentSeidFiles } from '../../components/tianfu/talent-domain'
@@ -18,6 +19,8 @@ type Params = {
     rawConfigObject: Record<string, unknown>
     configForm: { name: string; author: string; version: string; description: string }
     preservedSettings: unknown
+    npcMap: Record<string, any>
+    npcPath: string
     wudaoMap: Record<string, any>
     wudaoPath: string
     wudaoSkillMap: Record<string, any>
@@ -39,6 +42,7 @@ type Params = {
     saveFilePayload: (path: string, content: string) => Promise<any>
     deleteFilePayload: (path: string) => Promise<any>
     setConfigDirty: Setter
+    setNpcDirty: Setter
     setWuDaoDirty: Setter
     setWuDaoSkillDirty: Setter
     setAffixDirty: Setter
@@ -47,6 +51,7 @@ type Params = {
     setItemDirty: Setter
     setSkillDirty: Setter
     setStaticSkillDirty: Setter
+    setNpcCachePath: Setter
     setAffixCachePath: Setter
     setWuDaoSkillCachePath: Setter
     setTalentCachePath: Setter
@@ -65,6 +70,8 @@ export function useProjectSave(params: Params) {
         rawConfigObject,
         configForm,
         preservedSettings,
+        npcMap,
+        npcPath,
         wudaoMap,
         wudaoPath,
         wudaoSkillMap,
@@ -86,6 +93,7 @@ export function useProjectSave(params: Params) {
         saveFilePayload,
         deleteFilePayload,
         setConfigDirty,
+        setNpcDirty,
         setWuDaoDirty,
         setWuDaoSkillDirty,
         setAffixDirty,
@@ -94,6 +102,7 @@ export function useProjectSave(params: Params) {
         setItemDirty,
         setSkillDirty,
         setStaticSkillDirty,
+        setNpcCachePath,
         setAffixCachePath,
         setWuDaoSkillCachePath,
         setTalentCachePath,
@@ -139,6 +148,11 @@ export function useProjectSave(params: Params) {
             const affixFileCount = await saveAffixFile({
                 affixMap,
                 affixPath,
+                saveFilePayload,
+            })
+            await saveNpcFile({
+                npcMap,
+                npcPath,
                 saveFilePayload,
             })
             await saveWuDaoFile({
@@ -222,6 +236,7 @@ export function useProjectSave(params: Params) {
             })
 
             setConfigDirty(false)
+            setNpcDirty(false)
             setWuDaoDirty(false)
             setWuDaoSkillDirty(false)
             setAffixDirty(false)
@@ -230,6 +245,7 @@ export function useProjectSave(params: Params) {
             setItemDirty(false)
             setSkillDirty(false)
             setStaticSkillDirty(false)
+            setNpcCachePath(npcPath)
             setAffixCachePath(affixPath)
             setWuDaoSkillCachePath(wudaoSkillPath)
             setTalentCachePath(talentTarget)

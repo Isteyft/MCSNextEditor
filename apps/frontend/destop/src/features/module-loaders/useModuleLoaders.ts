@@ -8,6 +8,7 @@ import {
     adaptAffixImport,
     adaptBuffImportWithMerge,
     adaptItemImportWithMerge,
+    adaptNpcImport,
     adaptSkillImportWithMerge,
     adaptStaticSkillImport,
     adaptTalentImport,
@@ -23,6 +24,9 @@ type Params = {
     projectPath: string
     workspaceRoot: string
     configCachePath: string
+    npcPath: string
+    npcCachePath: string
+    npcDirty: boolean
     wudaoPath: string
     wudaoCachePath: string
     wudaoDirty: boolean
@@ -55,6 +59,12 @@ type Params = {
     setConfigForm: Setter
     setConfigCachePath: Setter
     setConfigDirty: Setter
+    setNpcMap: Setter
+    setNpcCachePath: Setter
+    setNpcDirty: Setter
+    setSelectedNpcKey: Setter
+    setSelectedNpcKeys: Setter
+    setNpcSelectionAnchor: Setter
     setWuDaoMap: Setter
     setWuDaoCachePath: Setter
     setWuDaoDirty: Setter
@@ -128,6 +138,9 @@ export function useModuleLoaders(params: Params) {
         projectPath,
         workspaceRoot,
         configCachePath,
+        npcPath,
+        npcCachePath,
+        npcDirty,
         wudaoPath,
         wudaoCachePath,
         wudaoDirty,
@@ -160,6 +173,12 @@ export function useModuleLoaders(params: Params) {
         setConfigForm,
         setConfigCachePath,
         setConfigDirty,
+        setNpcMap,
+        setNpcCachePath,
+        setNpcDirty,
+        setSelectedNpcKey,
+        setSelectedNpcKeys,
+        setNpcSelectionAnchor,
         setWuDaoMap,
         setWuDaoCachePath,
         setWuDaoDirty,
@@ -225,6 +244,37 @@ export function useModuleLoaders(params: Params) {
         loadSkillEnumMeta,
         loadSpecialDrawerOptions,
     } = params
+
+    async function loadNpcTable() {
+        setViewMode('table')
+        setActivePath(npcPath)
+        if (!modRootPath || !npcPath) return
+        if (npcCachePath === npcPath) {
+            setStatus(npcDirty ? '已加载非实例NPC数据（缓存，未保存）。' : '已加载非实例NPC数据（缓存）。')
+            return
+        }
+        try {
+            const payload = await readJsonUnknownWithFallback({
+                filePath: npcPath,
+                defaultContent: '{}\n',
+                readFilePayload,
+                saveFilePayload,
+            })
+            const parsedResult = parseJsonUnknown(payload.content, npcPath)
+            const parsed = parsedResult.ok ? parsedResult.data : {}
+            const normalized = adaptNpcImport(parsed).data
+            const firstKey = Object.keys(normalized).sort((a, b) => Number(a) - Number(b))[0] ?? ''
+            setNpcMap(normalized)
+            setNpcCachePath(npcPath)
+            setNpcDirty(false)
+            setSelectedNpcKey(firstKey)
+            setSelectedNpcKeys(firstKey ? [firstKey] : [])
+            setNpcSelectionAnchor(firstKey)
+            setStatus('已加载非实例NPC数据（AvatarJsonData）。')
+        } catch (error) {
+            setStatus(`读取非实例NPC数据失败: ${String(error)}`)
+        }
+    }
 
     async function loadConfigForm() {
         setViewMode('config-form')
@@ -539,6 +589,7 @@ export function useModuleLoaders(params: Params) {
         setActiveModule(key)
         setTableSearchText('')
         if (key === 'project-config') return loadConfigForm()
+        if (key === 'npc') return loadNpcTable()
         if (key === 'wudao') return loadWuDaoTable()
         if (key === 'wudaoskill') return loadWuDaoSkillTable()
         if (key === 'talent') return loadTalentTable()
@@ -554,6 +605,7 @@ export function useModuleLoaders(params: Params) {
     return {
         handleSelectModule,
         loadConfigForm,
+        loadNpcTable,
         loadWuDaoTable,
         loadWuDaoSkillTable,
         loadTalentTable,

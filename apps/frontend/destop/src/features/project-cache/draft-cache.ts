@@ -13,6 +13,7 @@ export type DraftCachePayload = {
         rawConfigObject: Record<string, unknown>
         configForm: { name: string; author: string; version: string; description: string }
         preservedSettings: unknown
+        npcMap: Record<string, unknown>
         wudaoMap: Record<string, unknown>
         wudaoSkillMap: Record<string, unknown>
         affixMap: Record<string, unknown>

@@ -1,8 +1,9 @@
 ﻿import { ViewMode } from '../../modules'
-import type { AffixEntry, BuffEntry, ItemEntry, SkillEntry, StaticSkillEntry, WuDaoSkillEntry } from '../../types'
+import type { AffixEntry, BuffEntry, ItemEntry, NpcEntry, SkillEntry, StaticSkillEntry, WuDaoSkillEntry } from '../../types'
 import { AffixForm } from '../affix/AffixForm'
 import { BuffForm } from '../buff/BuffForm'
 import { ItemForm } from '../item/ItemForm'
+import { NpcForm } from '../npc/NpcForm'
 import { SettingsForm } from '../settings/SettingsForm'
 import { SkillForm } from '../skill/SkillForm'
 import { StaticSkillForm } from '../staticskill/StaticSkillForm'
@@ -22,6 +23,11 @@ type EditorPanelProps = {
         description: string
     }
     onChangeConfigForm: (patch: Partial<EditorPanelProps['configForm']>) => void
+    npcForm: NpcEntry | null
+    onChangeNpcForm: (patch: Partial<NpcEntry>) => void
+    npcSkillOptions: { id: number; name: string }[]
+    npcStaticSkillOptions: { id: number; name: string }[]
+    npcItemTypeOptions: { id: number; name: string }[]
     wudaoForm: import('../../types').WuDaoEntry | null
     onChangeWuDaoForm: (patch: Partial<import('../../types').WuDaoEntry>) => void
     wudaoSkillForm: WuDaoSkillEntry | null
@@ -93,6 +99,11 @@ export function EditorPanel({
     activeModuleLabel,
     configForm,
     onChangeConfigForm,
+    npcForm,
+    onChangeNpcForm,
+    npcSkillOptions,
+    npcStaticSkillOptions,
+    npcItemTypeOptions,
     wudaoForm,
     onChangeWuDaoForm,
     wudaoSkillForm,
@@ -149,7 +160,15 @@ export function EditorPanel({
                 ) : null}
 
                 {activeModule !== 'settings' && viewMode === 'table' ? (
-                    activeModule === 'wudao' ? (
+                    activeModule === 'npc' ? (
+                        <NpcForm
+                            values={npcForm}
+                            onChange={onChangeNpcForm}
+                            skillOptions={npcSkillOptions}
+                            staticSkillOptions={npcStaticSkillOptions}
+                            itemTypeOptions={npcItemTypeOptions}
+                        />
+                    ) : activeModule === 'wudao' ? (
                         <WuDaoForm values={wudaoForm} onChange={onChangeWuDaoForm} />
                     ) : activeModule === 'wudaoskill' ? (
                         <WuDaoSkillForm

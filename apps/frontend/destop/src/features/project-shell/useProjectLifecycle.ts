@@ -2,6 +2,7 @@
 import type { FormEvent } from 'react'
 
 import { normalizeAffixMap } from '../../components/affix/affix-domain'
+import { normalizeNpcMap } from '../../components/npc/npc-domain'
 import { mergeStaticSkillSeidFiles, normalizeStaticSkillMap } from '../../components/staticskill/staticskill-domain'
 import { mergeTalentSeidFiles, normalizeTalentMap } from '../../components/tianfu/talent-domain'
 import { normalizeWuDaoMap } from '../../components/wudao/wudao-domain'
@@ -13,6 +14,7 @@ import type {
     BuffEntry,
     CreateAvatarEntry,
     ItemEntry,
+    NpcEntry,
     SkillEntry,
     StaticSkillEntry,
     WuDaoEntry,
@@ -24,6 +26,7 @@ import { parseJsonUnknown, readJsonUnknownWithFallback } from '../json-import/js
 import { adaptBuffImportWithMerge, adaptItemImportWithMerge, adaptSkillImportWithMerge } from '../json-import/module-adapters'
 
 export type RootModuleSnapshot = {
+    npcMap: Record<string, NpcEntry>
     wudaoMap: Record<string, WuDaoEntry>
     wudaoSkillMap: Record<string, WuDaoSkillEntry>
     affixMap: Record<string, AffixEntry>
@@ -32,6 +35,7 @@ export type RootModuleSnapshot = {
     itemMap: Record<string, ItemEntry>
     skillMap: Record<string, SkillEntry>
     staticSkillMap: Record<string, StaticSkillEntry>
+    npcDirty: boolean
     wudaoDirty: boolean
     wudaoSkillDirty: boolean
     affixDirty: boolean
@@ -76,6 +80,7 @@ type LifecycleParams = {
 
 function createEmptySnapshot(): RootModuleSnapshot {
     return {
+        npcMap: {},
         wudaoMap: {},
         wudaoSkillMap: {},
         affixMap: {},
@@ -84,6 +89,7 @@ function createEmptySnapshot(): RootModuleSnapshot {
         itemMap: {},
         skillMap: {},
         staticSkillMap: {},
+        npcDirty: false,
         wudaoDirty: false,
         wudaoSkillDirty: false,
         affixDirty: false,
@@ -103,6 +109,13 @@ function resetForRootSwitch(setters: LifecycleSetters) {
     setters.setTableSearchText('')
     setters.setConfigCachePath('')
     setters.setConfigDirty(false)
+    setters.setNpcMap({})
+    setters.setNpcCachePath('')
+    setters.setNpcDirty(false)
+    setters.setSelectedNpcKey('')
+    setters.setSelectedNpcKeys([])
+    setters.setNpcSelectionAnchor('')
+    setters.setNpcClipboard([])
     setters.setWuDaoMap({})
     setters.setWuDaoCachePath('')
     setters.setWuDaoDirty(false)
@@ -194,6 +207,9 @@ function resetForProjectReload(setters: LifecycleSetters, siblingFolders: Array<
     setters.setStaticSkillSeidMetaMap({})
     setters.setDrawerOptionsMap({})
     setters.setBuffDrawerFallbackOptions([])
+    setters.setSelectedNpcKey('')
+    setters.setSelectedNpcKeys([])
+    setters.setNpcSelectionAnchor('')
     setters.setSelectedTalentKey('')
     setters.setSelectedTalentKeys([])
     setters.setTalentSelectionAnchor('')
@@ -235,10 +251,24 @@ export function useProjectLifecycle(params: LifecycleParams) {
         if (!targetModRoot) return snapshot
 
         const targetWuDaoPath = joinWinPath(targetModRoot, 'Data', 'WuDaoAllTypeJson.json')
+        const targetNpcPath = joinWinPath(targetModRoot, 'Data', 'AvatarJsonData.json')
         const targetWuDaoSkillPath = joinWinPath(targetModRoot, 'Data', 'WuDaoJson.json')
         const targetAffixPath = joinWinPath(targetModRoot, 'Data', 'TuJianChunWenBen.json')
         const targetTalentPath = joinWinPath(targetModRoot, 'Data', 'CreateAvatarJsonData.json')
         const targetStaticSkillPath = joinWinPath(targetModRoot, 'Data', 'StaticSkillJsonData.json')
+
+        try {
+            const payload = await readJsonUnknownWithFallback({
+                filePath: targetNpcPath,
+                defaultContent: '{}\n',
+                readFilePayload,
+                saveFilePayload,
+            })
+            const parsedResult = parseJsonUnknown(payload.content, targetNpcPath)
+            snapshot.npcMap = normalizeNpcMap(parsedResult.ok ? parsedResult.data : {})
+        } catch {
+            // ignore and continue
+        }
 
         try {
             const payload = await readJsonUnknownWithFallback({
@@ -366,6 +396,7 @@ export function useProjectLifecycle(params: LifecycleParams) {
     }
 
     function applyRootModuleSnapshot(targetModRoot: string, snapshot: RootModuleSnapshot) {
+        const targetNpcPath = joinWinPath(targetModRoot, 'Data', 'AvatarJsonData.json')
         const targetWuDaoPath = joinWinPath(targetModRoot, 'Data', 'WuDaoAllTypeJson.json')
         const targetWuDaoSkillPath = joinWinPath(targetModRoot, 'Data', 'WuDaoJson.json')
         const targetAffixPath = joinWinPath(targetModRoot, 'Data', 'TuJianChunWenBen.json')
@@ -374,6 +405,14 @@ export function useProjectLifecycle(params: LifecycleParams) {
         const targetItemDirPath = joinWinPath(targetModRoot, 'Data', 'ItemJsonData')
         const targetSkillDirPath = joinWinPath(targetModRoot, 'Data', 'skillJsonData')
         const targetStaticSkillPath = joinWinPath(targetModRoot, 'Data', 'StaticSkillJsonData.json')
+
+        setters.setNpcMap(snapshot.npcMap)
+        setters.setNpcCachePath(targetNpcPath)
+        setters.setNpcDirty(snapshot.npcDirty)
+        const firstNpc = Object.keys(snapshot.npcMap).sort((a, b) => Number(a) - Number(b))[0] ?? ''
+        setters.setSelectedNpcKey(firstNpc)
+        setters.setSelectedNpcKeys(firstNpc ? [firstNpc] : [])
+        setters.setNpcSelectionAnchor(firstNpc)
 
         setters.setWuDaoMap(snapshot.wudaoMap)
         setters.setWuDaoCachePath(targetWuDaoPath)

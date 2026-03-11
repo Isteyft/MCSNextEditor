@@ -13,6 +13,7 @@ type SelectionSyncParams = {
 }
 
 type UseModuleSelectionSyncParams = Partial<{
+    npc: SelectionSyncParams
     wudao: SelectionSyncParams
     wudaoskill: SelectionSyncParams
     affix: SelectionSyncParams
@@ -46,7 +47,18 @@ function useSelectionSync(params?: SelectionSyncParams) {
     }, [rows, selectedKey, setSelectedKey, setSelectedKeys, setSelectionAnchor])
 }
 
-export function useModuleSelectionSync({ wudao, wudaoskill, affix, talent, buff, item, skill, staticSkill }: UseModuleSelectionSyncParams) {
+export function useModuleSelectionSync({
+    npc,
+    wudao,
+    wudaoskill,
+    affix,
+    talent,
+    buff,
+    item,
+    skill,
+    staticSkill,
+}: UseModuleSelectionSyncParams) {
+    useSelectionSync(npc)
     useSelectionSync(wudao)
     useSelectionSync(wudaoskill)
     useSelectionSync(affix)

@@ -9,6 +9,7 @@ type UseModulePathsParams = {
 
 export function useModulePaths({ modRootPath, renameTargetPath }: UseModulePathsParams) {
     const moduleConfigPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Config', 'modConfig.json') : ''), [modRootPath])
+    const npcPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Data', 'AvatarJsonData.json') : ''), [modRootPath])
     const wudaoPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Data', 'WuDaoAllTypeJson.json') : ''), [modRootPath])
     const wudaoSkillPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Data', 'WuDaoJson.json') : ''), [modRootPath])
     const affixPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Data', 'TuJianChunWenBen.json') : ''), [modRootPath])
@@ -23,10 +24,11 @@ export function useModulePaths({ modRootPath, renameTargetPath }: UseModulePaths
     const skillDirPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Data', 'skillJsonData') : ''), [modRootPath])
     const skillIconDirPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Assets', 'skill Icon') : ''), [modRootPath])
     const staticSkillPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Data', 'StaticSkillJsonData.json') : ''), [modRootPath])
-    const modFolderName = useMemo(() => pickLeafName(renameTargetPath || modRootPath) || 'mod默认', [renameTargetPath, modRootPath])
+    const modFolderName = useMemo(() => pickLeafName(renameTargetPath || modRootPath) || 'modĬ��', [renameTargetPath, modRootPath])
 
     return {
         moduleConfigPath,
+        npcPath,
         wudaoPath,
         wudaoSkillPath,
         affixPath,

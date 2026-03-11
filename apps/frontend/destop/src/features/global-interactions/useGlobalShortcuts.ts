@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 type Params = {
     activeModule: string
     isEditableElement: (target: EventTarget | null) => boolean
+    onDeleteNpc: () => void
     onDeleteWuDao: () => void
     onDeleteWuDaoSkill: () => void
     onDeleteAffix: () => void
@@ -11,6 +12,7 @@ type Params = {
     onDeleteItem: () => void
     onDeleteSkill: () => void
     onDeleteStaticSkill: () => void
+    onCopyNpc: () => void
     onCopyWuDao: () => void
     onCopyWuDaoSkill: () => void
     onCopyAffix: () => void
@@ -19,6 +21,7 @@ type Params = {
     onCopyItem: () => void
     onCopySkill: () => void
     onCopyStaticSkill: () => void
+    onPasteNpc: () => void
     onPasteWuDao: () => void
     onPasteWuDaoSkill: () => void
     onPasteAffix: () => void
@@ -33,6 +36,7 @@ export function useGlobalShortcuts(params: Params) {
     const {
         activeModule,
         isEditableElement,
+        onDeleteNpc,
         onDeleteWuDao,
         onDeleteWuDaoSkill,
         onDeleteAffix,
@@ -41,6 +45,7 @@ export function useGlobalShortcuts(params: Params) {
         onDeleteItem,
         onDeleteSkill,
         onDeleteStaticSkill,
+        onCopyNpc,
         onCopyWuDao,
         onCopyWuDaoSkill,
         onCopyAffix,
@@ -49,6 +54,7 @@ export function useGlobalShortcuts(params: Params) {
         onCopyItem,
         onCopySkill,
         onCopyStaticSkill,
+        onPasteNpc,
         onPasteWuDao,
         onPasteWuDaoSkill,
         onPasteAffix,
@@ -62,6 +68,7 @@ export function useGlobalShortcuts(params: Params) {
     useEffect(() => {
         function onKeyDown(event: KeyboardEvent) {
             if (
+                activeModule !== 'npc' &&
                 activeModule !== 'wudao' &&
                 activeModule !== 'wudaoskill' &&
                 activeModule !== 'affix' &&
@@ -77,7 +84,9 @@ export function useGlobalShortcuts(params: Params) {
 
             if (event.key === 'Delete') {
                 event.preventDefault()
-                if (activeModule === 'wudao') {
+                if (activeModule === 'npc') {
+                    onDeleteNpc()
+                } else if (activeModule === 'wudao') {
                     onDeleteWuDao()
                 } else if (activeModule === 'wudaoskill') {
                     onDeleteWuDaoSkill()
@@ -101,7 +110,9 @@ export function useGlobalShortcuts(params: Params) {
             const key = event.key.toLowerCase()
             if (key === 'c') {
                 event.preventDefault()
-                if (activeModule === 'wudao') {
+                if (activeModule === 'npc') {
+                    onCopyNpc()
+                } else if (activeModule === 'wudao') {
                     onCopyWuDao()
                 } else if (activeModule === 'wudaoskill') {
                     onCopyWuDaoSkill()
@@ -120,7 +131,9 @@ export function useGlobalShortcuts(params: Params) {
                 }
             } else if (key === 'v') {
                 event.preventDefault()
-                if (activeModule === 'wudao') {
+                if (activeModule === 'npc') {
+                    onPasteNpc()
+                } else if (activeModule === 'wudao') {
                     onPasteWuDao()
                 } else if (activeModule === 'wudaoskill') {
                     onPasteWuDaoSkill()
@@ -147,6 +160,7 @@ export function useGlobalShortcuts(params: Params) {
     }, [
         activeModule,
         isEditableElement,
+        onDeleteNpc,
         onDeleteWuDao,
         onDeleteWuDaoSkill,
         onDeleteAffix,
@@ -155,6 +169,7 @@ export function useGlobalShortcuts(params: Params) {
         onDeleteItem,
         onDeleteSkill,
         onDeleteStaticSkill,
+        onCopyNpc,
         onCopyWuDao,
         onCopyWuDaoSkill,
         onCopyAffix,
@@ -163,6 +178,7 @@ export function useGlobalShortcuts(params: Params) {
         onCopyItem,
         onCopySkill,
         onCopyStaticSkill,
+        onPasteNpc,
         onPasteWuDao,
         onPasteWuDaoSkill,
         onPasteAffix,

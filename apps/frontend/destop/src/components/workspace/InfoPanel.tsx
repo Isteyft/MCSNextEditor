@@ -1,4 +1,4 @@
-import { ClipboardPaste, Copy, Plus, Search, Trash2, Upload } from 'lucide-react'
+﻿import { ClipboardPaste, Copy, Plus, Search, Trash2, Upload } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { ModuleKey } from '../../modules'
@@ -35,16 +35,18 @@ type InfoPanelProps = {
 
 function getColumnLabels(activeModule: ModuleKey | '') {
     switch (activeModule) {
+        case 'npc':
+            return { name: '名称', category: '势力' }
         case 'wudao':
-            return { name: '名称', category: '道途' }
+            return { name: '名称', category: '道类' }
         case 'wudaoskill':
             return { name: '名称', category: '悟道类型' }
         case 'affix':
-            return { name: '词缀名', category: '类型' }
+            return { name: '词缀名称', category: '类型' }
         case 'buff':
-            return { name: 'Buff名', category: 'Buff类型' }
+            return { name: 'Buff名称', category: 'Buff类型' }
         case 'item':
-            return { name: '物品名', category: '物品类型' }
+            return { name: '物品名称', category: '物品类型' }
         case 'skill':
             return { name: '神通名', category: '阶段' }
         case 'staticskill':
@@ -104,7 +106,7 @@ export function InfoPanel({
         onBatchPrefixIds(prefix)
     }
 
-    const isTableModule = ['wudao', 'wudaoskill', 'affix', 'talent', 'buff', 'item', 'skill', 'staticskill'].includes(activeModule)
+    const isTableModule = ['npc', 'wudao', 'wudaoskill', 'affix', 'talent', 'buff', 'item', 'skill', 'staticskill'].includes(activeModule)
     const columnLabels = getColumnLabels(activeModule)
 
     return (
@@ -286,7 +288,7 @@ export function InfoPanel({
                         ) : null}
                     </>
                 ) : (
-                    <div className="todo-box">TODO: 当前模块暂无表格数据</div>
+                    <div className="todo-box">当前模块暂无表格数据</div>
                 )}
             </div>
         </section>
