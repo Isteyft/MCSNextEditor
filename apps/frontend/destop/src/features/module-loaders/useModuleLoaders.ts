@@ -10,6 +10,7 @@ import {
     adaptBuffImportWithMerge,
     adaptItemImportWithMerge,
     adaptNpcImport,
+    adaptNpcTypeImport,
     adaptNpcWuDaoImport,
     adaptSkillImportWithMerge,
     adaptStaticSkillImport,
@@ -26,13 +27,17 @@ type Params = {
     projectPath: string
     workspaceRoot: string
     configCachePath: string
+    npcTypeMap: Record<string, any>
     npcPath: string
+    npcTypePath: string
     npcWuDaoPath: string
     backpackPath: string
     npcCachePath: string
+    npcTypeCachePath: string
     npcWuDaoCachePath: string
     backpackCachePath: string
     npcDirty: boolean
+    npcTypeDirty: boolean
     npcWuDaoDirty: boolean
     backpackDirty: boolean
     wudaoPath: string
@@ -68,21 +73,27 @@ type Params = {
     setConfigCachePath: Setter
     setConfigDirty: Setter
     setNpcMap: Setter
+    setNpcTypeMap: Setter
     setNpcWuDaoMap: Setter
     setBackpackMap: Setter
     setNpcCachePath: Setter
+    setNpcTypeCachePath: Setter
     setNpcWuDaoCachePath: Setter
     setBackpackCachePath: Setter
     setNpcDirty: Setter
+    setNpcTypeDirty: Setter
     setNpcWuDaoDirty: Setter
     setBackpackDirty: Setter
     setSelectedNpcKey: Setter
+    setSelectedNpcTypeKey: Setter
     setSelectedNpcWuDaoKey: Setter
     setSelectedBackpackKey: Setter
     setSelectedNpcKeys: Setter
+    setSelectedNpcTypeKeys: Setter
     setSelectedNpcWuDaoKeys: Setter
     setSelectedBackpackKeys: Setter
     setNpcSelectionAnchor: Setter
+    setNpcTypeSelectionAnchor: Setter
     setNpcWuDaoSelectionAnchor: Setter
     setBackpackSelectionAnchor: Setter
     setWuDaoMap: Setter
@@ -158,13 +169,17 @@ export function useModuleLoaders(params: Params) {
         projectPath,
         workspaceRoot,
         configCachePath,
+        npcTypeMap,
         npcPath,
+        npcTypePath,
         npcWuDaoPath,
         backpackPath,
         npcCachePath,
+        npcTypeCachePath,
         npcWuDaoCachePath,
         backpackCachePath,
         npcDirty,
+        npcTypeDirty,
         npcWuDaoDirty,
         backpackDirty,
         wudaoPath,
@@ -200,21 +215,27 @@ export function useModuleLoaders(params: Params) {
         setConfigCachePath,
         setConfigDirty,
         setNpcMap,
+        setNpcTypeMap,
         setNpcWuDaoMap,
         setBackpackMap,
         setNpcCachePath,
+        setNpcTypeCachePath,
         setNpcWuDaoCachePath,
         setBackpackCachePath,
         setNpcDirty,
+        setNpcTypeDirty,
         setNpcWuDaoDirty,
         setBackpackDirty,
         setSelectedNpcKey,
+        setSelectedNpcTypeKey,
         setSelectedNpcWuDaoKey,
         setSelectedBackpackKey,
         setSelectedNpcKeys,
+        setSelectedNpcTypeKeys,
         setSelectedNpcWuDaoKeys,
         setSelectedBackpackKeys,
         setNpcSelectionAnchor,
+        setNpcTypeSelectionAnchor,
         setNpcWuDaoSelectionAnchor,
         setBackpackSelectionAnchor,
         setWuDaoMap,
@@ -325,6 +346,32 @@ export function useModuleLoaders(params: Params) {
                 setNpcSelectionAnchor(firstKey)
             },
             '非实例NPC数据'
+        )
+    }
+
+    async function loadNpcTypeTable() {
+        const npcTypeCount = Object.keys(npcTypeMap).length
+        setViewMode('table')
+        setActivePath(npcTypePath)
+        if (!modRootPath || !npcTypePath) return
+        if (npcTypeCachePath === npcTypePath && npcTypeCount > 0) {
+            setStatus(npcTypeDirty ? '已加载 NPC类型 数据（缓存，未保存）。' : '已加载 NPC类型 数据（缓存）。')
+            return
+        }
+        return loadJsonTable(
+            npcTypePath,
+            npcTypeCachePath,
+            npcTypeDirty,
+            raw => adaptNpcTypeImport(raw).data,
+            (rows, firstKey) => {
+                setNpcTypeMap(rows)
+                setNpcTypeCachePath(npcTypePath)
+                setNpcTypeDirty(false)
+                setSelectedNpcTypeKey(firstKey)
+                setSelectedNpcTypeKeys(firstKey ? [firstKey] : [])
+                setNpcTypeSelectionAnchor(firstKey)
+            },
+            'NPC类型数据'
         )
     }
 
@@ -631,6 +678,7 @@ export function useModuleLoaders(params: Params) {
         setTableSearchText('')
         if (key === 'project-config') return loadConfigForm()
         if (key === 'npc') return loadNpcTable()
+        if (key === 'npctype') return loadNpcTypeTable()
         if (key === 'npcwudao') return loadNpcWuDaoTable()
         if (key === 'backpack') return loadBackpackTable()
         if (key === 'wudao') return loadWuDaoTable()
@@ -649,6 +697,7 @@ export function useModuleLoaders(params: Params) {
         handleSelectModule,
         loadConfigForm,
         loadNpcTable,
+        loadNpcTypeTable,
         loadNpcWuDaoTable,
         loadBackpackTable,
         loadWuDaoTable,

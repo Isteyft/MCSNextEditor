@@ -12,6 +12,7 @@ type SelectionSyncParams = {
 
 type UseModuleSelectionSyncParams = Partial<{
     npc: SelectionSyncParams
+    npctype: SelectionSyncParams
     npcwudao: SelectionSyncParams
     backpack: SelectionSyncParams
     wudao: SelectionSyncParams
@@ -49,6 +50,7 @@ function useSelectionSync(params?: SelectionSyncParams) {
 
 export function useModuleSelectionSync({
     npc,
+    npctype,
     npcwudao,
     backpack,
     wudao,
@@ -61,6 +63,7 @@ export function useModuleSelectionSync({
     staticSkill,
 }: UseModuleSelectionSyncParams) {
     useSelectionSync(npc)
+    useSelectionSync(npctype)
     useSelectionSync(npcwudao)
     useSelectionSync(backpack)
     useSelectionSync(wudao)

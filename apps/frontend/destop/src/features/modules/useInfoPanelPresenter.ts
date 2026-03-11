@@ -10,6 +10,7 @@ type SelectFn = (key: string, index: number, options: SelectOptions) => void
 type UseInfoPanelPresenterParams = {
     activeModule: ModuleKey | ''
     setAddNpcOpen: (open: boolean) => void
+    setAddNpcTypeOpen: (open: boolean) => void
     setAddNpcWuDaoOpen: (open: boolean) => void
     setAddBackpackOpen: (open: boolean) => void
     setAddWuDaoOpen: (open: boolean) => void
@@ -21,6 +22,7 @@ type UseInfoPanelPresenterParams = {
     setAddSkillOpen: (open: boolean) => void
     setAddStaticSkillOpen: (open: boolean) => void
     handleBatchPrefixNpcIds: (prefix: string) => void
+    handleBatchPrefixNpcTypeIds: (prefix: string) => void
     handleBatchPrefixNpcWuDaoIds: (prefix: string) => void
     handleBatchPrefixBackpackIds: (prefix: string) => void
     handleBatchPrefixWuDaoIds: (prefix: string) => void
@@ -32,6 +34,7 @@ type UseInfoPanelPresenterParams = {
     handleBatchPrefixSkillIds: (prefix: string) => void
     handleBatchPrefixStaticSkillIds: (prefix: string) => void
     handleDeleteNpcs: () => void
+    handleDeleteNpcTypes: () => void
     handleDeleteNpcWuDaos: () => void
     handleDeleteBackpacks: () => void
     handleDeleteWuDaos: () => void
@@ -43,6 +46,7 @@ type UseInfoPanelPresenterParams = {
     handleDeleteSkills: () => void
     handleDeleteStaticSkills: () => void
     handleCopyNpc: () => void
+    handleCopyNpcType: () => void
     handleCopyNpcWuDao: () => void
     handleCopyBackpack: () => void
     handleCopyWuDao: () => void
@@ -54,6 +58,7 @@ type UseInfoPanelPresenterParams = {
     handleCopySkill: () => void
     handleCopyStaticSkill: () => void
     handlePasteNpc: () => void
+    handlePasteNpcType: () => void
     handlePasteNpcWuDao: () => void
     handlePasteBackpack: () => void
     handlePasteWuDao: () => void
@@ -65,6 +70,7 @@ type UseInfoPanelPresenterParams = {
     handlePasteSkill: () => void
     handlePasteStaticSkill: () => void
     handleImportNpc: (jsonText: string) => void
+    handleImportNpcType: (jsonText: string) => void
     handleImportNpcWuDao: (jsonText: string) => void
     handleImportBackpack: (jsonText: string) => void
     handleImportWuDao: (jsonText: string) => void
@@ -75,12 +81,14 @@ type UseInfoPanelPresenterParams = {
     handleImportItem: (jsonText: string) => void
     handleImportSkill: (jsonText: string) => void
     handleImportStaticSkill: (jsonText: string) => void
+    handleGenerateNpcTypeGroup: () => void
     handleGenerateNpcWuDaoGroup: () => void
     handleGenerateSkillGroup: () => void
     handleGenerateStaticSkillGroup: () => void
     handleGenerateSkillBooksFromSkill: () => void
     handleGenerateSkillBooksFromStaticSkill: () => void
     handleSelectNpc: SelectFn
+    handleSelectNpcType: SelectFn
     handleSelectNpcWuDao: SelectFn
     handleSelectBackpack: SelectFn
     handleSelectWuDao: SelectFn
@@ -92,6 +100,7 @@ type UseInfoPanelPresenterParams = {
     handleSelectSkill: SelectFn
     handleSelectStaticSkill: SelectFn
     filteredNpcRows: CreateAvatarRow[]
+    filteredNpcTypeRows: CreateAvatarRow[]
     filteredNpcWuDaoRows: CreateAvatarRow[]
     filteredBackpackRows: CreateAvatarRow[]
     filteredWuDaoRows: CreateAvatarRow[]
@@ -103,6 +112,7 @@ type UseInfoPanelPresenterParams = {
     filteredSkillRows: CreateAvatarRow[]
     filteredStaticSkillRows: CreateAvatarRow[]
     selectedNpcKey: string
+    selectedNpcTypeKey: string
     selectedNpcWuDaoKey: string
     selectedBackpackKey: string
     selectedWuDaoKey: string
@@ -114,6 +124,7 @@ type UseInfoPanelPresenterParams = {
     selectedSkillKey: string
     selectedStaticSkillKey: string
     selectedNpcKeys: string[]
+    selectedNpcTypeKeys: string[]
     selectedNpcWuDaoKeys: string[]
     selectedBackpackKeys: string[]
     selectedWuDaoKeys: string[]
@@ -124,6 +135,7 @@ type UseInfoPanelPresenterParams = {
     selectedItemKeys: string[]
     selectedSkillKeys: string[]
     selectedStaticSkillKeys: string[]
+    npcTypeMap: Record<string, { Level: number }>
     npcWuDaoMap: Record<string, { lv: number }>
     skillMap: Record<string, SkillEntry>
     staticSkillMap: Record<string, StaticSkillEntry>
@@ -133,6 +145,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
     const {
         activeModule,
         setAddNpcOpen,
+        setAddNpcTypeOpen,
         setAddNpcWuDaoOpen,
         setAddBackpackOpen,
         setAddWuDaoOpen,
@@ -144,6 +157,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         setAddSkillOpen,
         setAddStaticSkillOpen,
         handleBatchPrefixNpcIds,
+        handleBatchPrefixNpcTypeIds,
         handleBatchPrefixNpcWuDaoIds,
         handleBatchPrefixBackpackIds,
         handleBatchPrefixWuDaoIds,
@@ -155,6 +169,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         handleBatchPrefixSkillIds,
         handleBatchPrefixStaticSkillIds,
         handleDeleteNpcs,
+        handleDeleteNpcTypes,
         handleDeleteNpcWuDaos,
         handleDeleteBackpacks,
         handleDeleteWuDaos,
@@ -166,6 +181,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         handleDeleteSkills,
         handleDeleteStaticSkills,
         handleCopyNpc,
+        handleCopyNpcType,
         handleCopyNpcWuDao,
         handleCopyBackpack,
         handleCopyWuDao,
@@ -177,6 +193,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         handleCopySkill,
         handleCopyStaticSkill,
         handlePasteNpc,
+        handlePasteNpcType,
         handlePasteNpcWuDao,
         handlePasteBackpack,
         handlePasteWuDao,
@@ -188,6 +205,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         handlePasteSkill,
         handlePasteStaticSkill,
         handleImportNpc,
+        handleImportNpcType,
         handleImportNpcWuDao,
         handleImportBackpack,
         handleImportWuDao,
@@ -198,12 +216,14 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         handleImportItem,
         handleImportSkill,
         handleImportStaticSkill,
+        handleGenerateNpcTypeGroup,
         handleGenerateNpcWuDaoGroup,
         handleGenerateSkillGroup,
         handleGenerateStaticSkillGroup,
         handleGenerateSkillBooksFromSkill,
         handleGenerateSkillBooksFromStaticSkill,
         handleSelectNpc,
+        handleSelectNpcType,
         handleSelectNpcWuDao,
         handleSelectBackpack,
         handleSelectWuDao,
@@ -215,6 +235,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         handleSelectSkill,
         handleSelectStaticSkill,
         filteredNpcRows,
+        filteredNpcTypeRows,
         filteredNpcWuDaoRows,
         filteredBackpackRows,
         filteredWuDaoRows,
@@ -226,6 +247,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         filteredSkillRows,
         filteredStaticSkillRows,
         selectedNpcKey,
+        selectedNpcTypeKey,
         selectedNpcWuDaoKey,
         selectedBackpackKey,
         selectedWuDaoKey,
@@ -237,6 +259,8 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         selectedSkillKey,
         selectedStaticSkillKey,
         selectedNpcKeys,
+        selectedNpcTypeKeys,
+        npcTypeMap,
         selectedNpcWuDaoKeys,
         selectedBackpackKeys,
         selectedWuDaoKeys,
@@ -255,6 +279,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
     return useMemo(() => {
         const onAddTalent = () => {
             if (activeModule === 'npc') return setAddNpcOpen(true)
+            if (activeModule === 'npctype') return setAddNpcTypeOpen(true)
             if (activeModule === 'npcwudao') return setAddNpcWuDaoOpen(true)
             if (activeModule === 'backpack') return setAddBackpackOpen(true)
             if (activeModule === 'wudao') return setAddWuDaoOpen(true)
@@ -269,6 +294,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
 
         const onBatchPrefixIds = (prefix: string) => {
             if (activeModule === 'npc') return handleBatchPrefixNpcIds(prefix)
+            if (activeModule === 'npctype') return handleBatchPrefixNpcTypeIds(prefix)
             if (activeModule === 'npcwudao') return handleBatchPrefixNpcWuDaoIds(prefix)
             if (activeModule === 'backpack') return handleBatchPrefixBackpackIds(prefix)
             if (activeModule === 'wudao') return handleBatchPrefixWuDaoIds(prefix)
@@ -283,6 +309,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
 
         const onDeleteTalents = () => {
             if (activeModule === 'npc') return handleDeleteNpcs()
+            if (activeModule === 'npctype') return handleDeleteNpcTypes()
             if (activeModule === 'npcwudao') return handleDeleteNpcWuDaos()
             if (activeModule === 'backpack') return handleDeleteBackpacks()
             if (activeModule === 'wudao') return handleDeleteWuDaos()
@@ -297,6 +324,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
 
         const onCopyTalent = () => {
             if (activeModule === 'npc') return handleCopyNpc()
+            if (activeModule === 'npctype') return handleCopyNpcType()
             if (activeModule === 'npcwudao') return handleCopyNpcWuDao()
             if (activeModule === 'backpack') return handleCopyBackpack()
             if (activeModule === 'wudao') return handleCopyWuDao()
@@ -311,6 +339,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
 
         const onPasteTalent = () => {
             if (activeModule === 'npc') return handlePasteNpc()
+            if (activeModule === 'npctype') return handlePasteNpcType()
             if (activeModule === 'npcwudao') return handlePasteNpcWuDao()
             if (activeModule === 'backpack') return handlePasteBackpack()
             if (activeModule === 'wudao') return handlePasteWuDao()
@@ -325,6 +354,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
 
         const onImportTalent = (jsonText: string) => {
             if (activeModule === 'npc') return handleImportNpc(jsonText)
+            if (activeModule === 'npctype') return handleImportNpcType(jsonText)
             if (activeModule === 'npcwudao') return handleImportNpcWuDao(jsonText)
             if (activeModule === 'backpack') return handleImportBackpack(jsonText)
             if (activeModule === 'wudao') return handleImportWuDao(jsonText)
@@ -338,26 +368,34 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         }
 
         const onGenerateGroup =
-            activeModule === 'npcwudao'
-                ? handleGenerateNpcWuDaoGroup
-                : activeModule === 'skill'
-                  ? handleGenerateSkillGroup
-                  : activeModule === 'staticskill'
-                    ? handleGenerateStaticSkillGroup
-                    : undefined
+            activeModule === 'npctype'
+                ? handleGenerateNpcTypeGroup
+                : activeModule === 'npcwudao'
+                  ? handleGenerateNpcWuDaoGroup
+                  : activeModule === 'skill'
+                    ? handleGenerateSkillGroup
+                    : activeModule === 'staticskill'
+                      ? handleGenerateStaticSkillGroup
+                      : undefined
 
         const canGenerateGroup =
-            activeModule === 'npcwudao'
-                ? selectedNpcWuDaoKeys.length === 1 &&
-                  Boolean(selectedNpcWuDaoKey) &&
-                  Number(npcWuDaoMap[selectedNpcWuDaoKey]?.lv ?? -1) === 1
-                : activeModule === 'skill'
-                  ? selectedSkillKeys.length === 1 && Boolean(selectedSkillKey) && Number(skillMap[selectedSkillKey]?.Skill_Lv ?? -1) === 0
-                  : activeModule === 'staticskill'
-                    ? selectedStaticSkillKeys.length === 1 &&
-                      Boolean(selectedStaticSkillKey) &&
-                      Number(staticSkillMap[selectedStaticSkillKey]?.Skill_Lv ?? -1) === 0
-                    : false
+            activeModule === 'npctype'
+                ? selectedNpcTypeKeys.length === 1 &&
+                  Boolean(selectedNpcTypeKey) &&
+                  Number(npcTypeMap[selectedNpcTypeKey]?.Level ?? -1) === 1
+                : activeModule === 'npcwudao'
+                  ? selectedNpcWuDaoKeys.length === 1 &&
+                    Boolean(selectedNpcWuDaoKey) &&
+                    Number(npcWuDaoMap[selectedNpcWuDaoKey]?.lv ?? -1) === 1
+                  : activeModule === 'skill'
+                    ? selectedSkillKeys.length === 1 &&
+                      Boolean(selectedSkillKey) &&
+                      Number(skillMap[selectedSkillKey]?.Skill_Lv ?? -1) === 0
+                    : activeModule === 'staticskill'
+                      ? selectedStaticSkillKeys.length === 1 &&
+                        Boolean(selectedStaticSkillKey) &&
+                        Number(staticSkillMap[selectedStaticSkillKey]?.Skill_Lv ?? -1) === 0
+                      : false
 
         const onGenerateBook =
             activeModule === 'skill'
@@ -375,6 +413,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
 
         const onSelectTalent: SelectFn = (key, index, options) => {
             if (activeModule === 'npc') return handleSelectNpc(key, index, options)
+            if (activeModule === 'npctype') return handleSelectNpcType(key, index, options)
             if (activeModule === 'npcwudao') return handleSelectNpcWuDao(key, index, options)
             if (activeModule === 'backpack') return handleSelectBackpack(key, index, options)
             if (activeModule === 'wudao') return handleSelectWuDao(key, index, options)
@@ -390,71 +429,77 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         const rows =
             activeModule === 'npc'
                 ? filteredNpcRows
-                : activeModule === 'npcwudao'
-                  ? filteredNpcWuDaoRows
-                  : activeModule === 'backpack'
-                    ? filteredBackpackRows
-                    : activeModule === 'wudao'
-                      ? filteredWuDaoRows
-                      : activeModule === 'wudaoskill'
-                        ? filteredWuDaoSkillRows
-                        : activeModule === 'affix'
-                          ? filteredAffixRows
-                          : activeModule === 'buff'
-                            ? filteredBuffRows
-                            : activeModule === 'item'
-                              ? filteredItemRows
-                              : activeModule === 'skill'
-                                ? filteredSkillRows
-                                : activeModule === 'staticskill'
-                                  ? filteredStaticSkillRows
-                                  : filteredAvatarRows
+                : activeModule === 'npctype'
+                  ? filteredNpcTypeRows
+                  : activeModule === 'npcwudao'
+                    ? filteredNpcWuDaoRows
+                    : activeModule === 'backpack'
+                      ? filteredBackpackRows
+                      : activeModule === 'wudao'
+                        ? filteredWuDaoRows
+                        : activeModule === 'wudaoskill'
+                          ? filteredWuDaoSkillRows
+                          : activeModule === 'affix'
+                            ? filteredAffixRows
+                            : activeModule === 'buff'
+                              ? filteredBuffRows
+                              : activeModule === 'item'
+                                ? filteredItemRows
+                                : activeModule === 'skill'
+                                  ? filteredSkillRows
+                                  : activeModule === 'staticskill'
+                                    ? filteredStaticSkillRows
+                                    : filteredAvatarRows
 
         const currentSelectedKey =
             activeModule === 'npc'
                 ? selectedNpcKey
-                : activeModule === 'npcwudao'
-                  ? selectedNpcWuDaoKey
-                  : activeModule === 'backpack'
-                    ? selectedBackpackKey
-                    : activeModule === 'wudao'
-                      ? selectedWuDaoKey
-                      : activeModule === 'wudaoskill'
-                        ? selectedWuDaoSkillKey
-                        : activeModule === 'affix'
-                          ? selectedAffixKey
-                          : activeModule === 'buff'
-                            ? selectedBuffKey
-                            : activeModule === 'item'
-                              ? selectedItemKey
-                              : activeModule === 'skill'
-                                ? selectedSkillKey
-                                : activeModule === 'staticskill'
-                                  ? selectedStaticSkillKey
-                                  : selectedTalentKey
+                : activeModule === 'npctype'
+                  ? selectedNpcTypeKey
+                  : activeModule === 'npcwudao'
+                    ? selectedNpcWuDaoKey
+                    : activeModule === 'backpack'
+                      ? selectedBackpackKey
+                      : activeModule === 'wudao'
+                        ? selectedWuDaoKey
+                        : activeModule === 'wudaoskill'
+                          ? selectedWuDaoSkillKey
+                          : activeModule === 'affix'
+                            ? selectedAffixKey
+                            : activeModule === 'buff'
+                              ? selectedBuffKey
+                              : activeModule === 'item'
+                                ? selectedItemKey
+                                : activeModule === 'skill'
+                                  ? selectedSkillKey
+                                  : activeModule === 'staticskill'
+                                    ? selectedStaticSkillKey
+                                    : selectedTalentKey
 
         const currentSelectedKeys =
             activeModule === 'npc'
                 ? selectedNpcKeys
-                : activeModule === 'npcwudao'
-                  ? selectedNpcWuDaoKeys
-                  : activeModule === 'backpack'
-                    ? selectedBackpackKeys
-                    : activeModule === 'wudao'
-                      ? selectedWuDaoKeys
-                      : activeModule === 'wudaoskill'
-                        ? selectedWuDaoSkillKeys
-                        : activeModule === 'affix'
-                          ? selectedAffixKeys
-                          : activeModule === 'buff'
-                            ? selectedBuffKeys
-                            : activeModule === 'item'
-                              ? selectedItemKeys
-                              : activeModule === 'skill'
-                                ? selectedSkillKeys
-                                : activeModule === 'staticskill'
-                                  ? selectedStaticSkillKeys
-                                  : selectedTalentKeys
+                : activeModule === 'npctype'
+                  ? selectedNpcTypeKeys
+                  : activeModule === 'npcwudao'
+                    ? selectedNpcWuDaoKeys
+                    : activeModule === 'backpack'
+                      ? selectedBackpackKeys
+                      : activeModule === 'wudao'
+                        ? selectedWuDaoKeys
+                        : activeModule === 'wudaoskill'
+                          ? selectedWuDaoSkillKeys
+                          : activeModule === 'affix'
+                            ? selectedAffixKeys
+                            : activeModule === 'buff'
+                              ? selectedBuffKeys
+                              : activeModule === 'item'
+                                ? selectedItemKeys
+                                : activeModule === 'skill'
+                                  ? selectedSkillKeys
+                                  : activeModule === 'staticskill'
+                                    ? selectedStaticSkillKeys
+                                    : selectedTalentKeys
 
         return {
             onAddTalent,
@@ -465,7 +510,12 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
             onImportTalent,
             onGenerateGroup,
             canGenerateGroup,
-            generateGroupLabel: activeModule === 'npcwudao' ? '生成一组' : activeModule === 'staticskill' ? '生成功法组' : '生成技能组',
+            generateGroupLabel:
+                activeModule === 'npctype' || activeModule === 'npcwudao'
+                    ? '生成一组'
+                    : activeModule === 'staticskill'
+                      ? '生成功法组'
+                      : '生成技能组',
             onGenerateBook,
             canGenerateBook,
             generateBookLabel: '生成技能书',
@@ -477,6 +527,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
     }, [
         activeModule,
         setAddNpcOpen,
+        setAddNpcTypeOpen,
         setAddNpcWuDaoOpen,
         setAddBackpackOpen,
         setAddWuDaoOpen,
@@ -488,6 +539,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         setAddSkillOpen,
         setAddStaticSkillOpen,
         handleBatchPrefixNpcIds,
+        handleBatchPrefixNpcTypeIds,
         handleBatchPrefixNpcWuDaoIds,
         handleBatchPrefixBackpackIds,
         handleBatchPrefixWuDaoIds,
@@ -499,6 +551,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         handleBatchPrefixSkillIds,
         handleBatchPrefixStaticSkillIds,
         handleDeleteNpcs,
+        handleDeleteNpcTypes,
         handleDeleteNpcWuDaos,
         handleDeleteBackpacks,
         handleDeleteWuDaos,
@@ -510,6 +563,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         handleDeleteSkills,
         handleDeleteStaticSkills,
         handleCopyNpc,
+        handleCopyNpcType,
         handleCopyNpcWuDao,
         handleCopyBackpack,
         handleCopyWuDao,
@@ -521,6 +575,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         handleCopySkill,
         handleCopyStaticSkill,
         handlePasteNpc,
+        handlePasteNpcType,
         handlePasteNpcWuDao,
         handlePasteBackpack,
         handlePasteWuDao,
@@ -532,6 +587,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         handlePasteSkill,
         handlePasteStaticSkill,
         handleImportNpc,
+        handleImportNpcType,
         handleImportNpcWuDao,
         handleImportBackpack,
         handleImportWuDao,
@@ -542,12 +598,14 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         handleImportItem,
         handleImportSkill,
         handleImportStaticSkill,
+        handleGenerateNpcTypeGroup,
         handleGenerateNpcWuDaoGroup,
         handleGenerateSkillGroup,
         handleGenerateStaticSkillGroup,
         handleGenerateSkillBooksFromSkill,
         handleGenerateSkillBooksFromStaticSkill,
         handleSelectNpc,
+        handleSelectNpcType,
         handleSelectNpcWuDao,
         handleSelectBackpack,
         handleSelectWuDao,
@@ -559,6 +617,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         handleSelectSkill,
         handleSelectStaticSkill,
         filteredNpcRows,
+        filteredNpcTypeRows,
         filteredNpcWuDaoRows,
         filteredBackpackRows,
         filteredWuDaoRows,
@@ -570,6 +629,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         filteredSkillRows,
         filteredStaticSkillRows,
         selectedNpcKey,
+        selectedNpcTypeKey,
         selectedNpcWuDaoKey,
         selectedBackpackKey,
         selectedWuDaoKey,
@@ -581,6 +641,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         selectedSkillKey,
         selectedStaticSkillKey,
         selectedNpcKeys,
+        selectedNpcTypeKeys,
         selectedNpcWuDaoKeys,
         selectedBackpackKeys,
         selectedWuDaoKeys,
@@ -591,6 +652,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
         selectedItemKeys,
         selectedSkillKeys,
         selectedStaticSkillKeys,
+        npcTypeMap,
         npcWuDaoMap,
         skillMap,
         staticSkillMap,

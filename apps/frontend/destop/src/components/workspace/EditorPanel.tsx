@@ -5,6 +5,7 @@ import type {
     BuffEntry,
     ItemEntry,
     NpcEntry,
+    NpcTypeEntry,
     NpcWuDaoEntry,
     SkillEntry,
     StaticSkillEntry,
@@ -15,6 +16,7 @@ import { BackpackForm } from '../backpack/BackpackForm'
 import { BuffForm } from '../buff/BuffForm'
 import { ItemForm } from '../item/ItemForm'
 import { NpcForm } from '../npc/NpcForm'
+import { NpcTypeForm } from '../npctype/NpcTypeForm'
 import { NpcWuDaoForm } from '../npcwudao/NpcWuDaoForm'
 import { SettingsForm } from '../settings/SettingsForm'
 import { SkillForm } from '../skill/SkillForm'
@@ -35,6 +37,8 @@ type EditorPanelProps = {
     npcSkillOptions: { id: number; name: string }[]
     npcStaticSkillOptions: { id: number; name: string }[]
     npcItemTypeOptions: { id: number; name: string }[]
+    npcTypeForm: NpcTypeEntry | null
+    onChangeNpcTypeForm: (patch: Partial<NpcTypeEntry>) => void
     npcWuDaoForm: NpcWuDaoEntry | null
     onChangeNpcWuDaoForm: (patch: Partial<NpcWuDaoEntry>) => void
     npcWuDaoSkillOptions: { id: number; name: string }[]
@@ -125,6 +129,8 @@ export function EditorPanel(props: EditorPanelProps) {
         npcSkillOptions,
         npcStaticSkillOptions,
         npcItemTypeOptions,
+        npcTypeForm,
+        onChangeNpcTypeForm,
         npcWuDaoForm,
         onChangeNpcWuDaoForm,
         npcWuDaoSkillOptions,
@@ -197,6 +203,13 @@ export function EditorPanel(props: EditorPanelProps) {
                             skillOptions={npcSkillOptions}
                             staticSkillOptions={npcStaticSkillOptions}
                             itemTypeOptions={npcItemTypeOptions}
+                        />
+                    ) : activeModule === 'npctype' ? (
+                        <NpcTypeForm
+                            values={npcTypeForm}
+                            onChange={onChangeNpcTypeForm}
+                            skillOptions={npcSkillOptions}
+                            staticSkillOptions={npcStaticSkillOptions}
                         />
                     ) : activeModule === 'npcwudao' ? (
                         <NpcWuDaoForm

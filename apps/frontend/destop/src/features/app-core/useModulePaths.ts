@@ -10,6 +10,7 @@ type UseModulePathsParams = {
 export function useModulePaths({ modRootPath, renameTargetPath }: UseModulePathsParams) {
     const moduleConfigPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Config', 'modConfig.json') : ''), [modRootPath])
     const npcPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Data', 'AvatarJsonData.json') : ''), [modRootPath])
+    const npcTypePath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Data', 'NPCLeiXingDate.json') : ''), [modRootPath])
     const npcWuDaoPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Data', 'NPCWuDaoJson.json') : ''), [modRootPath])
     const backpackPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Data', 'BackpackJsonData.json') : ''), [modRootPath])
     const wudaoPath = useMemo(() => (modRootPath ? joinWinPath(modRootPath, 'Data', 'WuDaoAllTypeJson.json') : ''), [modRootPath])
@@ -31,6 +32,7 @@ export function useModulePaths({ modRootPath, renameTargetPath }: UseModulePaths
     return {
         moduleConfigPath,
         npcPath,
+        npcTypePath,
         npcWuDaoPath,
         backpackPath,
         wudaoPath,

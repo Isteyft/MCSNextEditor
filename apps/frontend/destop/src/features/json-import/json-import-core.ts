@@ -10,9 +10,10 @@ function buildError(message: string, path?: string): JsonImportIssue {
 
 export function parseJsonUnknown(content: string, path?: string): JsonImportResult<unknown> {
     try {
+        const normalizedContent = content.replace(/^\uFEFF/, '')
         return {
             ok: true,
-            data: JSON.parse(content) as unknown,
+            data: JSON.parse(normalizedContent) as unknown,
             issues: [],
         }
     } catch (error) {

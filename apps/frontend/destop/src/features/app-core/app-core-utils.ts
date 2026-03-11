@@ -4,6 +4,7 @@ import type {
     BuffEntry,
     CreateAvatarEntry,
     ItemEntry,
+    NpcTypeEntry,
     NpcWuDaoEntry,
     SkillEntry,
     StaticSkillEntry,
@@ -28,6 +29,22 @@ export function cloneBackpackEntry(entry: BackpackEntry): BackpackEntry {
         ...entry,
         ItemID: [...entry.ItemID],
         randomNum: [...entry.randomNum],
+    }
+}
+
+export function cloneNpcTypeEntry(entry: NpcTypeEntry): NpcTypeEntry {
+    return {
+        ...entry,
+        skills: [...entry.skills],
+        staticSkills: [...entry.staticSkills],
+        LingGen: [...entry.LingGen],
+        NPCTag: [...entry.NPCTag],
+        paimaifenzu: [...entry.paimaifenzu],
+        equipWeapon: [...entry.equipWeapon],
+        equipClothing: [...entry.equipClothing],
+        equipRing: [...entry.equipRing],
+        JinDanType: [...entry.JinDanType],
+        ShiLi: [...entry.ShiLi],
     }
 }
 

@@ -1,7 +1,8 @@
-export type ModuleKey =
+﻿export type ModuleKey =
     | 'project-config'
     | 'settings'
     | 'npc'
+    | 'npctype'
     | 'npcwudao'
     | 'backpack'
     | 'wudao'
@@ -18,6 +19,7 @@ export const MODULES: { key: ModuleKey; label: string }[] = [
     { key: 'project-config', label: '项目配置' },
     { key: 'settings', label: '设置' },
     { key: 'npc', label: '非实例NPC' },
+    { key: 'npctype', label: 'NPC类型' },
     { key: 'npcwudao', label: 'NPC悟道' },
     { key: 'backpack', label: '背包' },
     { key: 'wudao', label: '悟道' },

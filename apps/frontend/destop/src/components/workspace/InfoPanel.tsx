@@ -37,6 +37,12 @@ function getColumnLabels(activeModule: ModuleKey | '') {
     switch (activeModule) {
         case 'npc':
             return { name: '名称', category: '势力' }
+        case 'npctype':
+            return { name: '固定姓', category: '流派/门派' }
+        case 'npcwudao':
+            return { name: '类型', category: '境界' }
+        case 'backpack':
+            return { name: '背包名称', category: '物品类型' }
         case 'wudao':
             return { name: '名称', category: '道类' }
         case 'wudaoskill':
@@ -72,7 +78,7 @@ export function InfoPanel({
     onImportTalent,
     onGenerateGroup,
     canGenerateGroup = false,
-    generateGroupLabel = '生成技能组',
+    generateGroupLabel = '生成一组',
     onGenerateBook,
     canGenerateBook = false,
     generateBookLabel = '生成技能书',
@@ -108,6 +114,7 @@ export function InfoPanel({
 
     const isTableModule = [
         'npc',
+        'npctype',
         'npcwudao',
         'backpack',
         'wudao',

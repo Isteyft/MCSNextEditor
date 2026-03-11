@@ -7,6 +7,7 @@ import type {
     CreateAvatarEntry,
     ItemEntry,
     NpcEntry,
+    NpcTypeEntry,
     NpcWuDaoEntry,
     SkillEntry,
     StaticSkillEntry,
@@ -23,6 +24,8 @@ type UseProjectShellStateParams = {
     normalizePath: (value: string) => string
     pickLeafName: (value: string) => string
     npcMap: Record<string, NpcEntry>
+    npcTypeMap: Record<string, NpcTypeEntry>
+    npcTypeCachePath: string
     npcWuDaoMap: Record<string, NpcWuDaoEntry>
     backpackMap: Record<string, BackpackEntry>
     wudaoMap: Record<string, WuDaoEntry>
@@ -34,6 +37,7 @@ type UseProjectShellStateParams = {
     skillMap: Record<string, SkillEntry>
     staticSkillMap: Record<string, StaticSkillEntry>
     npcDirty: boolean
+    npcTypeDirty: boolean
     npcWuDaoDirty: boolean
     backpackDirty: boolean
     wudaoDirty: boolean
@@ -52,6 +56,8 @@ export function useProjectShellState({
     normalizePath,
     pickLeafName,
     npcMap,
+    npcTypeMap,
+    npcTypeCachePath,
     npcWuDaoMap,
     backpackMap,
     wudaoMap,
@@ -63,6 +69,7 @@ export function useProjectShellState({
     skillMap,
     staticSkillMap,
     npcDirty,
+    npcTypeDirty,
     npcWuDaoDirty,
     backpackDirty,
     wudaoDirty,
@@ -112,6 +119,8 @@ export function useProjectShellState({
             ...prev,
             [cacheKey]: {
                 npcMap,
+                npcTypeMap,
+                npcTypeSourcePath: npcTypeCachePath,
                 npcWuDaoMap,
                 backpackMap,
                 wudaoMap,
@@ -123,6 +132,7 @@ export function useProjectShellState({
                 skillMap,
                 staticSkillMap,
                 npcDirty,
+                npcTypeDirty,
                 npcWuDaoDirty,
                 backpackDirty,
                 wudaoDirty,
@@ -139,6 +149,8 @@ export function useProjectShellState({
         modRootPath,
         normalizePath,
         npcMap,
+        npcTypeMap,
+        npcTypeCachePath,
         npcWuDaoMap,
         backpackMap,
         wudaoMap,
@@ -150,6 +162,7 @@ export function useProjectShellState({
         skillMap,
         staticSkillMap,
         npcDirty,
+        npcTypeDirty,
         npcWuDaoDirty,
         backpackDirty,
         wudaoDirty,
