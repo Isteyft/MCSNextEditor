@@ -491,7 +491,7 @@ export function useModuleLoaders(params: Params) {
                 setSelectedWuDaoKeys(firstKey ? [firstKey] : [])
                 setWuDaoSelectionAnchor(firstKey)
             },
-            '鎮熼亾鏁版嵁'
+            '悟道数据'
         )
     }
 
@@ -587,7 +587,7 @@ export function useModuleLoaders(params: Params) {
                 setSelectedAffixKeys(firstKey ? [firstKey] : [])
                 setAffixSelectionAnchor(firstKey)
             },
-            '璇嶇紑鏁版嵁'
+            '词缀数据'
         )
     }
 
