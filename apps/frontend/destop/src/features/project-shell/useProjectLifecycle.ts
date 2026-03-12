@@ -1,4 +1,4 @@
-import { open } from '@tauri-apps/plugin-dialog'
+﻿import { open } from '@tauri-apps/plugin-dialog'
 import type { FormEvent } from 'react'
 
 import { normalizeAffixMap } from '../../components/affix/affix-domain'
@@ -650,7 +650,7 @@ export function useProjectLifecycle(params: LifecycleParams) {
     }
 
     async function reloadProject(rootPath: string) {
-        onProjectLoadingChange?.({ open: true, progress: 0, message: '正在扫描项目目录...' })
+        onProjectLoadingChange?.({ open: true, progress: 0, message: '姝ｅ湪鎵弿椤圭洰鐩綍...' })
         try {
             const loaded = await loadProjectEntries(rootPath)
             const modRoot = findModRoot(loaded)
@@ -669,35 +669,35 @@ export function useProjectLifecycle(params: LifecycleParams) {
             setters.setModRootPath(nextModRoot)
             setters.setModRootFolders(siblingFolders)
             resetForProjectReload(setters, siblingFolders)
-            reportStep('正在初始化项目状态...')
+            reportStep('姝ｅ湪鍒濆鍖栭」鐩姸鎬?..')
 
             await preloadMeta([rootPath, nextModRoot, workspaceRoot], true)
-            reportStep('正在加载基础元数据...')
+            reportStep('姝ｅ湪鍔犺浇鍩虹鍏冩暟鎹?..')
             await loadBuffSeidMeta([rootPath, nextModRoot, workspaceRoot], true)
-            reportStep('正在加载 Buff Seid 元数据...')
+            reportStep('姝ｅ湪鍔犺浇 Buff Seid 鍏冩暟鎹?..')
             await loadItemSeidMeta([rootPath, nextModRoot, workspaceRoot], true)
-            reportStep('正在加载 Item Seid 元数据...')
+            reportStep('姝ｅ湪鍔犺浇 Item Seid 鍏冩暟鎹?..')
             await loadSkillSeidMeta([rootPath, nextModRoot, workspaceRoot], true)
-            reportStep('正在加载神通 Seid 元数据...')
+            reportStep('姝ｅ湪鍔犺浇绁為€?Seid 鍏冩暟鎹?..')
             await loadStaticSkillSeidMeta([rootPath, nextModRoot, workspaceRoot], true)
-            reportStep('正在加载功法 Seid 元数据...')
+            reportStep('姝ｅ湪鍔犺浇鍔熸硶 Seid 鍏冩暟鎹?..')
             await loadBuffEnumMeta([rootPath, nextModRoot, workspaceRoot], true)
-            reportStep('正在加载 Buff 枚举...')
+            reportStep('姝ｅ湪鍔犺浇 Buff 鏋氫妇...')
             await loadAffixEnumMeta([rootPath, nextModRoot, workspaceRoot], true)
-            reportStep('正在加载词缀枚举...')
+            reportStep('姝ｅ湪鍔犺浇璇嶇紑鏋氫妇...')
             await loadItemEnumMeta([rootPath, nextModRoot, workspaceRoot], true)
-            reportStep('正在加载物品枚举...')
+            reportStep('姝ｅ湪鍔犺浇鐗╁搧鏋氫妇...')
             await loadSkillEnumMeta([rootPath, nextModRoot, workspaceRoot], true)
-            reportStep('正在加载技能枚举...')
+            reportStep('姝ｅ湪鍔犺浇鎶€鑳芥灇涓?..')
             await loadSpecialDrawerOptions([rootPath, nextModRoot, workspaceRoot], nextModRoot, true)
-            reportStep('正在加载编辑器选项...')
+            reportStep('姝ｅ湪鍔犺浇缂栬緫鍣ㄩ€夐」...')
 
             const nextCache: Record<string, RootModuleSnapshot> = {}
             const foldersToLoad = siblingFolders.length > 0 ? siblingFolders : [{ path: nextModRoot, name: pickLeafName(nextModRoot) }]
             for (let index = 0; index < foldersToLoad.length; index += 1) {
                 const item = foldersToLoad[index]
                 nextCache[normalizePath(item.path)] = await readRootModuleSnapshot(item.path)
-                reportStep(`正在预加载目录数据 (${index + 1}/${foldersToLoad.length})...`)
+                reportStep(`姝ｅ湪棰勫姞杞界洰褰曟暟鎹?(${index + 1}/${foldersToLoad.length})...`)
             }
             setters.setRootSnapshotCache(nextCache)
             const activeSnapshot = nextCache[normalizePath(nextModRoot)]
@@ -705,9 +705,9 @@ export function useProjectLifecycle(params: LifecycleParams) {
             setters.setStatus(
                 modRoot ? STATUS_MESSAGES.openProjectLoaded(rootPath) : STATUS_MESSAGES.openProjectLoadedFallback(nextModRoot)
             )
-            onProjectLoadingChange?.({ open: true, progress: 100, message: '项目加载完成。' })
+            onProjectLoadingChange?.({ open: true, progress: 100, message: '项目加载完成' })
         } finally {
-            onProjectLoadingChange?.({ open: false, progress: 100, message: '项目加载完成。' })
+            onProjectLoadingChange?.({ open: false, progress: 100, message: '项目加载完成' })
         }
     }
 
@@ -751,12 +751,12 @@ export function useProjectLifecycle(params: LifecycleParams) {
     }
 
     async function handleOpenProject() {
-        const selected = await open({ directory: true, multiple: false, title: '选择项目目录' })
+        const selected = await open({ directory: true, multiple: false, title: '閫夋嫨椤圭洰鐩綍' })
         if (!selected || Array.isArray(selected)) return
         try {
             await reloadProject(selected)
         } catch (error) {
-            setters.setStatus(statusError('打开', error))
+            setters.setStatus(statusError('鎵撳紑', error))
         }
     }
 
@@ -782,22 +782,26 @@ export function useProjectLifecycle(params: LifecycleParams) {
                     return
                 }
                 const createdModPath = await createModFolder(nextBasePath, modName)
+                setters.setCreateOpen(false)
+                setters.setCreateMode('full')
+                setters.setNewProjectName('')
+                setters.setNewModName('')
                 const siblingFolders = await collectSiblingModFolders(createdModPath)
                 setters.setModRootFolders(siblingFolders)
                 await handleSelectModRoot(createdModPath)
                 createdMessage = STATUS_MESSAGES.createdMod(createdModPath)
             } else {
                 const createdPath = await createProject(projectName, modName)
+                setters.setCreateOpen(false)
+                setters.setCreateMode('full')
+                setters.setNewProjectName('')
+                setters.setNewModName('')
                 await reloadProject(createdPath)
                 createdMessage = STATUS_MESSAGES.createdProject(createdPath)
             }
-            setters.setCreateOpen(false)
-            setters.setCreateMode('full')
-            setters.setNewProjectName('')
-            setters.setNewModName('')
             setters.setStatus(createdMessage)
         } catch (error) {
-            setters.setStatus(statusError('新建', error))
+            setters.setStatus(statusError('鏂板缓', error))
         }
     }
 

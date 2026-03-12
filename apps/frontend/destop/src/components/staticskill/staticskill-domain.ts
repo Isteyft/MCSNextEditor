@@ -1,3 +1,4 @@
+﻿import { getStaticSkillAttributeLabel } from '../../features/modules/staticskill/static-skill-attribute-options'
 import type { FsEntry, StaticSkillEntry } from '../../types'
 import type { CreateAvatarRow } from '../workspace/InfoPanel'
 
@@ -65,13 +66,16 @@ export function normalizeStaticSkillMap(raw: unknown): Record<string, StaticSkil
     return next
 }
 
-export function toStaticSkillRows(map: Record<string, StaticSkillEntry>): CreateAvatarRow[] {
+export function toStaticSkillRows(
+    map: Record<string, StaticSkillEntry>,
+    staticSkillAttributeOptions: Array<{ id: number; name: string }> = []
+): CreateAvatarRow[] {
     return Object.entries(map)
         .map(([key, value]) => ({
             key,
             id: value.id,
             title: value.name,
-            fenLei: String(value.AttackType),
+            fenLei: getStaticSkillAttributeLabel(Number(value.AttackType ?? 0), staticSkillAttributeOptions),
             desc: value.descr,
         }))
         .sort((a, b) => a.id - b.id)

@@ -412,3 +412,40 @@
 -   `src/features/project-save/useProjectSave.ts`
 -   `src/features/project-shell/useProjectLifecycle.ts`
 -   `src/App.tsx`
+
+## 14. 功法属性配置
+
+### 属性来源规则
+
+-   功法的 `AttackType` 不再按通用攻击属性理解。
+-   当前作为“功法属性”使用。
+-   内置固定属性：
+    -   `0 金`
+    -   `1 木`
+    -   `2 水`
+    -   `3 火`
+    -   `4 土`
+    -   `5 气`
+    -   `6 遁术`
+    -   `7 神`
+    -   `8 剑`
+    -   `9 体`
+-   另外支持在设置中增加自定义功法属性，建议从 `10` 开始编号。
+
+### 当前行为
+
+-   设置界面可维护“功法属性”配置。
+-   功法编辑区的“功法属性”下拉会合并：
+    -   内置 0-9
+    -   设置中的自定义属性
+-   中间表格会显示功法属性中文名，而不是裸数字。
+-   功法搜索已支持按功法属性中文名检索。
+
+### 关键文件
+
+-   `src/features/modules/staticskill/static-skill-attribute-options.ts`
+-   `src/components/staticskill/StaticSkillForm.tsx`
+-   `src/components/staticskill/staticskill-domain.ts`
+-   `src/features/modules/useModuleTableRows.ts`
+-   `src/features/settings/app-settings-store.ts`
+-   `src/components/settings/SettingsForm.tsx`

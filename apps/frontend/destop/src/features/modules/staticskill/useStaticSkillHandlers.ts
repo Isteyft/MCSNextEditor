@@ -1,9 +1,9 @@
-import { createEmptyItem } from '../../../components/item/item-domain'
+﻿import { createEmptyItem } from '../../../components/item/item-domain'
 import { createEmptyStaticSkill } from '../../../components/staticskill/staticskill-domain'
 import type { ItemEntry, StaticSkillEntry } from '../../../types'
 import { formatAtlasDescriptionToSkillDescription } from '../skill/description-sync'
 
-type Setter = (value: any) => void
+type Setter<T = any> = (value: T) => void
 
 type Params = {
     filteredStaticSkillRows: Array<{ key: string }>
@@ -112,7 +112,7 @@ export function useStaticSkillHandlers(params: Params) {
 
     function handleBatchPrefixStaticSkillIds(prefix: string) {
         if (!/^\d+$/.test(prefix)) {
-            setStatus('批量修改ID失败：请输入数字开头。')
+            setStatus('批量修改 ID 失败：请输入数字开头。')
             return
         }
         const targets =
@@ -125,7 +125,7 @@ export function useStaticSkillHandlers(params: Params) {
         const nextKeys = orderedTargets.map((_, index) => String(Number(prefix) + index))
         const nextKeySet = new Set(nextKeys)
         if (nextKeySet.size !== nextKeys.length) {
-            setStatus('批量修改ID失败：新ID出现重复。')
+            setStatus('批量修改 ID 失败：新 ID 出现重复。')
             return
         }
         const occupied = batchIdChangeKeepOriginal
@@ -137,7 +137,7 @@ export function useStaticSkillHandlers(params: Params) {
             return key !== orderedTargets[index]
         })
         if (conflict) {
-            setStatus(`批量修改ID失败：目标ID ${conflict} 已存在。`)
+            setStatus(`批量修改 ID 失败：目标 ID ${conflict} 已存在。`)
             return
         }
         setStaticSkillMap((prev: Record<string, StaticSkillEntry>) => {
@@ -158,7 +158,7 @@ export function useStaticSkillHandlers(params: Params) {
         setSelectedStaticSkillKeys(nextKeys)
         setStaticSkillSelectionAnchor(nextActive)
         setStaticSkillDirty(true)
-        setStatus(`已批量修改 ${targets.length} 条功法ID，开头为 ${prefix}。`)
+        setStatus(`已批量修改 ${targets.length} 条功法 ID，开头为 ${prefix}。`)
     }
 
     function handleAddStaticSkill(id: number) {
@@ -189,7 +189,7 @@ export function useStaticSkillHandlers(params: Params) {
             .map(item => cloneStaticSkillEntry(item))
         if (copied.length === 0) return
         setStaticSkillClipboard(copied)
-        setStatus(copied.length === 1 ? `已复制功法 ${copied[0].id}` : `已复制 ${copied.length} 条功法数据`)
+        setStatus(copied.length === 1 ? `已复制功法 ${copied[0].id}` : `已复制 ${copied.length} 条功法数据。`)
     }
 
     function handlePasteStaticSkill() {
@@ -209,7 +209,7 @@ export function useStaticSkillHandlers(params: Params) {
             existingKeys.add(key)
         })
         if (conflicts.length > 0) {
-            const prefixText = window.prompt(`检测到 ${conflicts.length} 条功法ID重复，请输入新的ID前缀（例如 95）`)
+            const prefixText = window.prompt(`检测到 ${conflicts.length} 条功法 ID 重复，请输入新的 ID 前缀，例如 95`)
             if (prefixText === null) return
             const prefix = prefixText.trim()
             if (!/^\d+$/.test(prefix)) {
@@ -219,7 +219,7 @@ export function useStaticSkillHandlers(params: Params) {
             for (let index = 0; index < conflicts.length; index += 1) {
                 const nextKey = String(Number(`${prefix}${index + 1}`))
                 if (existingKeys.has(nextKey)) {
-                    setStatus(`粘贴失败：批量重命名ID冲突（${nextKey}）。`)
+                    setStatus(`粘贴失败：批量重命名 ID 冲突（${nextKey}）。`)
                     return
                 }
                 inserts.push({ key: nextKey, row: { ...cloneStaticSkillEntry(conflicts[index]), id: Number(nextKey) } })
@@ -269,6 +269,7 @@ export function useStaticSkillHandlers(params: Params) {
             Number.isFinite(nextUniqueId) &&
             nextUniqueId > 0 &&
             oldUniqueId !== nextUniqueId
+
         setStaticSkillMap((prev: Record<string, StaticSkillEntry>) => {
             if (nextKey !== selectedStaticSkillKey && prev[nextKey]) {
                 setStatus(`功法 ID ${nextId} 已存在，不能重复。`)
@@ -300,8 +301,8 @@ export function useStaticSkillHandlers(params: Params) {
             setStatus('生成功法组失败：请只选中一条功法。')
             return
         }
-        if (Number(base.Skill_Lv) !== 0) {
-            setStatus('生成功法组仅支持 0 级功法。')
+        if (![0, 1].includes(Number(base.Skill_Lv ?? 0))) {
+            setStatus('生成功法组仅支持 0 或 1 级功法。')
             return
         }
 
@@ -318,7 +319,7 @@ export function useStaticSkillHandlers(params: Params) {
 
         setStaticSkillMap((prev: Record<string, StaticSkillEntry>) => {
             const draft = { ...prev }
-            draft[String(baseId)] = { ...cloneStaticSkillEntry(base), id: baseId, Skill_Lv: 1, Skill_Speed: baseSpeed * 1 }
+            draft[String(baseId)] = { ...cloneStaticSkillEntry(base), id: baseId, Skill_Lv: 1, Skill_Speed: baseSpeed }
             for (let level = 2; level <= 5; level += 1) {
                 const id = baseId + (level - 1)
                 draft[String(id)] = { ...cloneStaticSkillEntry(base), id, Skill_Lv: level, Skill_Speed: baseSpeed * level }
@@ -330,7 +331,7 @@ export function useStaticSkillHandlers(params: Params) {
         setSelectedStaticSkillKeys(nextKeys)
         setStaticSkillSelectionAnchor(nextKeys[0])
         setStaticSkillDirty(true)
-        setStatus(`已生成功法技能组（${baseId} -> ${baseId + 4}，1-5级）。`)
+        setStatus(`已生成功法技能组，${baseId} -> ${baseId + 4}（1-5级）。`)
     }
 
     function handleGenerateSkillBooksFromStaticSkill() {
@@ -379,7 +380,7 @@ export function useStaticSkillHandlers(params: Params) {
         setItemDirty(true)
         setStatus(
             existed.length > 0
-                ? `已生成 ${inserts.length} 个技能书，以下ID已存在被跳过：${existed.join(', ')}`
+                ? `已生成 ${inserts.length} 个技能书，以下 ID 已存在被跳过：${existed.join(', ')}`
                 : `已生成 ${inserts.length} 个技能书。`
         )
     }

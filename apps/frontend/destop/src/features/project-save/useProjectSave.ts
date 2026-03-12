@@ -44,8 +44,10 @@ type Params = {
     affixMap: Record<string, any>
     affixPath: string
     buffMap: Record<string, any>
+    buffSeidSkipJsonIds: number[]
     itemMap: Record<string, any>
     skillMap: Record<string, any>
+    skillSeidSkipJsonIds: number[]
     staticSkillMap: Record<string, any>
     staticSkillPath: string
     buffDirPath: string
@@ -113,8 +115,10 @@ export function useProjectSave(params: Params) {
         affixMap,
         affixPath,
         buffMap,
+        buffSeidSkipJsonIds,
         itemMap,
         skillMap,
+        skillSeidSkipJsonIds,
         staticSkillMap,
         staticSkillPath,
         buffDirPath,
@@ -258,6 +262,7 @@ export function useProjectSave(params: Params) {
                 loadProjectEntries,
                 deleteFilePayload,
                 saveFilePayload,
+                skipSeidIds: buffSeidSkipJsonIds,
             })
             finishStep('已保存 Buff Seid 数据')
 
@@ -298,6 +303,7 @@ export function useProjectSave(params: Params) {
                 loadProjectEntries,
                 deleteFilePayload,
                 saveFilePayload,
+                skipSeidIds: skillSeidSkipJsonIds,
             })
             finishStep('已保存神通 Seid 数据')
 

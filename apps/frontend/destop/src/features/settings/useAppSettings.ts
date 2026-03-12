@@ -31,6 +31,9 @@ export function useAppSettings() {
         const stored = readAppSettings()
         return (
             JSON.stringify(stored.npcWuDaoExtraValues) !== JSON.stringify(settingsDraft.npcWuDaoExtraValues) ||
+            JSON.stringify(stored.staticSkillAttributeOptions) !== JSON.stringify(settingsDraft.staticSkillAttributeOptions) ||
+            JSON.stringify(stored.buffSeidSkipJsonIds) !== JSON.stringify(settingsDraft.buffSeidSkipJsonIds) ||
+            JSON.stringify(stored.skillSeidSkipJsonIds) !== JSON.stringify(settingsDraft.skillSeidSkipJsonIds) ||
             JSON.stringify(stored.jsonImportFolderPaths) !== JSON.stringify(settingsDraft.jsonImportFolderPaths) ||
             JSON.stringify(stored.jsonImportFilePaths) !== JSON.stringify(settingsDraft.jsonImportFilePaths) ||
             stored.uniqueIdSyncEnabled !== settingsDraft.uniqueIdSyncEnabled ||

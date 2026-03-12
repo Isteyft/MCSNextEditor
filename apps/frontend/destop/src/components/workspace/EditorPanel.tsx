@@ -1,4 +1,4 @@
-import { ViewMode } from '../../modules'
+﻿import { ViewMode } from '../../modules'
 import type {
     AffixEntry,
     BackpackEntry,
@@ -89,6 +89,7 @@ type EditorPanelProps = {
     buffRemoveTriggerOptions: { id: number; name: string }[]
     buffOverlayTypeOptions: { id: number; name: string }[]
     skillAttackTypeOptions: { id: number; name: string }[]
+    staticSkillAttributeOptions: { id: number; name: string }[]
     skillConsultTypeOptions: { id: number; name: string }[]
     skillPhaseOptions: { id: number; name: string }[]
     skillQualityOptions: { id: number; name: string }[]
@@ -106,6 +107,9 @@ type EditorPanelProps = {
     seidDisplayRows: { id: number; name: string }[]
     settingsForm: {
         npcWuDaoExtraValues: Array<{ label: string; valueIndex: number }>
+        staticSkillAttributeOptions: Array<{ id: number; name: string }>
+        buffSeidSkipJsonIds: number[]
+        skillSeidSkipJsonIds: number[]
         jsonImportFolderPaths: string[]
         jsonImportFilePaths: string[]
         uniqueIdSyncEnabled: boolean
@@ -174,6 +178,7 @@ export function EditorPanel(props: EditorPanelProps) {
         buffRemoveTriggerOptions,
         buffOverlayTypeOptions,
         skillAttackTypeOptions,
+        staticSkillAttributeOptions,
         skillConsultTypeOptions,
         skillPhaseOptions,
         skillQualityOptions,
@@ -311,7 +316,7 @@ export function EditorPanel(props: EditorPanelProps) {
                             seidDisplayRows={seidDisplayRows}
                             values={staticSkillForm}
                             onChange={onChangeStaticSkillForm}
-                            attackTypeOptions={skillAttackTypeOptions}
+                            attackTypeOptions={staticSkillAttributeOptions}
                             skillConsultTypeOptions={skillConsultTypeOptions}
                             skillPhaseOptions={skillPhaseOptions}
                             skillQualityOptions={skillQualityOptions}

@@ -1,8 +1,14 @@
 ﻿import { open } from '@tauri-apps/plugin-dialog'
 
+import { BUILTIN_STATIC_SKILL_ATTRIBUTE_OPTIONS } from '../../features/modules/staticskill/static-skill-attribute-options'
+import { DEFAULT_SKILL_SEID_SKIP_JSON_IDS } from '../../features/settings/app-settings-store'
+
 type SettingsFormProps = {
     values: {
         npcWuDaoExtraValues: Array<{ label: string; valueIndex: number }>
+        staticSkillAttributeOptions: Array<{ id: number; name: string }>
+        buffSeidSkipJsonIds: number[]
+        skillSeidSkipJsonIds: number[]
         jsonImportFolderPaths: string[]
         jsonImportFilePaths: string[]
         uniqueIdSyncEnabled: boolean
@@ -28,11 +34,28 @@ function mergeUnique(current: string[], incoming: string[]): string[] {
     return Array.from(new Set([...current, ...incoming].filter(Boolean)))
 }
 
+function parseNumberList(input: string): number[] {
+    return Array.from(
+        new Set(
+            input
+                .split(/[，,\s]+/)
+                .map(item => Number(item.trim()))
+                .filter(item => Number.isFinite(item) && item >= 0)
+                .map(item => Math.floor(item))
+        )
+    ).sort((a, b) => a - b)
+}
+
 const MAIN_WINDOW_RESOLUTION_OPTIONS = ['800x600', '1280x968', '1440x1080', '1920x1080'] as const
 
 export function SettingsForm({ values, onChange }: SettingsFormProps) {
     const triggerLevelsText = values.uniqueIdSyncTriggerLevels.join(',')
+    const buffSeidSkipJsonText = values.buffSeidSkipJsonIds.join(',')
+    const skillSeidSkipJsonText = values.skillSeidSkipJsonIds.join(',')
     const selectedResolution = `${values.mainWindowWidth}x${values.mainWindowHeight}`
+    const customStaticSkillAttributeOptions = values.staticSkillAttributeOptions.filter(
+        item => !BUILTIN_STATIC_SKILL_ATTRIBUTE_OPTIONS.some(option => option.id === item.id)
+    )
 
     function updateNpcWuDaoExtraValue(index: number, patch: Partial<{ label: string; valueIndex: number }>) {
         onChange({
@@ -51,6 +74,26 @@ export function SettingsForm({ values, onChange }: SettingsFormProps) {
     function removeNpcWuDaoExtraValue(index: number) {
         onChange({
             npcWuDaoExtraValues: values.npcWuDaoExtraValues.filter((_, currentIndex) => currentIndex !== index),
+        })
+    }
+
+    function updateStaticSkillAttribute(index: number, patch: Partial<{ id: number; name: string }>) {
+        onChange({
+            staticSkillAttributeOptions: customStaticSkillAttributeOptions.map((item, currentIndex) =>
+                currentIndex === index ? { ...item, ...patch } : item
+            ),
+        })
+    }
+
+    function addStaticSkillAttribute() {
+        onChange({
+            staticSkillAttributeOptions: [...customStaticSkillAttributeOptions, { id: 10, name: '' }],
+        })
+    }
+
+    function removeStaticSkillAttribute(index: number) {
+        onChange({
+            staticSkillAttributeOptions: customStaticSkillAttributeOptions.filter((_, currentIndex) => currentIndex !== index),
         })
     }
 
@@ -278,6 +321,106 @@ export function SettingsForm({ values, onChange }: SettingsFormProps) {
                                     新增一行
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="settings-pref-section">
+                <h3>功法属性</h3>
+                <div className="settings-pref-card">
+                    <div className="settings-pref-row settings-pref-row-list">
+                        <span>内置属性</span>
+                        <div className="settings-pref-list-wrap settings-grid-wrap">
+                            <div className="settings-grid-head">
+                                <span>ID</span>
+                                <span>名称</span>
+                                <span />
+                            </div>
+                            {BUILTIN_STATIC_SKILL_ATTRIBUTE_OPTIONS.map(item => (
+                                <div className="settings-grid-row" key={`builtin-static-skill-attr-${item.id}`}>
+                                    <input className="settings-level-input" disabled type="number" value={item.id} />
+                                    <input className="settings-level-input" disabled type="text" value={item.name} />
+                                    <span className="muted settings-grid-note">内置</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="settings-pref-row settings-pref-row-list">
+                        <span>自定义属性</span>
+                        <div className="settings-pref-list-wrap settings-grid-wrap">
+                            <div className="settings-grid-head">
+                                <span>ID</span>
+                                <span>名称</span>
+                                <span />
+                            </div>
+                            {customStaticSkillAttributeOptions.map((item, index) => (
+                                <div className="settings-grid-row" key={`custom-static-skill-attr-${index}`}>
+                                    <input
+                                        className="settings-level-input"
+                                        inputMode="numeric"
+                                        min={10}
+                                        onChange={event =>
+                                            updateStaticSkillAttribute(index, {
+                                                id: Math.max(10, Number.parseInt(event.target.value || '10', 10) || 10),
+                                            })
+                                        }
+                                        type="number"
+                                        value={item.id}
+                                    />
+                                    <input
+                                        className="settings-level-input"
+                                        onChange={event => updateStaticSkillAttribute(index, { name: event.target.value })}
+                                        placeholder="例如：雷"
+                                        type="text"
+                                        value={item.name}
+                                    />
+                                    <button className="settings-remove-btn" onClick={() => removeStaticSkillAttribute(index)} type="button">
+                                        删除
+                                    </button>
+                                </div>
+                            ))}
+                            {customStaticSkillAttributeOptions.length === 0 ? <div className="muted">暂无自定义属性</div> : null}
+                            <div className="settings-grid-actions">
+                                <button className="settings-action-btn" onClick={addStaticSkillAttribute} type="button">
+                                    新增一行
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="settings-pref-section">
+                <h3>Seid JSON 生成</h3>
+                <div className="settings-pref-card">
+                    <div className="settings-pref-row">
+                        <span>Buff 跳过生成 JSON 的 Seid</span>
+                        <input
+                            className="settings-level-input"
+                            onChange={event => onChange({ buffSeidSkipJsonIds: parseNumberList(event.target.value) })}
+                            placeholder="例如：3,5,10"
+                            type="text"
+                            value={buffSeidSkipJsonText}
+                        />
+                    </div>
+                    <div className="settings-pref-row">
+                        <span>神通跳过生成 JSON 的 Seid</span>
+                        <div className="settings-inline-actions">
+                            <input
+                                className="settings-level-input settings-wide-input"
+                                onChange={event => onChange({ skillSeidSkipJsonIds: parseNumberList(event.target.value) })}
+                                placeholder="例如：2,8,11"
+                                type="text"
+                                value={skillSeidSkipJsonText}
+                            />
+                            <button
+                                className="settings-action-btn"
+                                onClick={() => onChange({ skillSeidSkipJsonIds: [...DEFAULT_SKILL_SEID_SKIP_JSON_IDS] })}
+                                type="button"
+                            >
+                                重置默认值
+                            </button>
                         </div>
                     </div>
                 </div>

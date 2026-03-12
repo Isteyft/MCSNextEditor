@@ -49,6 +49,7 @@ import { useNpcImportantHandlers } from './features/modules/npcimportant/useNpcI
 import { useNpcTypeHandlers } from './features/modules/npctype/useNpcTypeHandlers'
 import { useNpcWuDaoHandlers } from './features/modules/npcwudao/useNpcWuDaoHandlers'
 import { useSkillHandlers } from './features/modules/skill/useSkillHandlers'
+import { mergeStaticSkillAttributeOptions } from './features/modules/staticskill/static-skill-attribute-options'
 import { useStaticSkillHandlers } from './features/modules/staticskill/useStaticSkillHandlers'
 import { useTalentHandlers } from './features/modules/talent/useTalentHandlers'
 import { useInfoPanelPresenter } from './features/modules/useInfoPanelPresenter'
@@ -279,6 +280,10 @@ export function App() {
     const cacheRestoredRootRef = useRef('')
     const lastCacheUnsavedRef = useRef<boolean | null>(null)
     const { settingsDraft, settingsHydrated, patchSettings } = useAppSettings()
+    const staticSkillAttributeOptions = useMemo(
+        () => mergeStaticSkillAttributeOptions(settingsDraft.staticSkillAttributeOptions).map(item => ({ id: item.id, name: item.name })),
+        [settingsDraft.staticSkillAttributeOptions]
+    )
     const startupResolutionAppliedRef = useRef(false)
 
     function withMetaRoots(roots: string[]) {
@@ -396,6 +401,7 @@ export function App() {
         itemMap,
         skillMap,
         staticSkillMap,
+        staticSkillAttributeOptions,
         tableSearchText,
     })
     const selectedNpc = useMemo(() => (selectedNpcKey ? (npcMap[selectedNpcKey] ?? null) : null), [npcMap, selectedNpcKey])
@@ -2157,8 +2163,10 @@ export function App() {
         affixMap,
         affixPath,
         buffMap,
+        buffSeidSkipJsonIds: settingsDraft.buffSeidSkipJsonIds,
         itemMap,
         skillMap,
+        skillSeidSkipJsonIds: settingsDraft.skillSeidSkipJsonIds,
         staticSkillMap,
         staticSkillPath,
         buffDirPath,
@@ -2662,6 +2670,7 @@ export function App() {
                         buffRemoveTriggerOptions={buffRemoveTriggerOptions}
                         buffOverlayTypeOptions={buffOverlayTypeOptions}
                         skillAttackTypeOptions={skillAttackTypeOptions}
+                        staticSkillAttributeOptions={staticSkillAttributeOptions}
                         skillConsultTypeOptions={skillConsultTypeOptions}
                         skillPhaseOptions={skillPhaseOptions}
                         skillQualityOptions={skillQualityOptions}

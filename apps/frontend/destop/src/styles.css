@@ -568,6 +568,18 @@ body,
     width: 140px;
 }
 
+.settings-wide-input {
+    width: 240px;
+}
+
+.settings-inline-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
 .settings-size-inputs {
     display: flex;
     align-items: center;

@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+﻿import { useMemo } from 'react'
 
 import { toAffixRows } from '../../components/affix/affix-domain'
 import { toBackpackRows } from '../../components/backpack/backpack-domain'
@@ -43,6 +43,7 @@ type UseModuleTableRowsParams = {
     itemMap: Record<string, ItemEntry>
     skillMap: Record<string, SkillEntry>
     staticSkillMap: Record<string, StaticSkillEntry>
+    staticSkillAttributeOptions: Array<{ id: number; name: string }>
     tableSearchText: string
 }
 
@@ -60,6 +61,7 @@ export function useModuleTableRows({
     itemMap,
     skillMap,
     staticSkillMap,
+    staticSkillAttributeOptions,
     tableSearchText,
 }: UseModuleTableRowsParams) {
     const npcRows = useMemo(() => toNpcRows(npcMap), [npcMap])
@@ -74,7 +76,10 @@ export function useModuleTableRows({
     const buffRows = useMemo(() => toBuffRows(buffMap), [buffMap])
     const itemRows = useMemo(() => toItemRows(itemMap), [itemMap])
     const skillRows = useMemo(() => toSkillRows(skillMap), [skillMap])
-    const staticSkillRows = useMemo(() => toStaticSkillRows(staticSkillMap), [staticSkillMap])
+    const staticSkillRows = useMemo(
+        () => toStaticSkillRows(staticSkillMap, staticSkillAttributeOptions),
+        [staticSkillMap, staticSkillAttributeOptions]
+    )
 
     const keyword = tableSearchText.trim().toLowerCase()
 
@@ -170,7 +175,7 @@ export function useModuleTableRows({
     const filteredStaticSkillRows = useMemo(() => {
         if (!keyword) return staticSkillRows
         return staticSkillRows.filter(row =>
-            `${row.id} ${staticSkillMap[row.key]?.Skill_ID ?? ''} ${row.title} ${row.desc} ${staticSkillMap[row.key]?.TuJiandescr ?? ''}`
+            `${row.id} ${staticSkillMap[row.key]?.Skill_ID ?? ''} ${row.title} ${row.fenLei} ${row.desc} ${staticSkillMap[row.key]?.TuJiandescr ?? ''}`
                 .toLowerCase()
                 .includes(keyword)
         )

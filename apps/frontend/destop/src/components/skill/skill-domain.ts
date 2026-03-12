@@ -267,14 +267,17 @@ export async function saveSkillSeidFiles(params: {
     loadProjectEntries: (rootPath: string) => Promise<FsEntry[]>
     deleteFilePayload: (filePath: string) => Promise<unknown>
     saveFilePayload: (filePath: string, content: string) => Promise<unknown>
+    skipSeidIds?: number[]
 }) {
-    const { skillMap, modRootPath, joinWinPath, loadProjectEntries, deleteFilePayload, saveFilePayload } = params
+    const { skillMap, modRootPath, joinWinPath, loadProjectEntries, deleteFilePayload, saveFilePayload, skipSeidIds } = params
     const seidDirPath = joinWinPath(modRootPath, 'Data', 'SkillSeidJsonData')
     const seidFilePayload: Record<string, Record<string, Record<string, unknown>>> = {}
+    const skipSeidIdSet = new Set((skipSeidIds ?? []).filter(seidId => Number.isFinite(seidId) && seidId > 0))
 
     for (const row of Object.values(skillMap)) {
         for (const seidId of row.seid) {
             if (!Number.isFinite(seidId) || seidId <= 0) continue
+            if (skipSeidIdSet.has(seidId)) continue
             const seidKey = String(seidId)
             const fileRows = (seidFilePayload[seidKey] ??= {})
             const rowPayload: Record<string, unknown> = { skillid: row.id }

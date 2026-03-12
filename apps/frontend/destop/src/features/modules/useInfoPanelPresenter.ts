@@ -420,7 +420,7 @@ export function useInfoPanelPresenter(params: UseInfoPanelPresenterParams) {
                     : activeModule === 'staticskill'
                       ? selectedStaticSkillKeys.length === 1 &&
                         Boolean(selectedStaticSkillKey) &&
-                        Number(staticSkillMap[selectedStaticSkillKey]?.Skill_Lv ?? -1) === 0
+                        [0, 1].includes(Number(staticSkillMap[selectedStaticSkillKey]?.Skill_Lv ?? -1))
                       : false
 
         const onGenerateBook =

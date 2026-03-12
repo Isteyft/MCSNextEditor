@@ -6,9 +6,13 @@ const SETTINGS_STORAGE_KEY = 'baize.destop.settings.v1'
 const SETTINGS_FILE_NAME = 'app-settings.json'
 const MIN_MAIN_WINDOW_WIDTH = 800
 const MIN_MAIN_WINDOW_HEIGHT = 600
+export const DEFAULT_SKILL_SEID_SKIP_JSON_IDS = [5, 6, 22, 53, 78, 99, 115, 139, 155, 156, 157, 161]
 
 export type AppSettings = {
     npcWuDaoExtraValues: Array<{ label: string; valueIndex: number }>
+    staticSkillAttributeOptions: Array<{ id: number; name: string }>
+    buffSeidSkipJsonIds: number[]
+    skillSeidSkipJsonIds: number[]
     jsonImportFolderPaths: string[]
     jsonImportFilePaths: string[]
     uniqueIdSyncEnabled: boolean
@@ -24,6 +28,9 @@ export type AppSettings = {
 
 const DEFAULT_SETTINGS: AppSettings = {
     npcWuDaoExtraValues: [],
+    staticSkillAttributeOptions: [],
+    buffSeidSkipJsonIds: [],
+    skillSeidSkipJsonIds: [...DEFAULT_SKILL_SEID_SKIP_JSON_IDS],
     jsonImportFolderPaths: [],
     jsonImportFilePaths: [],
     uniqueIdSyncEnabled: false,
@@ -78,12 +85,29 @@ function normalizeNpcWuDaoExtraValues(value: unknown): Array<{ label: string; va
     return result.filter((item, index, array) => array.findIndex(row => row.valueIndex === item.valueIndex) === index)
 }
 
+function normalizeStaticSkillAttributeOptions(value: unknown): Array<{ id: number; name: string }> {
+    if (!Array.isArray(value)) return []
+    const result: Array<{ id: number; name: string }> = []
+    for (const item of value) {
+        if (!item || typeof item !== 'object') continue
+        const row = item as Record<string, unknown>
+        const id = Math.floor(Number(row.id ?? 0))
+        const name = String(row.name ?? '').trim()
+        if (!Number.isFinite(id) || id < 0 || !name) continue
+        result.push({ id, name })
+    }
+    return result.filter((item, index, array) => array.findIndex(row => row.id === item.id) === index)
+}
+
 function normalizeSettings(parsed: Record<string, unknown>): AppSettings {
     const folderPaths = toPathArray(parsed.jsonImportFolderPaths ?? parsed.globalImportRootPath)
     const filePaths = toPathArray(parsed.jsonImportFilePaths ?? parsed.jsonImportFilePath)
     const triggerLevels = toNumberArray(parsed.uniqueIdSyncTriggerLevels)
     return {
         npcWuDaoExtraValues: normalizeNpcWuDaoExtraValues(parsed.npcWuDaoExtraValues),
+        staticSkillAttributeOptions: normalizeStaticSkillAttributeOptions(parsed.staticSkillAttributeOptions),
+        buffSeidSkipJsonIds: Array.from(new Set(toNumberArray(parsed.buffSeidSkipJsonIds))),
+        skillSeidSkipJsonIds: Array.from(new Set(toNumberArray(parsed.skillSeidSkipJsonIds ?? DEFAULT_SKILL_SEID_SKIP_JSON_IDS))),
         jsonImportFolderPaths: Array.from(new Set(folderPaths)),
         jsonImportFilePaths: Array.from(new Set(filePaths)),
         uniqueIdSyncEnabled: Boolean(parsed.uniqueIdSyncEnabled ?? false),
@@ -151,6 +175,11 @@ export function saveAppSettings(patch: Partial<AppSettings>) {
         ...current,
         ...patch,
         npcWuDaoExtraValues: normalizeNpcWuDaoExtraValues(patch.npcWuDaoExtraValues ?? current.npcWuDaoExtraValues),
+        staticSkillAttributeOptions: normalizeStaticSkillAttributeOptions(
+            patch.staticSkillAttributeOptions ?? current.staticSkillAttributeOptions
+        ),
+        buffSeidSkipJsonIds: Array.from(new Set(toNumberArray(patch.buffSeidSkipJsonIds ?? current.buffSeidSkipJsonIds))),
+        skillSeidSkipJsonIds: Array.from(new Set(toNumberArray(patch.skillSeidSkipJsonIds ?? current.skillSeidSkipJsonIds))),
         jsonImportFolderPaths: Array.from(new Set((patch.jsonImportFolderPaths ?? current.jsonImportFolderPaths).filter(Boolean))),
         jsonImportFilePaths: Array.from(new Set((patch.jsonImportFilePaths ?? current.jsonImportFilePaths).filter(Boolean))),
         uniqueIdSyncEnabled: patch.uniqueIdSyncEnabled ?? current.uniqueIdSyncEnabled,

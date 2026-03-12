@@ -1,4 +1,4 @@
-import { convertFileSrc } from '@tauri-apps/api/core'
+﻿import { convertFileSrc } from '@tauri-apps/api/core'
 import { Plus, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
@@ -25,7 +25,7 @@ function toSafeNumber(input: string) {
 }
 
 function withCurrent(options: Option[], current: number) {
-    return options.some(item => item.id === current) ? options : [{ id: current, name: '未定义' }, ...options]
+    return options.some(item => item.id === current) ? options : [{ id: current, name: `未定义(${current})` }, ...options]
 }
 
 export function StaticSkillForm({
@@ -66,7 +66,7 @@ export function StaticSkillForm({
                 <input inputMode="numeric" onChange={event => onChange({ id: toSafeNumber(event.target.value) })} value={values.id} />
             </label>
             <label className="config-field">
-                <span>Skill_ID (唯一ID)</span>
+                <span>Skill_ID（唯一ID）</span>
                 <input
                     inputMode="numeric"
                     onChange={event => onChange({ Skill_ID: toSafeNumber(event.target.value) })}
@@ -111,7 +111,7 @@ export function StaticSkillForm({
                 <select onChange={event => onChange({ qingjiaotype: toSafeNumber(event.target.value) })} value={values.qingjiaotype}>
                     {withCurrent(skillConsultTypeOptions, values.qingjiaotype).map(option => (
                         <option key={option.id} value={option.id}>
-                            {option.id}.{option.name}
+                            {option.id}. {option.name}
                         </option>
                     ))}
                 </select>
@@ -129,11 +129,11 @@ export function StaticSkillForm({
                 <textarea className="config-desc-input" onChange={event => onChange({ descr: event.target.value })} value={values.descr} />
             </label>
             <label className="config-field">
-                <span>攻击属性</span>
+                <span>功法属性</span>
                 <select onChange={event => onChange({ AttackType: toSafeNumber(event.target.value) })} value={values.AttackType}>
                     {withCurrent(attackTypeOptions, values.AttackType).map(option => (
                         <option key={option.id} value={option.id}>
-                            {option.id}.{option.name}
+                            {option.id}. {option.name}
                         </option>
                     ))}
                 </select>
@@ -143,7 +143,7 @@ export function StaticSkillForm({
                 <select onChange={event => onChange({ Skill_LV: toSafeNumber(event.target.value) })} value={values.Skill_LV}>
                     {withCurrent(skillQualityOptions, values.Skill_LV).map(option => (
                         <option key={option.id} value={option.id}>
-                            {option.id}.{option.name}
+                            {option.id}. {option.name}
                         </option>
                     ))}
                 </select>
@@ -153,7 +153,7 @@ export function StaticSkillForm({
                 <select onChange={event => onChange({ typePinJie: toSafeNumber(event.target.value) })} value={values.typePinJie}>
                     {withCurrent(skillPhaseOptions, values.typePinJie).map(option => (
                         <option key={option.id} value={option.id}>
-                            {option.id}.{option.name}
+                            {option.id}. {option.name}
                         </option>
                     ))}
                 </select>
@@ -212,7 +212,7 @@ export function StaticSkillForm({
                                 <option value={affix}>{affix > 0 ? `当前: ${affix}` : '选择词缀'}</option>
                                 {affixOptions.map(option => (
                                     <option key={option.id} value={option.id}>
-                                        {option.id}.{option.name}
+                                        {option.id}. {option.name}
                                     </option>
                                 ))}
                             </select>
